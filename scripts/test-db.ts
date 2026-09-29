@@ -18,6 +18,17 @@ const EXPECTED_TABLES = [
 // System item types created by `npm run db:seed`.
 const EXPECTED_TYPE_IDS = ["snippet", "prompt", "command", "note", "file", "image", "url"];
 
+// Demo data created by `npm run db:seed` (see `context/features/seed-spec.md`).
+const DEMO_USER_EMAIL = "demo@devstash.io";
+const EXPECTED_COLLECTION_NAMES = [
+  "React Patterns",
+  "AI Workflows",
+  "DevOps",
+  "Terminal Commands",
+  "Design Resources",
+];
+const EXPECTED_ITEM_COUNT = 18;
+
 interface Check {
   label: string;
   ok: boolean;
@@ -92,6 +103,47 @@ async function runChecks() {
     missingTypes.length
       ? `missing: ${list(missingTypes)} (run npm run db:seed)`
       : `${EXPECTED_TYPE_IDS.length}/${EXPECTED_TYPE_IDS.length} seeded`,
+  );
+
+  const demoUser = await prisma.user.findUnique({
+    where: { email: DEMO_USER_EMAIL },
+    select: { id: true },
+  });
+  check(
+    "demo user",
+    demoUser !== null,
+    demoUser
+      ? DEMO_USER_EMAIL
+      : `missing ${DEMO_USER_EMAIL} (run npm run db:seed)`,
+  );
+
+  const collections = demoUser
+    ? await prisma.collection.findMany({
+        where: { userId: demoUser.id },
+        select: { name: true },
+      })
+    : [];
+  const collectionNames = collections.map((collection) => collection.name);
+  const missingCollections = EXPECTED_COLLECTION_NAMES.filter(
+    (name) => !collectionNames.includes(name),
+  );
+  check(
+    "demo collections",
+    demoUser !== null && missingCollections.length === 0,
+    missingCollections.length
+      ? `missing: ${list(missingCollections)} (run npm run db:seed)`
+      : `${EXPECTED_COLLECTION_NAMES.length}/${EXPECTED_COLLECTION_NAMES.length} seeded`,
+  );
+
+  const itemCount = demoUser
+    ? await prisma.item.count({ where: { userId: demoUser.id } })
+    : 0;
+  check(
+    "demo items",
+    itemCount >= EXPECTED_ITEM_COUNT,
+    itemCount >= EXPECTED_ITEM_COUNT
+      ? `${itemCount} seeded`
+      : `${itemCount}/${EXPECTED_ITEM_COUNT} seeded (run npm run db:seed)`,
   );
 
   return Promise.all([
