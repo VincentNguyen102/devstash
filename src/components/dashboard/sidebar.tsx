@@ -1,48 +1,17 @@
 "use client";
 
-import type { ComponentType, ReactNode } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  ChevronDown,
-  CodeXml,
-  File,
-  Image as ImageIcon,
-  Layers,
-  Link as LinkIcon,
-  Settings,
-  Sparkles,
-  Star,
-  StickyNote,
-  Terminal,
-} from "lucide-react";
+import { ChevronDown, CodeXml, Layers, Settings, Star } from "lucide-react";
 import { Collapsible } from "radix-ui";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { getTypeVisual } from "@/lib/item-type-meta";
 import { collections, currentUser, itemTypes } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
-
-const typeIcons: Record<string, ComponentType<{ className?: string }>> = {
-  CodeXml,
-  Sparkles,
-  Terminal,
-  StickyNote,
-  File,
-  Image: ImageIcon,
-  Link: LinkIcon,
-};
-
-const typeColors: Record<string, string> = {
-  "#60a5fa": "text-blue-400",
-  "#a78bfa": "text-violet-400",
-  "#fb923c": "text-orange-400",
-  "#facc15": "text-yellow-400",
-  "#94a3b8": "text-slate-400",
-  "#f472b6": "text-pink-400",
-  "#4ade80": "text-green-400",
-};
 
 interface NavRowProps {
   href: string;
@@ -169,7 +138,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <nav className="flex-1 overflow-y-auto px-2 py-3">
         <SidebarSection title="Types">
           {itemTypes.map((type) => {
-            const Icon = typeIcons[type.icon] ?? File;
+            const { Icon, textClass } = getTypeVisual(type.id);
             return (
               <NavRow
                 key={type.id}
@@ -179,12 +148,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 label={type.name}
                 count={type.itemCount}
                 icon={
-                  <Icon
-                    className={cn(
-                      "size-4 shrink-0",
-                      typeColors[type.color] ?? "text-muted-foreground"
-                    )}
-                  />
+                  <Icon aria-hidden className={cn("size-4 shrink-0", textClass)} />
                 }
               />
             );
