@@ -1,0 +1,174 @@
+// DevStash data model
+// Docs: https://www.prisma.io/docs/orm/prisma-schema/overview
+//
+// Prisma 7 notes:
+// - The `prisma-client` generator is required (the old `prisma-client-js` provider is deprecated).
+// - `output` is required and the generated client is imported from that path, not `@prisma/client`.
+// - `url`/`directUrl` are no longer configured here; they live in `prisma.config.ts`.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  isPro         Boolean   @default(false)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+
+  accounts    Account[]
+  sessions    Session[]
+  items       Item[]
+  itemTypes   ItemType[]
+  collections Collection[]
+  tags        Tag[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Item {
+  id          String  @id @default(cuid())
+  title       String
+  contentType String // text | file
+  content     String? // used for text types
+  fileUrl     String?
+  fileName    String?
+  fileSize    Int?
+  url         String?
+  description String?
+  language    String?
+  isFavorite  Boolean @default(false)
+  isPinned    Boolean @default(false)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  typeId String
+  type   ItemType @relation(fields: [typeId], references: [id], onDelete: Restrict)
+
+  collectionId String?
+  collection   Collection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+
+  tags ItemTag[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([typeId])
+  @@index([collectionId])
+  @@index([userId, createdAt])
+  @@index([userId, isPinned])
+}
+
+model ItemType {
+  id       String  @id @default(cuid())
+  name     String
+  icon     String?
+  color    String?
+  isSystem Boolean @default(false)
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  items Item[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model Collection {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  isFavorite  Boolean @default(false)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  items Item[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, isFavorite])
+}
+
+model Tag {
+  id   String @id @default(cuid())
+  name String
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  items ItemTag[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model ItemTag {
+  itemId String
+  tagId  String
+
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, tagId])
+  @@index([tagId])
+}
+
+// ---------------------------------------------------------------------------
+// NextAuth (Auth.js) models
+// Schema required by `@auth/prisma-adapter`:
+// https://authjs.dev/getting-started/adapters/prisma
+// ---------------------------------------------------------------------------
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
