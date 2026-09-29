@@ -1,11 +1,5 @@
 ## DevStash Project Specifications
 
-🚀 Centralized Developer Knowledge Hub
-
----
-
-## DevStash Project Specifications
-
 🚀 **Centralized Developer Knowledge Hub** for code snippets, AI prompts, docs, commands & more.
 
 ---
@@ -244,6 +238,13 @@ model ItemTag {
 
 - Mobile drawer for sidebar
 - Touch‑optimized icons and buttons
+
+### Screenshots
+
+Refer to the screenshots below as a base for the dashboard UI. It does not  have to be exact. Use it as a reference:
+
+- @context/screenshots/dashboard-ui-main.png
+- @context/screenshots/dashboard-ui-drawer.png
 
 ---
 
