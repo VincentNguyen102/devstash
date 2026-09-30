@@ -8,22 +8,24 @@ import {
   getCollectionStats,
   getRecentCollections,
 } from "@/lib/db/collections";
-import { items } from "@/lib/mock-data";
+import { getItemStats, getPinnedItems, getRecentItems } from "@/lib/db/items";
 
 const RECENT_ITEM_LIMIT = 10;
 
-function byMostRecent(a: { updatedAt: string }, b: { updatedAt: string }): number {
-  return b.updatedAt.localeCompare(a.updatedAt);
-}
-
 export default async function DashboardPage() {
-  const [recentCollections, collectionStats] = await Promise.all([
+  const [
+    recentCollections,
+    collectionStats,
+    itemStats,
+    pinnedItems,
+    recentItems,
+  ] = await Promise.all([
     getRecentCollections(),
     getCollectionStats(),
+    getItemStats(),
+    getPinnedItems(),
+    getRecentItems(RECENT_ITEM_LIMIT),
   ]);
-
-  const pinnedItems = items.filter((item) => item.isPinned).sort(byMostRecent);
-  const recentItems = [...items].sort(byMostRecent).slice(0, RECENT_ITEM_LIMIT);
 
   return (
     <div className="space-y-8">
@@ -33,9 +35,9 @@ export default async function DashboardPage() {
       </header>
 
       <DashboardStats
-        itemCount={items.length}
+        itemCount={itemStats.total}
         collectionCount={collectionStats.total}
-        favoriteItemCount={items.filter((item) => item.isFavorite).length}
+        favoriteItemCount={itemStats.favorites}
         favoriteCollectionCount={collectionStats.favorites}
       />
 
@@ -48,14 +50,16 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <section className="space-y-4">
-        <SectionHeading title="Pinned" icon={<Pin className="size-4" />} />
-        <div className="space-y-3">
-          {pinnedItems.map((item) => (
-            <ItemRow key={item.id} item={item} />
-          ))}
-        </div>
-      </section>
+      {pinnedItems.length > 0 ? (
+        <section className="space-y-4">
+          <SectionHeading title="Pinned" icon={<Pin className="size-4" />} />
+          <div className="space-y-3">
+            {pinnedItems.map((item) => (
+              <ItemRow key={item.id} item={item} />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="space-y-4">
         <SectionHeading title="Recent Items" />

@@ -1,8 +1,8 @@
 import { Pin, Star } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import type { ItemSummary } from "@/lib/db/items";
 import { getTypeVisual } from "@/lib/item-type-meta";
-import type { Item } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -11,11 +11,16 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
 });
 
-export function ItemRow({ item }: { item: Item }) {
-  const { Icon, textClass, bgClass } = getTypeVisual(item.typeId);
+export function ItemRow({ item }: { item: ItemSummary }) {
+  const { Icon, textClass, bgClass, borderClass } = getTypeVisual(item.typeId);
 
   return (
-    <article className="flex items-start gap-3 rounded-xl bg-card p-3 ring-1 ring-foreground/10 sm:gap-4 sm:p-4">
+    <article
+      className={cn(
+        "flex items-start gap-3 rounded-xl bg-card p-3 ring-1 sm:gap-4 sm:p-4",
+        borderClass
+      )}
+    >
       <span
         className={cn(
           "flex size-9 shrink-0 items-center justify-center rounded-lg",
@@ -53,10 +58,10 @@ export function ItemRow({ item }: { item: Item }) {
       </div>
 
       <time
-        dateTime={item.updatedAt}
+        dateTime={item.updatedAt.toISOString()}
         className="shrink-0 text-xs text-muted-foreground"
       >
-        {dateFormatter.format(new Date(item.updatedAt))}
+        {dateFormatter.format(item.updatedAt)}
       </time>
     </article>
   );
