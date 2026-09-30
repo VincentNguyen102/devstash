@@ -8,17 +8,30 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import type { CollectionSummary } from "@/lib/db/collections";
 import { getTypeVisual } from "@/lib/item-type-meta";
-import type { Collection } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
-export function CollectionCard({ collection }: { collection: Collection }) {
+export function CollectionCard({
+  collection,
+}: {
+  collection: CollectionSummary;
+}) {
+  const borderClass = collection.dominantTypeId
+    ? getTypeVisual(collection.dominantTypeId).borderClass
+    : undefined;
+
   return (
     <Link
       href={`/collections/${collection.id}`}
       className="rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
-      <Card className="h-full transition-shadow hover:ring-foreground/25">
+      <Card
+        className={cn(
+          "h-full transition-shadow hover:ring-foreground/25",
+          borderClass
+        )}
+      >
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <span className="truncate">{collection.name}</span>

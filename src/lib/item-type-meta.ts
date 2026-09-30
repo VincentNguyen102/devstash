@@ -18,6 +18,8 @@ export interface TypeVisual {
   textClass: string;
   /** Tinted background class for icon containers. */
   bgClass: string;
+  /** Border (ring) colour class, e.g. for a card tied to this type. */
+  borderClass: string;
 }
 
 const ICONS: Record<string, LucideIcon> = {
@@ -31,18 +33,47 @@ const ICONS: Record<string, LucideIcon> = {
 };
 
 const VISUALS_BY_TYPE_ID: Record<string, Omit<TypeVisual, "Icon">> = {
-  snippet: { textClass: "text-blue-400", bgClass: "bg-blue-400/10" },
-  prompt: { textClass: "text-violet-400", bgClass: "bg-violet-400/10" },
-  command: { textClass: "text-orange-400", bgClass: "bg-orange-400/10" },
-  note: { textClass: "text-yellow-400", bgClass: "bg-yellow-400/10" },
-  file: { textClass: "text-slate-400", bgClass: "bg-slate-400/10" },
-  image: { textClass: "text-pink-400", bgClass: "bg-pink-400/10" },
-  url: { textClass: "text-green-400", bgClass: "bg-green-400/10" },
+  snippet: {
+    textClass: "text-blue-400",
+    bgClass: "bg-blue-400/10",
+    borderClass: "ring-blue-400/40",
+  },
+  prompt: {
+    textClass: "text-violet-400",
+    bgClass: "bg-violet-400/10",
+    borderClass: "ring-violet-400/40",
+  },
+  command: {
+    textClass: "text-orange-400",
+    bgClass: "bg-orange-400/10",
+    borderClass: "ring-orange-400/40",
+  },
+  note: {
+    textClass: "text-yellow-400",
+    bgClass: "bg-yellow-400/10",
+    borderClass: "ring-yellow-400/40",
+  },
+  file: {
+    textClass: "text-slate-400",
+    bgClass: "bg-slate-400/10",
+    borderClass: "ring-slate-400/40",
+  },
+  image: {
+    textClass: "text-pink-400",
+    bgClass: "bg-pink-400/10",
+    borderClass: "ring-pink-400/40",
+  },
+  url: {
+    textClass: "text-green-400",
+    bgClass: "bg-green-400/10",
+    borderClass: "ring-green-400/40",
+  },
 };
 
 const FALLBACK_VISUAL: Omit<TypeVisual, "Icon"> = {
   textClass: "text-muted-foreground",
   bgClass: "bg-muted",
+  borderClass: "ring-foreground/10",
 };
 
 /** Look up an item type by id. */

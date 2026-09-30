@@ -4,7 +4,11 @@ import { CollectionCard } from "@/components/dashboard/collection-card";
 import { ItemRow } from "@/components/dashboard/item-row";
 import { SectionHeading } from "@/components/dashboard/section-heading";
 import { DashboardStats } from "@/components/dashboard/stat-cards";
-import { collections, items } from "@/lib/mock-data";
+import {
+  getCollectionStats,
+  getRecentCollections,
+} from "@/lib/db/collections";
+import { items } from "@/lib/mock-data";
 
 const RECENT_ITEM_LIMIT = 10;
 
@@ -12,8 +16,12 @@ function byMostRecent(a: { updatedAt: string }, b: { updatedAt: string }): numbe
   return b.updatedAt.localeCompare(a.updatedAt);
 }
 
-export default function DashboardPage() {
-  const recentCollections = [...collections].sort(byMostRecent);
+export default async function DashboardPage() {
+  const [recentCollections, collectionStats] = await Promise.all([
+    getRecentCollections(),
+    getCollectionStats(),
+  ]);
+
   const pinnedItems = items.filter((item) => item.isPinned).sort(byMostRecent);
   const recentItems = [...items].sort(byMostRecent).slice(0, RECENT_ITEM_LIMIT);
 
@@ -26,11 +34,9 @@ export default function DashboardPage() {
 
       <DashboardStats
         itemCount={items.length}
-        collectionCount={collections.length}
+        collectionCount={collectionStats.total}
         favoriteItemCount={items.filter((item) => item.isFavorite).length}
-        favoriteCollectionCount={
-          collections.filter((collection) => collection.isFavorite).length
-        }
+        favoriteCollectionCount={collectionStats.favorites}
       />
 
       <section className="space-y-4">
