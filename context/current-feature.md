@@ -1,28 +1,18 @@
-# Current Feature: Add Pro Badge to Sidebar
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-In Progress
+Not Started
 
 ## Goals
 
 <!-- Goals & requirements -->
 
-- Add a PRO badge to the file and image item types in the sidebar
-- Use the ShadCN UI Badge component (`src/components/ui/badge.tsx`)
-- Keep the badge clean and subtle
-- Render the label as all uppercase "PRO"
-
 ## Notes
 
 <!-- Any extra notes -->
-
-- Spec reference: `@context/features/add-pro-badge-sidebar.md`
-- Only the `file` and `image` system item types get the badge (stable slugs; see `src/lib/item-type-meta.ts` and `prisma/seed.ts`)
-- Sidebar is `src/components/dashboard/sidebar.tsx`; it renders DB-backed item types passed down through `DashboardShell` from the `(dashboard)` server layout
-- `Badge` component already exists at `src/components/ui/badge.tsx`
 
 ## History
 
@@ -38,3 +28,4 @@ In Progress
 - Dashboard items completed — added `src/lib/db/items.ts` (`getPinnedItems`, `getRecentItems`, `getItemStats`) to fetch the demo user's items from Neon with Prisma and map the `ItemTag` -> `Tag` relation to tag names; the dashboard server component now renders real pinned and recent item rows (icon and border colour derived from the item type), passes real item/favorite-item counts to the stat cards, and omits the Pinned section when there are no pinned items; `ItemRow` now takes the DB-backed `ItemSummary` type and handles `updatedAt` as a `Date`; the sidebar and collection pages still use `src/lib/mock-data.ts`
 - Stats & sidebar completed — added `getItemTypes()` to `src/lib/db/items.ts` (system item types with the demo user's per-type counts via `groupBy`, returned in canonical order) and `getCollections()` to `src/lib/db/collections.ts` (shared mapper with `getRecentCollections`); the `(dashboard)` server layout fetches both and passes them through `DashboardShell`, so the sidebar now renders DB-backed system types with real counts/icons, favorite collections with stars and recents with a colored circle derived from the dominant type, plus a "View all collections" link and a new `/collections` listing page; `src/lib/item-type-meta.ts` no longer imports `mock-data` (icons resolve from a local map or the DB-provided icon name); removed a stray debug `console.log` in `items.ts`
 - Connected the repo to Vercel
+- Add Pro Badge to Sidebar completed — added the Feature Workflow skill (`.agents/skills/feature/`) and the `context/features/add-pro-badge-sidebar.md` spec; the sidebar now renders a subtle ShadCN `Badge` ("PRO", `outline` variant) before the item count for the `file` and `image` item types, gated by a `PRO_TYPE_IDS` set in `src/components/dashboard/sidebar.tsx`
