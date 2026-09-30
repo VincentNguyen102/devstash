@@ -24,12 +24,10 @@ export interface CollectionStats {
 }
 
 /**
- * Most recent collections for the dashboard grid, including the item type
- * breakdown used to render the type icons and the card border colour.
+ * Query the demo user's collections, most recently updated first, including the
+ * item type breakdown used to render the type icons and border colours.
  */
-export async function getRecentCollections(
-  limit = 6,
-): Promise<CollectionSummary[]> {
+async function findCollections(limit?: number): Promise<CollectionSummary[]> {
   // Prisma queries are not tied to a request-time API, so opt into dynamic
   // rendering explicitly instead of baking the result into a static shell.
   await connection();
@@ -68,6 +66,18 @@ export async function getRecentCollections(
       dominantTypeId: typeIds[0] ?? null,
     };
   });
+}
+
+/** Most recent collections for the dashboard grid. */
+export async function getRecentCollections(
+  limit = 6,
+): Promise<CollectionSummary[]> {
+  return findCollections(limit);
+}
+
+/** All of the demo user's collections, for the sidebar. */
+export async function getCollections(): Promise<CollectionSummary[]> {
+  return findCollections();
 }
 
 /** Aggregate collection counts for the dashboard stat cards. */

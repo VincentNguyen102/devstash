@@ -9,8 +9,10 @@ import { Collapsible } from "radix-ui";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import type { CollectionSummary } from "@/lib/db/collections";
+import type { ItemTypeSummary } from "@/lib/db/items";
 import { getTypeVisual } from "@/lib/item-type-meta";
-import { collections, currentUser, itemTypes } from "@/lib/mock-data";
+import { currentUser } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
 interface NavRowProps {
@@ -113,16 +115,21 @@ function UserNav() {
   );
 }
 
-export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+export function SidebarContent({
+  types,
+  collections,
+  onNavigate,
+}: {
+  types: ItemTypeSummary[];
+  collections: CollectionSummary[];
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
 
-  const sortedCollections = [...collections].sort((a, b) =>
-    b.updatedAt.localeCompare(a.updatedAt)
-  );
-  const favoriteCollections = sortedCollections.filter(
+  const favoriteCollections = collections.filter(
     (collection) => collection.isFavorite
   );
-  const recentCollections = sortedCollections.filter(
+  const recentCollections = collections.filter(
     (collection) => !collection.isFavorite
   );
 
@@ -137,8 +144,8 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       <nav className="flex-1 overflow-y-auto px-2 py-3">
         <SidebarSection title="Types">
-          {itemTypes.map((type) => {
-            const { Icon, textClass } = getTypeVisual(type.id);
+          {types.map((type) => {
+            const { Icon, textClass } = getTypeVisual(type.id, type.icon);
             return (
               <NavRow
                 key={type.id}
@@ -188,10 +195,28 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               label={collection.name}
               count={collection.itemCount}
               icon={
-                <Layers className="size-4 shrink-0 text-muted-foreground" />
+                collection.dominantTypeId ? (
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "size-2.5 shrink-0 rounded-full bg-current",
+                      getTypeVisual(collection.dominantTypeId).textClass
+                    )}
+                  />
+                ) : (
+                  <Layers className="size-4 shrink-0 text-muted-foreground" />
+                )
               }
             />
           ))}
+
+          <Link
+            href="/collections"
+            onClick={onNavigate}
+            className="flex items-center rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          >
+            View all collections
+          </Link>
         </SidebarSection>
       </nav>
 

@@ -22,6 +22,32 @@ export interface ItemStats {
   favorites: number;
 }
 
+export interface ItemTypeSummary {
+  id: string;
+  name: string;
+  icon: string | null;
+  color: string | null;
+  /** Number of the demo user's items of this type. */
+  itemCount: number;
+}
+
+// Display order for the built-in item types. Ids are stable slugs, so this keeps
+// the sidebar order deterministic without an explicit column in the database.
+const SYSTEM_TYPE_ORDER = [
+  "snippet",
+  "prompt",
+  "command",
+  "note",
+  "file",
+  "image",
+  "url",
+];
+
+function systemTypeOrder(typeId: string): number {
+  const index = SYSTEM_TYPE_ORDER.indexOf(typeId);
+  return index === -1 ? SYSTEM_TYPE_ORDER.length : index;
+}
+
 /** Query the demo user's items, newest first, mapped to the row shape. */
 async function findItemSummaries(
   filter: { isPinned?: boolean },
@@ -42,8 +68,6 @@ async function findItemSummaries(
       tags: { select: { tag: { select: { name: true } } } },
     },
   });
-
-  console.log("items", items);
 
   return items.map((item) => ({
     id: item.id,
@@ -85,4 +109,38 @@ export async function getItemStats(): Promise<ItemStats> {
   ]);
 
   return { total, favorites };
+}
+
+/**
+ * The system item types with the demo user's item count per type, for the
+ * sidebar. Types with no items are included so the full set is always visible.
+ */
+export async function getItemTypes(): Promise<ItemTypeSummary[]> {
+  await connection();
+
+  const [types, counts] = await Promise.all([
+    prisma.itemType.findMany({ where: { isSystem: true } }),
+    prisma.item.groupBy({
+      by: ["typeId"],
+      where: { user: { email: DEMO_USER_EMAIL } },
+      _count: { _all: true },
+    }),
+  ]);
+
+  console.log("item types", types);
+  console.log("item counts", counts);
+
+  const countByTypeId = new Map(
+    counts.map(({ typeId, _count }) => [typeId, _count._all])
+  );
+
+  return types
+    .map((type) => ({
+      id: type.id,
+      name: type.name,
+      icon: type.icon,
+      color: type.color,
+      itemCount: countByTypeId.get(type.id) ?? 0,
+    }))
+    .sort((a, b) => systemTypeOrder(a.id) - systemTypeOrder(b.id));
 }

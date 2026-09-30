@@ -9,8 +9,6 @@ import {
   Terminal,
 } from "lucide-react";
 
-import { itemTypes, type ItemType } from "@/lib/mock-data";
-
 export interface TypeVisual {
   /** Icon component for the item type. */
   Icon: LucideIcon;
@@ -22,6 +20,7 @@ export interface TypeVisual {
   borderClass: string;
 }
 
+/** Lucide icons keyed by the icon name stored on an `ItemType` row. */
 const ICONS: Record<string, LucideIcon> = {
   CodeXml,
   Sparkles,
@@ -30,6 +29,17 @@ const ICONS: Record<string, LucideIcon> = {
   File,
   Image: ImageIcon,
   Link: LinkIcon,
+};
+
+/** Canonical icon for each system item type id. */
+const ICON_BY_TYPE_ID: Record<string, LucideIcon> = {
+  snippet: CodeXml,
+  prompt: Sparkles,
+  command: Terminal,
+  note: StickyNote,
+  file: File,
+  image: ImageIcon,
+  url: LinkIcon,
 };
 
 const VISUALS_BY_TYPE_ID: Record<string, Omit<TypeVisual, "Icon">> = {
@@ -76,17 +86,23 @@ const FALLBACK_VISUAL: Omit<TypeVisual, "Icon"> = {
   borderClass: "ring-foreground/10",
 };
 
-/** Look up an item type by id. */
-export function getType(typeId: string): ItemType | undefined {
-  return itemTypes.find((type) => type.id === typeId);
-}
-
-/** Resolve the icon and colour classes for an item type. */
-export function getTypeVisual(typeId: string): TypeVisual {
-  const type = getType(typeId);
+/**
+ * Resolve the icon and colour classes for an item type.
+ *
+ * `iconName` is the lucide icon name stored on the `ItemType` row and takes
+ * precedence, so database-backed types render their own icon. Custom types with
+ * an unknown name fall back to the canonical system icon and, failing that, a
+ * generic file icon.
+ */
+export function getTypeVisual(
+  typeId: string,
+  iconName?: string | null
+): TypeVisual {
+  const Icon =
+    (iconName ? ICONS[iconName] : undefined) ?? ICON_BY_TYPE_ID[typeId] ?? File;
 
   return {
-    Icon: (type ? ICONS[type.icon] : undefined) ?? File,
+    Icon,
     ...(VISUALS_BY_TYPE_ID[typeId] ?? FALLBACK_VISUAL),
   };
 }

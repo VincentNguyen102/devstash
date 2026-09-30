@@ -4,9 +4,21 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import { SidebarContent } from "@/components/dashboard/sidebar";
 import { TopBar } from "@/components/dashboard/top-bar";
+import type { CollectionSummary } from "@/lib/db/collections";
+import type { ItemTypeSummary } from "@/lib/db/items";
 import { cn } from "@/lib/utils";
 
-export function DashboardShell({ children }: { children: ReactNode }) {
+interface DashboardShellProps {
+  children: ReactNode;
+  types: ItemTypeSummary[];
+  collections: CollectionSummary[];
+}
+
+export function DashboardShell({
+  children,
+  types,
+  collections,
+}: DashboardShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -38,7 +50,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         )}
       >
         <div className="h-full w-64">
-          <SidebarContent />
+          <SidebarContent types={types} collections={collections} />
         </div>
       </aside>
 
@@ -61,7 +73,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             className="absolute inset-0 h-full w-full cursor-default bg-black/50"
           />
           <aside className="absolute inset-y-0 left-0 w-64 border-r border-sidebar-border shadow-xl">
-            <SidebarContent onNavigate={() => setMobileOpen(false)} />
+            <SidebarContent
+              types={types}
+              collections={collections}
+              onNavigate={() => setMobileOpen(false)}
+            />
           </aside>
         </div>
       ) : null}
