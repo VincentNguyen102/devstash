@@ -1,47 +1,28 @@
-# Current Feature
-
-Stats & Sidebar — Wire Dashboard Stats, Item Types and Collections to the Database
+# Current Feature: Add Pro Badge to Sidebar
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+<!-- Not Started|In Progress|Complete -->
 
-Completed
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
-See @context/features/stats-sidebar-spec.md
-
-- Show the main-area stats from the database instead of `src/lib/mock-data.ts`
-- Show the system item types in the sidebar with their icons and real item counts, linking to `/items/[typename]`
-- Show the actual collection data from the database in the sidebar
-- Add a "View all collections" link under the collections list that goes to `/collections`
-- Keep the star icons for favorite collections; for recents show a colored circle based on the most-used item type in the collection
-- Create `src/lib/db/items.ts` and add the database functions (the file already exists from the dashboard items feature — extend it)
+- Add a PRO badge to the file and image item types in the sidebar
+- Use the ShadCN UI Badge component (`src/components/ui/badge.tsx`)
+- Keep the badge clean and subtle
+- Render the label as all uppercase "PRO"
 
 ## Notes
 
 <!-- Any extra notes -->
 
-- Spec reference: `@context/features/stats-sidebar-spec.md`
-- Main-area stat cards already read from the database; the sidebar still imports `itemTypes`, `collections` and `currentUser` from `src/lib/mock-data.ts`
-- `src/lib/db/collections.ts` already exposes `dominantTypeId` on `CollectionSummary`; extend it with a function that returns the sidebar's collections
-- The sidebar is a client component, so the `(dashboard)` server layout fetches the data and passes it down through `DashboardShell`
-- System item type ids are stable slugs (`snippet`, `prompt`, `command`, `note`, `file`, `image`, `url`) matching the keys in `src/lib/item-type-meta.ts`
-- Follow the established pattern: server components fetch directly with Prisma, scoped to the seeded demo user and using `connection()` to opt into dynamic rendering — see `src/lib/prisma.ts`
-
-### Implementation
-
-- `src/lib/db/items.ts` — add `ItemTypeSummary` and `getItemTypes()`; fetch the system item types plus the demo user's per-type item counts (via `groupBy`) and return them in the canonical type order
-- `src/lib/db/collections.ts` — add `getSidebarCollections()` (all of the demo user's collections with their dominant type) and extract the shared mapper used by `getRecentCollections`
-- `src/lib/item-type-meta.ts` — resolve icons from a local system-type map and an optional DB-provided icon name instead of importing `mock-data`
-- `src/app/(dashboard)/layout.tsx` — fetch item types + collections in the server layout and pass them to `DashboardShell`
-- `src/components/dashboard/dashboard-shell.tsx` — accept the DB data and forward it to both sidebar instances (desktop + mobile)
-- `src/components/dashboard/sidebar.tsx` — render the DB system types with real counts, favorite collections with stars, recents with a colored circle derived from the dominant type, and a "View all collections" link to `/collections`
-- `src/app/(dashboard)/collections/page.tsx` — minimal all-collections listing so the new link resolves
-- `src/lib/mock-data.ts` — still used for the sidebar user and the item/collection detail placeholders; leave those untouched
+- Spec reference: `@context/features/add-pro-badge-sidebar.md`
+- Only the `file` and `image` system item types get the badge (stable slugs; see `src/lib/item-type-meta.ts` and `prisma/seed.ts`)
+- Sidebar is `src/components/dashboard/sidebar.tsx`; it renders DB-backed item types passed down through `DashboardShell` from the `(dashboard)` server layout
+- `Badge` component already exists at `src/components/ui/badge.tsx`
 
 ## History
 

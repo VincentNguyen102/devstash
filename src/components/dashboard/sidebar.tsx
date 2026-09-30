@@ -7,6 +7,7 @@ import { ChevronDown, CodeXml, Layers, Settings, Star } from "lucide-react";
 import { Collapsible } from "radix-ui";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import type { CollectionSummary } from "@/lib/db/collections";
@@ -14,6 +15,9 @@ import type { ItemTypeSummary } from "@/lib/db/items";
 import { getTypeVisual } from "@/lib/item-type-meta";
 import { currentUser } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
+
+/** System item types that require a Pro membership. */
+const PRO_TYPE_IDS = new Set(["file", "image"]);
 
 interface NavRowProps {
   href: string;
@@ -154,6 +158,16 @@ export function SidebarContent({
                 active={pathname === `/items/${type.id}`}
                 label={type.name}
                 count={type.itemCount}
+                trailing={
+                  PRO_TYPE_IDS.has(type.id) ? (
+                    <Badge
+                      variant="outline"
+                      className="h-4 rounded-full px-1.5 text-[0.625rem] font-semibold tracking-wide text-muted-foreground"
+                    >
+                      PRO
+                    </Badge>
+                  ) : undefined
+                }
                 icon={
                   <Icon aria-hidden className={cn("size-4 shrink-0", textClass)} />
                 }
