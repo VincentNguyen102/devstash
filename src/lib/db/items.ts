@@ -127,9 +127,6 @@ export async function getItemTypes(): Promise<ItemTypeSummary[]> {
     }),
   ]);
 
-  console.log("item types", types);
-  console.log("item counts", counts);
-
   const countByTypeId = new Map(
     counts.map(({ typeId, _count }) => [typeId, _count._all])
   );
