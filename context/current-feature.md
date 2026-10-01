@@ -1,36 +1,18 @@
-# Current Feature: Email Verification on Register
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-In Progress
+Not Started
 
 ## Goals
 
 <!-- Goals & requirements -->
 
-- After registering, send a verification email to the new user via **Resend**.
-- The email contains a unique, clickable verification link.
-- Clicking the link verifies the user's email (sets `User.emailVerified`) and shows a clear success state.
-- Unverified users cannot sign in — the Credentials sign-in must reject accounts that have not verified their email, with a clear error message (and ideally an option to resend the email).
-- Verification links must be single-use and time-limited (expiry), with user-friendly handling for expired or already-used links.
-- Registration success UI reflects the new flow: tell the user to check their inbox instead of "you can now sign in."
-
 ## Notes
 
 <!-- Any extra notes -->
-
-- Email provider: **Resend** (`resend` npm package). `RESEND_API_KEY` is now present in `.env`; `RESEND_FROM_EMAIL` and `NEXT_PUBLIC_APP_URL` were documented in `.env.example`.
-  - ⚠️ The Resend account is still in **test mode**, so it can only deliver to the account owner's address. To email real users, verify a domain at resend.com/domains and set `RESEND_FROM_EMAIL` to an address on that domain.
-- Existing pieces we can build on:
-  - `User.emailVerified DateTime?` already exists in `prisma/schema.prisma`.
-  - The Auth.js `VerificationToken` model already exists — reusable for email-verification tokens (hashed tokens recommended).
-  - Registration lives in `src/app/api/auth/register/route.ts` (zod validation, bcrypt 12 rounds, 409 on duplicates).
-  - The register form (`src/components/auth/register-form.tsx`) currently toasts "Account created — you can now sign in." and routes to `/sign-in`.
-  - Credentials sign-in is in `src/auth.ts` (`authorize`) — the natural place to gate on `emailVerified`; `session.strategy` is JWT.
-- Suggested routes/pages: `GET /api/auth/verify-email` or `GET /verify-email?token=...` for the link, plus a resend endpoint/action; keep the token out of logs.
-- Use zod for input validation and the `{ success, data, error }` return pattern per coding standards; add `RESEND_API_KEY` usage server-side only.
 
 ## History
 
@@ -50,3 +32,4 @@ In Progress
 - Auth Phase 1 completed — set up NextAuth v5 (`next-auth@5.0.0-beta.32`) with the split config pattern: `src/auth.config.ts` (edge-safe, GitHub provider + `trustHost`) and `src/auth.ts` (Prisma adapter + JWT strategy + a session callback exposing `session.user.id`); added the Auth.js route handler at `src/app/api/auth/[...nextauth]/route.ts`, protected `/dashboard/*` with a named-export Next.js 16 proxy at `src/proxy.ts` that redirects unauthenticated users to the default sign-in page with a `callbackUrl`, and added `src/types/next-auth.d.ts` to extend the `Session` type with `user.id`; documented `AUTH_SECRET`/`AUTH_GITHUB_ID`/`AUTH_GITHUB_SECRET` in `.env.example`; verified `npm run build` + `npm run lint` and the GitHub OAuth handoff (302 to GitHub with PKCE)
 - Auth Phase 2 (Credentials / Email-Password) completed — added the Credentials provider using the split pattern (`auth.config.ts` holds an edge-safe `authorize: () => null` placeholder; `auth.ts` provides the real bcrypt validation via `compare` against the stored hash) and added `POST /api/auth/register` (`src/app/api/auth/register/route.ts`) which validates `name/email/password/confirmPassword` with zod, rejects duplicate emails (409), hashes with bcryptjs at 12 rounds and creates the user; added `zod` as a dependency; no Prisma migration needed (`User.password` already existed from the initial migration); verified `npm run build` + `npm run lint` and end-to-end checks (register 201, duplicate 409, password mismatch 400, credentials login 302 → `/dashboard` with a session exposing `user.id`, GitHub handoff still works)
 - Auth Phase 3 (UI: Sign In, Register & Sign Out) completed — replaced the default Auth.js pages with custom `src/app/sign-in` and `src/app/register` pages (credentials via a server action with inline errors, GitHub button, link between the pages) plus `src/actions/auth.ts`; added a reusable `UserAvatar` (GitHub image or initials via `getInitials`) and a sidebar `UserMenu` dropdown (Radix) with a Profile link and client `signOut({ redirectTo: "/sign-in" })`; set `pages.signIn = "/sign-in"` and extended the proxy matcher to protect the whole `(dashboard)` group (`/dashboard`, `/collections`, `/items`, `/profile`), redirecting to `/sign-in`; added a placeholder `/profile` page and a `sonner` toast ("Account created — you can now sign in.") on successful registration with `<Toaster />` mounted in the root layout; added `sonner` as a dependency; verified `npm run build` + `npm run lint` and the full flow in a real browser (credentials login, sidebar avatar + dropdown, sign-out redirect, register → toast → `/sign-in`)
+- Email Verification on Register completed — added Resend-based email verification: `src/lib/email-verification.ts` issues SHA-256-hashed, single-use tokens (24h TTL) in the existing Auth.js `VerificationToken` table (resending invalidates prior links) and `src/lib/email.ts` sends a dark-themed verification email via Resend (dev-only fallback logs the link when `RESEND_API_KEY` is missing); `POST /api/auth/register` now creates a token and sends the email without rolling back the account on delivery failure; `GET /api/auth/verify-email` consumes the token and redirects to `/verify-email` (`success`/`expired`/`invalid`/`error` states) and a new `/check-email` page plus a resend server action (`src/actions/email-verification.ts`) let users request a fresh link without revealing which emails have accounts; `src/auth.ts` gates the Credentials provider on `emailVerified` via a `CredentialsSignin` subclass (`code: email_not_verified`) surfaced by `src/actions/auth.ts`/`sign-in-form.tsx` with a "Send a new link" link (GitHub OAuth is unaffected); updated `register-form.tsx` to redirect to `/check-email` and documented `RESEND_API_KEY`/`RESEND_FROM_EMAIL`/`NEXT_PUBLIC_APP_URL` in `.env.example`; verified `npm run build` + `npm run lint` and end-to-end (register 201, unverified sign-in → `code=email_not_verified`, wrong password → generic, valid token → success, reuse → invalid, expired → expired+email, verified sign-in → 302 `/dashboard` with session); note: the Resend account is in test mode so it only delivers to the account owner until a domain is verified
