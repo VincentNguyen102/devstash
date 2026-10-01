@@ -1,43 +1,18 @@
-# Current Feature: Forgot Password
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-In Progress
+Not Started
 
 ## Goals
 
 <!-- Goals & requirements -->
 
-- Add a **"Forgot password?"** link on the sign-in page pointing to `/forgot-password`.
-- `/forgot-password` page + form: the user enters their email; submitting always shows the same generic confirmation ("If an account exists for that email, we've sent a reset link.") so registered addresses can't be enumerated.
-- When an account with a password exists, issue a single-use, time-limited reset token and email a link.
-- **Reuse the existing `VerificationToken` model** for reset tokens — no new Prisma model/migration.
-- Namespace the token identifier (e.g. `password-reset:<email>`) so reset tokens neither collide with nor invalidate email-verification tokens (which use the bare email), and vice versa.
-- Invalidate any outstanding reset tokens for that email before issuing a new one.
-- Reset tokens are hashed at rest (sha256) and never logged; TTL ~1 hour.
-- The email link points to `/reset-password?token=...`. The page validates the token server-side (read-only, does **not** consume it) and renders the new-password form; invalid/expired shows a clear message + link back to `/forgot-password`.
-- Submitting the form (server action) validates `password`/`confirmPassword` with zod (min 8, must match), hashes with bcryptjs at 12 rounds, updates `User.password`, consumes (deletes) the token, and redirects to `/sign-in` with a success notice.
-- Reuse Resend for delivery via a new `sendPasswordResetEmail` helper.
-- Password reset is **independent of `EMAIL_VERIFICATION_ENABLED`** — it works whether verification is on or off (accounts have passwords either way).
-- Verify with `npm run build` + `npm run lint` and end-to-end (request → token consumed once → old password rejected → new password signs in; reuse/expired token rejected; unknown email keeps the flow generic).
-
 ## Notes
 
 <!-- Any extra notes -->
-
-- **Touch points:**
-  - `src/lib/password-reset.ts` (new) — `createPasswordResetToken(email)`, `verifyPasswordResetToken(token)` (read-only, used by the page), `consumePasswordResetToken(token, newPassword)` (validates + updates `User.password` + deletes token), `buildPasswordResetUrl(token)`, TTL constant.
-  - `src/lib/email.ts` — add `sendPasswordResetEmail({ to, name, url })` alongside the existing verification email (share the Resend client / sender-from logic).
-  - `src/actions/password-reset.ts` (new) — `requestPasswordReset` and `submitPasswordReset` server actions (return the `{ success, data, error }` state shape, like `actions/email-verification.ts`).
-  - `src/app/forgot-password/page.tsx` (new) + `src/components/auth/forgot-password-form.tsx` (new, client, `useActionState`).
-  - `src/app/reset-password/page.tsx` (new) + `src/components/auth/reset-password-form.tsx` (new, client, hidden token field).
-  - `src/app/sign-in/page.tsx` / `src/components/auth/sign-in-form.tsx` — add the "Forgot password?" link; optionally show the success notice from `?reset=success`.
-- **Token collision safeguard:** because `verifyEmailToken()` currently looks up by token hash alone and deletes by `identifier`, add an identifier-prefix guard to the reset lookup (and consider guarding `verifyEmailToken` with the bare-email form) so a token from one flow can never be consumed by the other. Alternatively extract a shared `hashToken`/token helper.
-- **Email delivery caveat:** the Resend account is still in **test mode**, so reset mail only reaches the account owner. A dev-only fallback will log the reset link (see confirmed decisions) so the flow is testable locally.
-- **Security / future:** do not reveal account existence; token single-use + expiry; consider rate limiting; JWT sessions can't be revoked server-side, so note that existing sessions aren't invalidated on reset. Decide whether a successful reset should also set `emailVerified` (recommend: leave it alone — out of scope).
-- **Decisions (confirmed):** reset token TTL = **1 hour**; in development, log the reset link via `console.warn` when delivery fails or is unconfigured (same fallback style as the verification email).
 
 ## History
 
@@ -59,3 +34,4 @@ In Progress
 - Auth Phase 3 (UI: Sign In, Register & Sign Out) completed — replaced the default Auth.js pages with custom `src/app/sign-in` and `src/app/register` pages (credentials via a server action with inline errors, GitHub button, link between the pages) plus `src/actions/auth.ts`; added a reusable `UserAvatar` (GitHub image or initials via `getInitials`) and a sidebar `UserMenu` dropdown (Radix) with a Profile link and client `signOut({ redirectTo: "/sign-in" })`; set `pages.signIn = "/sign-in"` and extended the proxy matcher to protect the whole `(dashboard)` group (`/dashboard`, `/collections`, `/items`, `/profile`), redirecting to `/sign-in`; added a placeholder `/profile` page and a `sonner` toast ("Account created — you can now sign in.") on successful registration with `<Toaster />` mounted in the root layout; added `sonner` as a dependency; verified `npm run build` + `npm run lint` and the full flow in a real browser (credentials login, sidebar avatar + dropdown, sign-out redirect, register → toast → `/sign-in`)
 - Email Verification on Register completed — added Resend-based email verification: `src/lib/email-verification.ts` issues SHA-256-hashed, single-use tokens (24h TTL) in the existing Auth.js `VerificationToken` table (resending invalidates prior links) and `src/lib/email.ts` sends a dark-themed verification email via Resend (dev-only fallback logs the link when `RESEND_API_KEY` is missing); `POST /api/auth/register` now creates a token and sends the email without rolling back the account on delivery failure; `GET /api/auth/verify-email` consumes the token and redirects to `/verify-email` (`success`/`expired`/`invalid`/`error` states) and a new `/check-email` page plus a resend server action (`src/actions/email-verification.ts`) let users request a fresh link without revealing which emails have accounts; `src/auth.ts` gates the Credentials provider on `emailVerified` via a `CredentialsSignin` subclass (`code: email_not_verified`) surfaced by `src/actions/auth.ts`/`sign-in-form.tsx` with a "Send a new link" link (GitHub OAuth is unaffected); updated `register-form.tsx` to redirect to `/check-email` and documented `RESEND_API_KEY`/`RESEND_FROM_EMAIL`/`NEXT_PUBLIC_APP_URL` in `.env.example`; verified `npm run build` + `npm run lint` and end-to-end (register 201, unverified sign-in → `code=email_not_verified`, wrong password → generic, valid token → success, reuse → invalid, expired → expired+email, verified sign-in → 302 `/dashboard` with session); note: the Resend account is in test mode so it only delivers to the account owner until a domain is verified
 - Toggle Email Verification completed — added `isEmailVerificationEnabled()` to `src/lib/email-verification.ts`, reading `EMAIL_VERIFICATION_ENABLED` (opt-out: enabled unless explicitly `"false"`/`"0"`); when disabled, `POST /api/auth/register` sets `emailVerified` at creation and skips the token + email, the Credentials gate in `src/auth.ts` is skipped, and `/check-email`, `/verify-email`, `GET /api/auth/verify-email` and the resend action redirect/no-op; the `register` server page passes the flag as a prop to `RegisterForm`, which returns to the "account created — you can now sign in" → `/sign-in` flow; register/check-email/verify-email pages call `connection()` so the flag is read at request time instead of being baked into a static page; documented `EMAIL_VERIFICATION_ENABLED` in `.env.example` and set it `false` in `.env` (no Resend domain yet); verified `npm run build` + `npm run lint` and both states end-to-end (off: register 201 → sign-in 302 `/dashboard` with session, verification pages redirect to `/sign-in`, no send attempted; on: register 201, sign-in blocked with `code=email_not_verified`, `/check-email` 200)
+- Forgot Password completed — reused the Auth.js `VerificationToken` table for password-reset tokens with namespaced identifiers (`password-reset:<email>`) so they never collide with or consume email-verification tokens (cross-flow guards added to both `verifyEmailToken` and the reset lookup, verified); extracted shared token helpers (`generateToken`/`hashToken`/`PASSWORD_RESET_IDENTIFIER_PREFIX`) to `src/lib/tokens.ts`, and refactored `src/lib/email.ts` around a shared Resend helper with a dev fallback that logs the link on delivery failure (added `sendPasswordResetEmail`); added `src/lib/password-reset.ts` (single-use, 1-hour, sha256-hashed tokens with a read-only validity check and a consume-and-update function) and `src/actions/password-reset.ts` (`requestPasswordReset` always returns a generic response to prevent enumeration and only issues tokens for credential accounts; `submitPasswordReset` validates with zod, hashes at bcrypt 12 rounds, updates `User.password`, consumes the token and redirects to `/sign-in?reset=success`); added `/forgot-password` and `/reset-password` pages with client forms (invalid/expired states), plus a "Forgot password?" link and a reset-success notice on the sign-in page; reset is independent of `EMAIL_VERIFICATION_ENABLED`; verified `npm run build` + `npm run lint` and end-to-end (valid token renders the form, invalid → "Invalid link", expired → "Link expired", reset success, token reuse → invalid, old password rejected / new password signs in, cross-flow `verifyEmailToken` on a reset token → invalid without consuming it); note: the dev fallback logs the reset link while Resend stays in test mode
