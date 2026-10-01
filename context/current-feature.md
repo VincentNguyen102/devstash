@@ -1,18 +1,61 @@
-# Current Feature
+# Current Feature: Auth Setup (NextAuth v5 + GitHub Provider)
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Install NextAuth v5 (`next-auth@beta`) and `@auth/prisma-adapter`
+- Set up the split auth config pattern for edge compatibility
+- Add the GitHub OAuth provider
+- Protect `/dashboard/*` routes using the Next.js 16 proxy
+- Redirect unauthenticated users to sign-in
+
+Success criteria (from spec Testing):
+
+- Visiting `/dashboard` redirects unauthenticated users to the sign-in page
+- Clicking "Sign in with GitHub" completes the GitHub flow
+- After auth, the user is redirected back to `/dashboard`
+
 ## Notes
 
 <!-- Any extra notes -->
+
+Files to create:
+
+1. `src/auth.config.ts` — edge-compatible config (providers only, no adapter)
+2. `src/auth.ts` — full config with Prisma adapter and JWT strategy
+3. `src/app/api/auth/[...nextauth]/route.ts` — export handlers from `auth.ts`
+4. `src/proxy.ts` — route protection with redirect logic
+5. `src/types/next-auth.d.ts` — extend `Session` type with `user.id`
+
+Key gotchas:
+
+- Use `next-auth@beta` (not `@latest`, which installs v4)
+- Proxy file must be at `src/proxy.ts` (same level as `app/`)
+- Use named export: `export const proxy = auth(...)` — not a default export
+- Use `session: { strategy: 'jwt' }` with the split config pattern
+- Don't set a custom `pages.signIn` — use NextAuth's default page
+- Verify the newest config/conventions with Context7 before coding
+
+Environment variables:
+
+```
+AUTH_SECRET=
+AUTH_GITHUB_ID=
+AUTH_GITHUB_SECRET=
+```
+
+Notes / context:
+
+- The NextAuth (Auth.js) Prisma models (`User`, `Account`, `Session`, `VerificationToken`) already exist from the `20260929085629_init` migration — no schema changes expected
+- This phase is GitHub OAuth only; email + password auth comes in a later phase
+- References: https://authjs.dev/getting-started/installation#edge-compatibility and https://authjs.dev/getting-started/adapters/prisma
 
 ## History
 
