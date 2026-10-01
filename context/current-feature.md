@@ -1,18 +1,36 @@
-# Current Feature
+# Current Feature: Email Verification on Register
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- After registering, send a verification email to the new user via **Resend**.
+- The email contains a unique, clickable verification link.
+- Clicking the link verifies the user's email (sets `User.emailVerified`) and shows a clear success state.
+- Unverified users cannot sign in — the Credentials sign-in must reject accounts that have not verified their email, with a clear error message (and ideally an option to resend the email).
+- Verification links must be single-use and time-limited (expiry), with user-friendly handling for expired or already-used links.
+- Registration success UI reflects the new flow: tell the user to check their inbox instead of "you can now sign in."
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- Email provider: **Resend** (`resend` npm package). `RESEND_API_KEY` is now present in `.env`; `RESEND_FROM_EMAIL` and `NEXT_PUBLIC_APP_URL` were documented in `.env.example`.
+  - ⚠️ The Resend account is still in **test mode**, so it can only deliver to the account owner's address. To email real users, verify a domain at resend.com/domains and set `RESEND_FROM_EMAIL` to an address on that domain.
+- Existing pieces we can build on:
+  - `User.emailVerified DateTime?` already exists in `prisma/schema.prisma`.
+  - The Auth.js `VerificationToken` model already exists — reusable for email-verification tokens (hashed tokens recommended).
+  - Registration lives in `src/app/api/auth/register/route.ts` (zod validation, bcrypt 12 rounds, 409 on duplicates).
+  - The register form (`src/components/auth/register-form.tsx`) currently toasts "Account created — you can now sign in." and routes to `/sign-in`.
+  - Credentials sign-in is in `src/auth.ts` (`authorize`) — the natural place to gate on `emailVerified`; `session.strategy` is JWT.
+- Suggested routes/pages: `GET /api/auth/verify-email` or `GET /verify-email?token=...` for the link, plus a resend endpoint/action; keep the token out of logs.
+- Use zod for input validation and the `{ success, data, error }` return pattern per coding standards; add `RESEND_API_KEY` usage server-side only.
 
 ## History
 

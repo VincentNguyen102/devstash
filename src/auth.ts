@@ -1,4 +1,4 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import GitHub from "next-auth/providers/github";
 import { PrismaAdapter } from "@auth/prisma-adapter";
@@ -13,6 +13,13 @@ const credentialsSchema = z.object({
   email: z.email(),
   password: z.string().min(1),
 });
+
+// Thrown when the credentials are valid but the email has not been verified
+// yet. The `code` is surfaced to the sign-in action so it can show a specific
+// message instead of the generic "invalid credentials" error.
+class EmailNotVerifiedError extends CredentialsSignin {
+  code = "email_not_verified";
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -48,6 +55,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!passwordMatches) {
           return null;
+        }
+
+        if (!user.emailVerified) {
+          throw new EmailNotVerifiedError();
         }
 
         return {

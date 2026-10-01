@@ -2,6 +2,11 @@ import { hash } from "bcryptjs";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { sendVerificationEmail } from "@/lib/email";
+import {
+  buildVerificationUrl,
+  createEmailVerificationToken,
+} from "@/lib/email-verification";
 import { prisma } from "@/lib/prisma";
 
 const registerSchema = z
@@ -48,6 +53,19 @@ export async function POST(request: Request) {
     const user = await prisma.user.create({
       data: { name, email, password: hashedPassword },
     });
+
+    // Send the verification email. A delivery failure should not roll back the
+    // account — the user can request a new link from the check-email page.
+    try {
+      const token = await createEmailVerificationToken(email);
+      await sendVerificationEmail({
+        to: email,
+        name: user.name,
+        url: buildVerificationUrl(token),
+      });
+    } catch (error) {
+      console.error("Failed to send verification email", error);
+    }
 
     return NextResponse.json(
       {

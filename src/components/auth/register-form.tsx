@@ -22,6 +22,7 @@ export function RegisterForm() {
     setError(null);
 
     const formData = new FormData(event.currentTarget);
+    const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
     const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
@@ -38,7 +39,7 @@ export function RegisterForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: formData.get("name"),
-          email: formData.get("email"),
+          email,
           password,
           confirmPassword,
         }),
@@ -51,8 +52,8 @@ export function RegisterForm() {
         return;
       }
 
-      toast.success("Account created — you can now sign in.");
-      router.push("/sign-in");
+      toast.success("Account created — check your inbox to verify your email.");
+      router.push(`/check-email?email=${encodeURIComponent(email)}`);
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {

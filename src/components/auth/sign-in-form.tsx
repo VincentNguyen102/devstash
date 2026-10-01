@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 
 import { authenticate, signInWithGitHub } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
@@ -26,16 +27,14 @@ interface SignInFormProps {
 }
 
 export function SignInForm({ callbackUrl, error }: SignInFormProps) {
-  const [errorMessage, formAction, isPending] = useActionState(
-    authenticate,
-    undefined,
-  );
+  const [state, formAction, isPending] = useActionState(authenticate, null);
 
   const displayError =
-    errorMessage ??
+    state?.message ??
     (error
       ? (ERROR_MESSAGES[error] ?? "Unable to sign in. Please try again.")
       : undefined);
+  const needsVerification = state?.code === "email_not_verified";
 
   return (
     <div className="space-y-4">
@@ -71,6 +70,18 @@ export function SignInForm({ callbackUrl, error }: SignInFormProps) {
         {displayError ? (
           <p role="alert" className="text-sm text-destructive">
             {displayError}
+          </p>
+        ) : null}
+
+        {needsVerification ? (
+          <p className="text-sm text-muted-foreground">
+            Didn&apos;t get the email?{" "}
+            <Link
+              href="/check-email"
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+            >
+              Send a new link
+            </Link>
           </p>
         ) : null}
 
