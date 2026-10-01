@@ -18,6 +18,25 @@ Read the following to get the full context of the project:
 - **Production server**: `npm run start`
 - **Lint**: `npm run lint`
 
+## Neon MCP — project & branch scope
+
+When using any Neon MCP tool, always target the DevStash **development** branch. Never connect to, read from, or write to **production** unless I explicitly ask for it in that message.
+
+| Target   | ID                        |
+| -------- | ------------------------- |
+| Project  | `shy-heart-70914834`      |
+| Branch   | `br-twilight-wind-b3lrs3kz` (name: `development`) |
+| Database | `neondb`                  |
+
+Rules:
+
+- Pass `project_id: "shy-heart-70914834"` and `branch_id: "br-twilight-wind-b3lrs3kz"` explicitly on every Neon MCP call (the connection is unscoped).
+- Do **not** use `list_projects` to guess a project, and do not pass a branch name where an ID is required — resolve names with `list_branches` if needed.
+- The production branch (`br-dawn-fog-b3iwlp96`, name `production`) is off-limits. Read-only or otherwise, treat it as forbidden until I say the exact words that I want production.
+- Never run DDL or destructive SQL (DROP, TRUNCATE, DELETE, ALTER, migrate reset) against any branch without asking me first.
+- Do not create projects, branches, or endpoints as a side effect of a task.
+- Schema changes go through Prisma migrations, not ad-hoc SQL against the branch.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
