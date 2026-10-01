@@ -1,51 +1,18 @@
-# Current Feature: Auth Credentials (Email/Password Provider)
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-In Progress
+Not Started
 
 ## Goals
 
 <!-- Goals & requirements -->
 
-- Use bcryptjs for password hashing (already installed)
-- Ensure the `User.password` field exists (already in the schema — no migration needed)
-- Add a Credentials provider placeholder in `auth.config.ts`
-- Override Credentials with bcrypt validation logic in `auth.ts`
-- Create the registration API route at `POST /api/auth/register`
-
-Registration endpoint (`POST /api/auth/register`):
-
-- Accept `name`, `email`, `password`, `confirmPassword`
-- Validate the input and confirm the passwords match
-- Reject the request if the email is already registered
-- Hash the password with bcryptjs
-- Create the user in the database
-- Return a success/error response
-
-Success criteria (from spec Testing):
-
-- `POST /api/auth/register` creates a user successfully
-- Signing in with email/password at `/api/auth/signin` redirects to `/dashboard`
-- GitHub OAuth still works
-
 ## Notes
 
 <!-- Any extra notes -->
-
-Split config pattern for Credentials:
-
-- `auth.config.ts`: add a Credentials provider with an `authorize: () => null` placeholder (edge-safe)
-- `auth.ts`: provide the real Credentials provider with bcrypt validation (bcrypt + Prisma are Node-only)
-
-Context / constraints:
-
-- The Credentials provider can only be used with the JWT session strategy (already enabled in `auth.ts`)
-- Credentials sign-ins are not persisted as an `Account`; the password hash lives on the `User` row
-- No Prisma migration is expected (`password String?` already exists from the initial migration)
-- Reference: https://authjs.dev/getting-started/authentication/credentials
 
 ## History
 
@@ -63,3 +30,4 @@ Context / constraints:
 - Connected the repo to Vercel
 - Add Pro Badge to Sidebar completed — added the Feature Workflow skill (`.agents/skills/feature/`) and the `context/features/add-pro-badge-sidebar.md` spec; the sidebar now renders a subtle ShadCN `Badge` ("PRO", `outline` variant) before the item count for the `file` and `image` item types, gated by a `PRO_TYPE_IDS` set in `src/components/dashboard/sidebar.tsx`
 - Auth Phase 1 completed — set up NextAuth v5 (`next-auth@5.0.0-beta.32`) with the split config pattern: `src/auth.config.ts` (edge-safe, GitHub provider + `trustHost`) and `src/auth.ts` (Prisma adapter + JWT strategy + a session callback exposing `session.user.id`); added the Auth.js route handler at `src/app/api/auth/[...nextauth]/route.ts`, protected `/dashboard/*` with a named-export Next.js 16 proxy at `src/proxy.ts` that redirects unauthenticated users to the default sign-in page with a `callbackUrl`, and added `src/types/next-auth.d.ts` to extend the `Session` type with `user.id`; documented `AUTH_SECRET`/`AUTH_GITHUB_ID`/`AUTH_GITHUB_SECRET` in `.env.example`; verified `npm run build` + `npm run lint` and the GitHub OAuth handoff (302 to GitHub with PKCE)
+- Auth Phase 2 (Credentials / Email-Password) completed — added the Credentials provider using the split pattern (`auth.config.ts` holds an edge-safe `authorize: () => null` placeholder; `auth.ts` provides the real bcrypt validation via `compare` against the stored hash) and added `POST /api/auth/register` (`src/app/api/auth/register/route.ts`) which validates `name/email/password/confirmPassword` with zod, rejects duplicate emails (409), hashes with bcryptjs at 12 rounds and creates the user; added `zod` as a dependency; no Prisma migration needed (`User.password` already existed from the initial migration); verified `npm run build` + `npm run lint` and end-to-end checks (register 201, duplicate 409, password mismatch 400, credentials login 302 → `/dashboard` with a session exposing `user.id`, GitHub handoff still works)
