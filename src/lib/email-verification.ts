@@ -1,6 +1,9 @@
-import { createHash, randomBytes } from "node:crypto";
-
 import { prisma } from "@/lib/prisma";
+import {
+  generateToken,
+  hashToken,
+  PASSWORD_RESET_IDENTIFIER_PREFIX,
+} from "@/lib/tokens";
 
 // Verification links are valid for 24 hours.
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 24;
@@ -24,11 +27,6 @@ export interface VerifyEmailResult {
   email?: string;
 }
 
-/** Only the hash of a verification token is ever stored or logged. */
-function hashToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
-}
-
 /** Absolute base URL used to build the link that goes in the email. */
 export function getAppUrl(): string {
   const configured =
@@ -49,7 +47,7 @@ export async function createEmailVerificationToken(
   email: string,
 ): Promise<string> {
   const identifier = email.trim().toLowerCase();
-  const token = randomBytes(32).toString("hex");
+  const token = generateToken();
 
   await prisma.$transaction([
     prisma.verificationToken.deleteMany({ where: { identifier } }),
@@ -77,7 +75,11 @@ export async function verifyEmailToken(
   token: string,
 ): Promise<VerifyEmailResult> {
   const record = await prisma.verificationToken.findFirst({
-    where: { token: hashToken(token) },
+    where: {
+      token: hashToken(token),
+      // Never treat a password-reset token as an email-verification token.
+      NOT: { identifier: { startsWith: PASSWORD_RESET_IDENTIFIER_PREFIX } },
+    },
   });
 
   if (!record) {

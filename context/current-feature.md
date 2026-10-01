@@ -1,18 +1,43 @@
-# Current Feature
+# Current Feature: Forgot Password
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Add a **"Forgot password?"** link on the sign-in page pointing to `/forgot-password`.
+- `/forgot-password` page + form: the user enters their email; submitting always shows the same generic confirmation ("If an account exists for that email, we've sent a reset link.") so registered addresses can't be enumerated.
+- When an account with a password exists, issue a single-use, time-limited reset token and email a link.
+- **Reuse the existing `VerificationToken` model** for reset tokens — no new Prisma model/migration.
+- Namespace the token identifier (e.g. `password-reset:<email>`) so reset tokens neither collide with nor invalidate email-verification tokens (which use the bare email), and vice versa.
+- Invalidate any outstanding reset tokens for that email before issuing a new one.
+- Reset tokens are hashed at rest (sha256) and never logged; TTL ~1 hour.
+- The email link points to `/reset-password?token=...`. The page validates the token server-side (read-only, does **not** consume it) and renders the new-password form; invalid/expired shows a clear message + link back to `/forgot-password`.
+- Submitting the form (server action) validates `password`/`confirmPassword` with zod (min 8, must match), hashes with bcryptjs at 12 rounds, updates `User.password`, consumes (deletes) the token, and redirects to `/sign-in` with a success notice.
+- Reuse Resend for delivery via a new `sendPasswordResetEmail` helper.
+- Password reset is **independent of `EMAIL_VERIFICATION_ENABLED`** — it works whether verification is on or off (accounts have passwords either way).
+- Verify with `npm run build` + `npm run lint` and end-to-end (request → token consumed once → old password rejected → new password signs in; reuse/expired token rejected; unknown email keeps the flow generic).
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- **Touch points:**
+  - `src/lib/password-reset.ts` (new) — `createPasswordResetToken(email)`, `verifyPasswordResetToken(token)` (read-only, used by the page), `consumePasswordResetToken(token, newPassword)` (validates + updates `User.password` + deletes token), `buildPasswordResetUrl(token)`, TTL constant.
+  - `src/lib/email.ts` — add `sendPasswordResetEmail({ to, name, url })` alongside the existing verification email (share the Resend client / sender-from logic).
+  - `src/actions/password-reset.ts` (new) — `requestPasswordReset` and `submitPasswordReset` server actions (return the `{ success, data, error }` state shape, like `actions/email-verification.ts`).
+  - `src/app/forgot-password/page.tsx` (new) + `src/components/auth/forgot-password-form.tsx` (new, client, `useActionState`).
+  - `src/app/reset-password/page.tsx` (new) + `src/components/auth/reset-password-form.tsx` (new, client, hidden token field).
+  - `src/app/sign-in/page.tsx` / `src/components/auth/sign-in-form.tsx` — add the "Forgot password?" link; optionally show the success notice from `?reset=success`.
+- **Token collision safeguard:** because `verifyEmailToken()` currently looks up by token hash alone and deletes by `identifier`, add an identifier-prefix guard to the reset lookup (and consider guarding `verifyEmailToken` with the bare-email form) so a token from one flow can never be consumed by the other. Alternatively extract a shared `hashToken`/token helper.
+- **Email delivery caveat:** the Resend account is still in **test mode**, so reset mail only reaches the account owner. A dev-only fallback will log the reset link (see confirmed decisions) so the flow is testable locally.
+- **Security / future:** do not reveal account existence; token single-use + expiry; consider rate limiting; JWT sessions can't be revoked server-side, so note that existing sessions aren't invalidated on reset. Decide whether a successful reset should also set `emailVerified` (recommend: leave it alone — out of scope).
+- **Decisions (confirmed):** reset token TTL = **1 hour**; in development, log the reset link via `console.warn` when delivery fails or is unconfigured (same fallback style as the verification email).
 
 ## History
 

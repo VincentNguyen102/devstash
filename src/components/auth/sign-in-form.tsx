@@ -67,6 +67,15 @@ export function SignInForm({ callbackUrl, error }: SignInFormProps) {
           />
         </div>
 
+        <div className="flex justify-end">
+          <Link
+            href="/forgot-password"
+            className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          >
+            Forgot password?
+          </Link>
+        </div>
+
         {displayError ? (
           <p role="alert" className="text-sm text-destructive">
             {displayError}
