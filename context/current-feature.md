@@ -1,18 +1,49 @@
-# Current Feature
+# Current Feature: Auth UI (Sign In, Register & Sign Out)
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Replace NextAuth's default pages with custom UI
+- Create the sign-in page at `/sign-in` (email + password fields, "Sign in with GitHub" button, link to register, form validation and error display)
+- Create the register page at `/register` (name, email, password, confirm password, client-side validation, submit to `/api/auth/register`, redirect to sign-in on success)
+- Build a reusable avatar component (GitHub image or initials fallback)
+- Update the bottom of the sidebar: user avatar + name, a dropdown that opens upward with a "Sign out" action and a link to `/profile`
+- Set `pages.signIn` to `/sign-in` and protect the whole `(dashboard)` group, redirecting unauthenticated users to `/sign-in`
+- Add a minimal placeholder `/profile` page so the sidebar link resolves
+
+Success criteria (from spec Testing):
+
+- `/sign-in` renders the custom page
+- Signing in with GitHub works
+- Signing in with email/password works
+- The avatar shows the GitHub image or initials
+- Clicking the avatar opens the dropdown
+- Clicking "Sign out" logs out and redirects
+- `/register` creates an account and redirects to sign-in
+
 ## Notes
 
 <!-- Any extra notes -->
+
+Decisions confirmed with the user:
+
+- Protect the **whole `(dashboard)` route group** (`/dashboard`, `/collections`, `/items`, `/profile`) — not just `/dashboard/*`
+- Create a **minimal placeholder `/profile` page** so the "go to /profile" interaction does not 404
+
+Context / constraints:
+
+- Auth forms use **Server Actions** (`src/actions/auth.ts`); the register form posts to the existing `/api/auth/register` route as specified
+- Sign-out uses the client `signOut` from `next-auth/react` with `redirectTo: "/sign-in"` (a Radix menu item swallows a nested form's native submit, so a server-action-in-menu approach cleared the cookie without navigating)
+- On successful registration a `sonner` toast ("Account created — you can now sign in.") is shown before redirecting to `/sign-in`; `sonner` was added as a dependency and `<Toaster />` is mounted in the root layout
+- `pages.signIn = "/sign-in"` belongs in `auth.config.ts` (edge-safe, shared)
+- Reference: https://authjs.dev/guides/pages/signin and https://authjs.dev/guides/pages/signout
 
 ## History
 

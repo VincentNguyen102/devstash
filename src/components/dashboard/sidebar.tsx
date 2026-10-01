@@ -3,17 +3,16 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, CodeXml, Layers, Settings, Star } from "lucide-react";
+import { ChevronDown, CodeXml, Layers, Star } from "lucide-react";
 import { Collapsible } from "radix-ui";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserMenu } from "@/components/dashboard/user-menu";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import type { CollectionSummary } from "@/lib/db/collections";
 import type { ItemTypeSummary } from "@/lib/db/items";
 import { getTypeVisual } from "@/lib/item-type-meta";
-import { currentUser } from "@/lib/mock-data";
+import type { AuthUser } from "@/types/auth";
 import { cn } from "@/lib/utils";
 
 /** System item types that require a Pro membership. */
@@ -88,42 +87,21 @@ function SidebarSection({
   );
 }
 
-function UserNav() {
-  const initials = currentUser.name
-    .split(" ")
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-
+function UserNav({ user }: { user: AuthUser | null }) {
   return (
     <div className="border-t border-sidebar-border p-3">
-      <div className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-sidebar-accent">
-        <Avatar className="size-8">
-          {currentUser.image ? (
-            <AvatarImage src={currentUser.image} alt={currentUser.name} />
-          ) : null}
-          <AvatarFallback>{initials}</AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{currentUser.name}</p>
-          <p className="truncate text-xs text-muted-foreground">
-            {currentUser.email}
-          </p>
-        </div>
-        <Button variant="ghost" size="icon-sm" aria-label="Settings">
-          <Settings aria-hidden />
-        </Button>
-      </div>
+      <UserMenu user={user} />
     </div>
   );
 }
 
 export function SidebarContent({
+  user,
   types,
   collections,
   onNavigate,
 }: {
+  user: AuthUser | null;
   types: ItemTypeSummary[];
   collections: CollectionSummary[];
   onNavigate?: () => void;
@@ -234,7 +212,7 @@ export function SidebarContent({
         </SidebarSection>
       </nav>
 
-      <UserNav />
+      <UserNav user={user} />
     </div>
   );
 }

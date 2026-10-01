@@ -8,6 +8,8 @@ export default {
   // Trust the host header. Auth.js enables this automatically on Vercel, but
   // it is required when running the production server locally or self-hosting.
   trustHost: true,
+  // Use the custom sign-in page instead of Auth.js's built-in page.
+  pages: { signIn: "/sign-in" },
   providers: [
     GitHub,
     // Edge-safe placeholder. `auth.ts` swaps in the real provider with bcrypt

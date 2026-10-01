@@ -6,16 +6,19 @@ import { SidebarContent } from "@/components/dashboard/sidebar";
 import { TopBar } from "@/components/dashboard/top-bar";
 import type { CollectionSummary } from "@/lib/db/collections";
 import type { ItemTypeSummary } from "@/lib/db/items";
+import type { AuthUser } from "@/types/auth";
 import { cn } from "@/lib/utils";
 
 interface DashboardShellProps {
   children: ReactNode;
+  user: AuthUser | null;
   types: ItemTypeSummary[];
   collections: CollectionSummary[];
 }
 
 export function DashboardShell({
   children,
+  user,
   types,
   collections,
 }: DashboardShellProps) {
@@ -50,7 +53,11 @@ export function DashboardShell({
         )}
       >
         <div className="h-full w-64">
-          <SidebarContent types={types} collections={collections} />
+          <SidebarContent
+            user={user}
+            types={types}
+            collections={collections}
+          />
         </div>
       </aside>
 
@@ -74,6 +81,7 @@ export function DashboardShell({
           />
           <aside className="absolute inset-y-0 left-0 w-64 border-r border-sidebar-border shadow-xl">
             <SidebarContent
+              user={user}
               types={types}
               collections={collections}
               onNavigate={() => setMobileOpen(false)}
