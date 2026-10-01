@@ -1,18 +1,51 @@
-# Current Feature
+# Current Feature: Auth Credentials (Email/Password Provider)
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Use bcryptjs for password hashing (already installed)
+- Ensure the `User.password` field exists (already in the schema — no migration needed)
+- Add a Credentials provider placeholder in `auth.config.ts`
+- Override Credentials with bcrypt validation logic in `auth.ts`
+- Create the registration API route at `POST /api/auth/register`
+
+Registration endpoint (`POST /api/auth/register`):
+
+- Accept `name`, `email`, `password`, `confirmPassword`
+- Validate the input and confirm the passwords match
+- Reject the request if the email is already registered
+- Hash the password with bcryptjs
+- Create the user in the database
+- Return a success/error response
+
+Success criteria (from spec Testing):
+
+- `POST /api/auth/register` creates a user successfully
+- Signing in with email/password at `/api/auth/signin` redirects to `/dashboard`
+- GitHub OAuth still works
+
 ## Notes
 
 <!-- Any extra notes -->
+
+Split config pattern for Credentials:
+
+- `auth.config.ts`: add a Credentials provider with an `authorize: () => null` placeholder (edge-safe)
+- `auth.ts`: provide the real Credentials provider with bcrypt validation (bcrypt + Prisma are Node-only)
+
+Context / constraints:
+
+- The Credentials provider can only be used with the JWT session strategy (already enabled in `auth.ts`)
+- Credentials sign-ins are not persisted as an `Account`; the password hash lives on the `User` row
+- No Prisma migration is expected (`password String?` already exists from the initial migration)
+- Reference: https://authjs.dev/getting-started/authentication/credentials
 
 ## History
 

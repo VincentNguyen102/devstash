@@ -1,4 +1,5 @@
 import type { NextAuthConfig } from "next-auth";
+import Credentials from "next-auth/providers/credentials";
 import GitHub from "next-auth/providers/github";
 
 // Edge-compatible Auth.js configuration. It intentionally omits the database
@@ -7,5 +8,16 @@ export default {
   // Trust the host header. Auth.js enables this automatically on Vercel, but
   // it is required when running the production server locally or self-hosting.
   trustHost: true,
-  providers: [GitHub],
+  providers: [
+    GitHub,
+    // Edge-safe placeholder. `auth.ts` swaps in the real provider with bcrypt
+    // validation, since bcrypt and Prisma cannot run in the proxy runtime.
+    Credentials({
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      authorize: () => null,
+    }),
+  ],
 } satisfies NextAuthConfig;
