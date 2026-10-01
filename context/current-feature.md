@@ -1,49 +1,18 @@
-# Current Feature: Auth UI (Sign In, Register & Sign Out)
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-In Progress
+Not Started
 
 ## Goals
 
 <!-- Goals & requirements -->
 
-- Replace NextAuth's default pages with custom UI
-- Create the sign-in page at `/sign-in` (email + password fields, "Sign in with GitHub" button, link to register, form validation and error display)
-- Create the register page at `/register` (name, email, password, confirm password, client-side validation, submit to `/api/auth/register`, redirect to sign-in on success)
-- Build a reusable avatar component (GitHub image or initials fallback)
-- Update the bottom of the sidebar: user avatar + name, a dropdown that opens upward with a "Sign out" action and a link to `/profile`
-- Set `pages.signIn` to `/sign-in` and protect the whole `(dashboard)` group, redirecting unauthenticated users to `/sign-in`
-- Add a minimal placeholder `/profile` page so the sidebar link resolves
-
-Success criteria (from spec Testing):
-
-- `/sign-in` renders the custom page
-- Signing in with GitHub works
-- Signing in with email/password works
-- The avatar shows the GitHub image or initials
-- Clicking the avatar opens the dropdown
-- Clicking "Sign out" logs out and redirects
-- `/register` creates an account and redirects to sign-in
-
 ## Notes
 
 <!-- Any extra notes -->
-
-Decisions confirmed with the user:
-
-- Protect the **whole `(dashboard)` route group** (`/dashboard`, `/collections`, `/items`, `/profile`) — not just `/dashboard/*`
-- Create a **minimal placeholder `/profile` page** so the "go to /profile" interaction does not 404
-
-Context / constraints:
-
-- Auth forms use **Server Actions** (`src/actions/auth.ts`); the register form posts to the existing `/api/auth/register` route as specified
-- Sign-out uses the client `signOut` from `next-auth/react` with `redirectTo: "/sign-in"` (a Radix menu item swallows a nested form's native submit, so a server-action-in-menu approach cleared the cookie without navigating)
-- On successful registration a `sonner` toast ("Account created — you can now sign in.") is shown before redirecting to `/sign-in`; `sonner` was added as a dependency and `<Toaster />` is mounted in the root layout
-- `pages.signIn = "/sign-in"` belongs in `auth.config.ts` (edge-safe, shared)
-- Reference: https://authjs.dev/guides/pages/signin and https://authjs.dev/guides/pages/signout
 
 ## History
 
@@ -62,3 +31,4 @@ Context / constraints:
 - Add Pro Badge to Sidebar completed — added the Feature Workflow skill (`.agents/skills/feature/`) and the `context/features/add-pro-badge-sidebar.md` spec; the sidebar now renders a subtle ShadCN `Badge` ("PRO", `outline` variant) before the item count for the `file` and `image` item types, gated by a `PRO_TYPE_IDS` set in `src/components/dashboard/sidebar.tsx`
 - Auth Phase 1 completed — set up NextAuth v5 (`next-auth@5.0.0-beta.32`) with the split config pattern: `src/auth.config.ts` (edge-safe, GitHub provider + `trustHost`) and `src/auth.ts` (Prisma adapter + JWT strategy + a session callback exposing `session.user.id`); added the Auth.js route handler at `src/app/api/auth/[...nextauth]/route.ts`, protected `/dashboard/*` with a named-export Next.js 16 proxy at `src/proxy.ts` that redirects unauthenticated users to the default sign-in page with a `callbackUrl`, and added `src/types/next-auth.d.ts` to extend the `Session` type with `user.id`; documented `AUTH_SECRET`/`AUTH_GITHUB_ID`/`AUTH_GITHUB_SECRET` in `.env.example`; verified `npm run build` + `npm run lint` and the GitHub OAuth handoff (302 to GitHub with PKCE)
 - Auth Phase 2 (Credentials / Email-Password) completed — added the Credentials provider using the split pattern (`auth.config.ts` holds an edge-safe `authorize: () => null` placeholder; `auth.ts` provides the real bcrypt validation via `compare` against the stored hash) and added `POST /api/auth/register` (`src/app/api/auth/register/route.ts`) which validates `name/email/password/confirmPassword` with zod, rejects duplicate emails (409), hashes with bcryptjs at 12 rounds and creates the user; added `zod` as a dependency; no Prisma migration needed (`User.password` already existed from the initial migration); verified `npm run build` + `npm run lint` and end-to-end checks (register 201, duplicate 409, password mismatch 400, credentials login 302 → `/dashboard` with a session exposing `user.id`, GitHub handoff still works)
+- Auth Phase 3 (UI: Sign In, Register & Sign Out) completed — replaced the default Auth.js pages with custom `src/app/sign-in` and `src/app/register` pages (credentials via a server action with inline errors, GitHub button, link between the pages) plus `src/actions/auth.ts`; added a reusable `UserAvatar` (GitHub image or initials via `getInitials`) and a sidebar `UserMenu` dropdown (Radix) with a Profile link and client `signOut({ redirectTo: "/sign-in" })`; set `pages.signIn = "/sign-in"` and extended the proxy matcher to protect the whole `(dashboard)` group (`/dashboard`, `/collections`, `/items`, `/profile`), redirecting to `/sign-in`; added a placeholder `/profile` page and a `sonner` toast ("Account created — you can now sign in.") on successful registration with `<Toaster />` mounted in the root layout; added `sonner` as a dependency; verified `npm run build` + `npm run lint` and the full flow in a real browser (credentials login, sidebar avatar + dropdown, sign-out redirect, register → toast → `/sign-in`)
