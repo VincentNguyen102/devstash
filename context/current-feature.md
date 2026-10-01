@@ -1,61 +1,18 @@
-# Current Feature: Auth Setup (NextAuth v5 + GitHub Provider)
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-In Progress
+Not Started
 
 ## Goals
 
 <!-- Goals & requirements -->
 
-- Install NextAuth v5 (`next-auth@beta`) and `@auth/prisma-adapter`
-- Set up the split auth config pattern for edge compatibility
-- Add the GitHub OAuth provider
-- Protect `/dashboard/*` routes using the Next.js 16 proxy
-- Redirect unauthenticated users to sign-in
-
-Success criteria (from spec Testing):
-
-- Visiting `/dashboard` redirects unauthenticated users to the sign-in page
-- Clicking "Sign in with GitHub" completes the GitHub flow
-- After auth, the user is redirected back to `/dashboard`
-
 ## Notes
 
 <!-- Any extra notes -->
-
-Files to create:
-
-1. `src/auth.config.ts` — edge-compatible config (providers only, no adapter)
-2. `src/auth.ts` — full config with Prisma adapter and JWT strategy
-3. `src/app/api/auth/[...nextauth]/route.ts` — export handlers from `auth.ts`
-4. `src/proxy.ts` — route protection with redirect logic
-5. `src/types/next-auth.d.ts` — extend `Session` type with `user.id`
-
-Key gotchas:
-
-- Use `next-auth@beta` (not `@latest`, which installs v4)
-- Proxy file must be at `src/proxy.ts` (same level as `app/`)
-- Use named export: `export const proxy = auth(...)` — not a default export
-- Use `session: { strategy: 'jwt' }` with the split config pattern
-- Don't set a custom `pages.signIn` — use NextAuth's default page
-- Verify the newest config/conventions with Context7 before coding
-
-Environment variables:
-
-```
-AUTH_SECRET=
-AUTH_GITHUB_ID=
-AUTH_GITHUB_SECRET=
-```
-
-Notes / context:
-
-- The NextAuth (Auth.js) Prisma models (`User`, `Account`, `Session`, `VerificationToken`) already exist from the `20260929085629_init` migration — no schema changes expected
-- This phase is GitHub OAuth only; email + password auth comes in a later phase
-- References: https://authjs.dev/getting-started/installation#edge-compatibility and https://authjs.dev/getting-started/adapters/prisma
 
 ## History
 
@@ -72,3 +29,4 @@ Notes / context:
 - Stats & sidebar completed — added `getItemTypes()` to `src/lib/db/items.ts` (system item types with the demo user's per-type counts via `groupBy`, returned in canonical order) and `getCollections()` to `src/lib/db/collections.ts` (shared mapper with `getRecentCollections`); the `(dashboard)` server layout fetches both and passes them through `DashboardShell`, so the sidebar now renders DB-backed system types with real counts/icons, favorite collections with stars and recents with a colored circle derived from the dominant type, plus a "View all collections" link and a new `/collections` listing page; `src/lib/item-type-meta.ts` no longer imports `mock-data` (icons resolve from a local map or the DB-provided icon name); removed a stray debug `console.log` in `items.ts`
 - Connected the repo to Vercel
 - Add Pro Badge to Sidebar completed — added the Feature Workflow skill (`.agents/skills/feature/`) and the `context/features/add-pro-badge-sidebar.md` spec; the sidebar now renders a subtle ShadCN `Badge` ("PRO", `outline` variant) before the item count for the `file` and `image` item types, gated by a `PRO_TYPE_IDS` set in `src/components/dashboard/sidebar.tsx`
+- Auth Phase 1 completed — set up NextAuth v5 (`next-auth@5.0.0-beta.32`) with the split config pattern: `src/auth.config.ts` (edge-safe, GitHub provider + `trustHost`) and `src/auth.ts` (Prisma adapter + JWT strategy + a session callback exposing `session.user.id`); added the Auth.js route handler at `src/app/api/auth/[...nextauth]/route.ts`, protected `/dashboard/*` with a named-export Next.js 16 proxy at `src/proxy.ts` that redirects unauthenticated users to the default sign-in page with a `callbackUrl`, and added `src/types/next-auth.d.ts` to extend the `Session` type with `user.id`; documented `AUTH_SECRET`/`AUTH_GITHUB_ID`/`AUTH_GITHUB_SECRET` in `.env.example`; verified `npm run build` + `npm run lint` and the GitHub OAuth handoff (302 to GitHub with PKCE)
