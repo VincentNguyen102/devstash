@@ -5,6 +5,17 @@ import { prisma } from "@/lib/prisma";
 // Verification links are valid for 24 hours.
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 24;
 
+/**
+ * Whether the email-verification system is enabled. Enabled by default
+ * (opt-out) so a missing or misconfigured variable keeps verification on;
+ * set `EMAIL_VERIFICATION_ENABLED=false` (or `0`) to disable it.
+ */
+export function isEmailVerificationEnabled(): boolean {
+  const value = process.env.EMAIL_VERIFICATION_ENABLED?.trim().toLowerCase();
+
+  return value !== "false" && value !== "0";
+}
+
 export type VerifyEmailStatus = "success" | "expired" | "invalid";
 
 export interface VerifyEmailResult {

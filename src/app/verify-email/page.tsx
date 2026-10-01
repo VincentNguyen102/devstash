@@ -1,7 +1,10 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { CheckCircle2, Clock, MailWarning, XCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { isEmailVerificationEnabled } from "@/lib/email-verification";
 
 interface VerifyEmailPageProps {
   searchParams: Promise<{ status?: string; email?: string }>;
@@ -44,6 +47,13 @@ const CONTENT = {
 export default async function VerifyEmailPage({
   searchParams,
 }: VerifyEmailPageProps) {
+  // Read the flag at request time so it always matches the server behavior.
+  await connection();
+
+  if (!isEmailVerificationEnabled()) {
+    redirect("/sign-in");
+  }
+
   const { status, email } = await searchParams;
   const content =
     CONTENT[status as keyof typeof CONTENT] ?? CONTENT.invalid;

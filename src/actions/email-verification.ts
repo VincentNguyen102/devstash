@@ -6,6 +6,7 @@ import { sendVerificationEmail } from "@/lib/email";
 import {
   buildVerificationUrl,
   createEmailVerificationToken,
+  isEmailVerificationEnabled,
 } from "@/lib/email-verification";
 import { prisma } from "@/lib/prisma";
 
@@ -28,6 +29,13 @@ export async function resendVerificationEmail(
   _prevState: ResendVerificationState | null,
   formData: FormData,
 ): Promise<ResendVerificationState> {
+  if (!isEmailVerificationEnabled()) {
+    return {
+      success: true,
+      data: { message: "Email verification is currently disabled." },
+    };
+  }
+
   const parsed = resendSchema.safeParse({ email: formData.get("email") });
 
   if (!parsed.success) {

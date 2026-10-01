@@ -6,6 +6,7 @@ import { sendVerificationEmail } from "@/lib/email";
 import {
   buildVerificationUrl,
   createEmailVerificationToken,
+  isEmailVerificationEnabled,
 } from "@/lib/email-verification";
 import { prisma } from "@/lib/prisma";
 
@@ -49,22 +50,32 @@ export async function POST(request: Request) {
     }
 
     const hashedPassword = await hash(password, 12);
+    const verificationEnabled = isEmailVerificationEnabled();
 
     const user = await prisma.user.create({
-      data: { name, email, password: hashedPassword },
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        // When verification is disabled the account is immediately usable. It
+        // stays consistent if verification is re-enabled later.
+        emailVerified: verificationEnabled ? null : new Date(),
+      },
     });
 
-    // Send the verification email. A delivery failure should not roll back the
-    // account — the user can request a new link from the check-email page.
-    try {
-      const token = await createEmailVerificationToken(email);
-      await sendVerificationEmail({
-        to: email,
-        name: user.name,
-        url: buildVerificationUrl(token),
-      });
-    } catch (error) {
-      console.error("Failed to send verification email", error);
+    if (verificationEnabled) {
+      // Send the verification email. A delivery failure should not roll back
+      // the account — the user can request a new link from the check-email page.
+      try {
+        const token = await createEmailVerificationToken(email);
+        await sendVerificationEmail({
+          to: email,
+          name: user.name,
+          url: buildVerificationUrl(token),
+        });
+      } catch (error) {
+        console.error("Failed to send verification email", error);
+      }
     }
 
     return NextResponse.json(

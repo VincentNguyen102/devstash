@@ -1,8 +1,14 @@
 import Link from "next/link";
+import { connection } from "next/server";
 
 import { RegisterForm } from "@/components/auth/register-form";
+import { isEmailVerificationEnabled } from "@/lib/email-verification";
 
-export default function RegisterPage() {
+export default async function RegisterPage() {
+  // Read the flag at request time so it always matches the server behavior.
+  await connection();
+  const emailVerificationEnabled = isEmailVerificationEnabled();
+
   return (
     <main className="flex min-h-svh items-center justify-center p-6">
       <div className="w-full max-w-sm space-y-6">
@@ -13,7 +19,9 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        <RegisterForm />
+        <RegisterForm
+          emailVerificationEnabled={emailVerificationEnabled}
+        />
 
         <p className="text-center text-sm text-muted-foreground">
           Already have an account?{" "}

@@ -12,7 +12,11 @@ interface RegisterResponse {
   error?: string;
 }
 
-export function RegisterForm() {
+interface RegisterFormProps {
+  emailVerificationEnabled: boolean;
+}
+
+export function RegisterForm({ emailVerificationEnabled }: RegisterFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
@@ -52,8 +56,15 @@ export function RegisterForm() {
         return;
       }
 
-      toast.success("Account created — check your inbox to verify your email.");
-      router.push(`/check-email?email=${encodeURIComponent(email)}`);
+      if (emailVerificationEnabled) {
+        toast.success(
+          "Account created — check your inbox to verify your email.",
+        );
+        router.push(`/check-email?email=${encodeURIComponent(email)}`);
+      } else {
+        toast.success("Account created — you can now sign in.");
+        router.push("/sign-in");
+      }
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {

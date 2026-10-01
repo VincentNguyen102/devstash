@@ -6,6 +6,7 @@ import { compare } from "bcryptjs";
 import { z } from "zod";
 
 import authConfig from "@/auth.config";
+import { isEmailVerificationEnabled } from "@/lib/email-verification";
 import { prisma } from "@/lib/prisma";
 
 // Only the email/password pair is read from the credentials sign-in form.
@@ -57,7 +58,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
-        if (!user.emailVerified) {
+        // Only block unverified accounts while the verification system is on.
+        if (isEmailVerificationEnabled() && !user.emailVerified) {
           throw new EmailNotVerifiedError();
         }
 

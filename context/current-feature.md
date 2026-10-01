@@ -1,18 +1,43 @@
-# Current Feature
+# Current Feature: Toggle Email Verification
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Add a single, easily toggled flag (env variable — see Notes) that enables or disables the **entire** email-verification system, so registration/sign-in work without Resend while no domain is linked.
+- Centralize reading the flag in one helper (e.g. `isEmailVerificationEnabled()` in `src/lib/email-verification.ts`) — no scattered `process.env` reads across the codebase.
+- **When disabled:**
+  - `POST /api/auth/register` does not create a verification token and does not send an email; it marks the new user as already verified (`emailVerified: new Date()`), or otherwise makes the account immediately usable.
+  - The Credentials sign-in gate in `src/auth.ts` is skipped, so unverified accounts can sign in normally.
+  - The registration UI skips the "check your inbox" step and returns to the previous flow: toast "Account created — you can now sign in." and redirect to `/sign-in`.
+  - `/check-email`, `/verify-email`, `GET /api/auth/verify-email` and the resend server action redirect to `/sign-in` (or otherwise no-op gracefully) instead of erroring.
+- **When enabled:** current behavior is unchanged (email sent, sign-in blocked until verified, `/check-email` + `/verify-email` work).
+- Document the flag in `.env.example` and set the desired value in `.env`.
+- Verify with `npm run build` + `npm run lint` and manually check both flag states (register → sign in works when off; still gated when on).
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- **Mechanism (confirmed) — env var:** `EMAIL_VERIFICATION_ENABLED`, parsed in one place. Semantics: **enabled unless explicitly set to `"false"`/`"0"`** (fail safe — a misconfigured production environment keeps verification on). Set `EMAIL_VERIFICATION_ENABLED=false` in `.env` for now.
+  - Alternatives considered:
+    - `NEXT_PUBLIC_EMAIL_VERIFICATION_ENABLED` so the client can read it directly — not needed; pass the value from the server `register` page down to `RegisterForm` as a prop instead (single source of truth, no bundle exposure).
+    - Auto-detect (enable only when a Resend sending domain/key is present) — too implicit/magical; avoid.
+    - A DB/config setting — overkill for a boolean deployment concern; env var is the right tool.
+- **Touch points to update (all read the central helper):**
+  - `src/lib/email-verification.ts` — add `isEmailVerificationEnabled()`; `getAppUrl()` etc. unaffected.
+  - `src/app/api/auth/register/route.ts` — skip token + send; set `emailVerified` when disabled.
+  - `src/auth.ts` — only throw `EmailNotVerifiedError` when verification is enabled.
+  - `src/app/register/page.tsx` + `src/components/auth/register-form.tsx` — pass a boolean prop; choose `/sign-in` vs `/check-email`.
+  - `src/app/check-email/page.tsx`, `src/app/verify-email/page.tsx`, `src/app/api/auth/verify-email/route.ts`, `src/actions/email-verification.ts` — guard/redirect when disabled.
+- **Decision (confirmed):** variable name `EMAIL_VERIFICATION_ENABLED`; verification is **enabled unless explicitly set to `"false"`/`"0"`** (opt-out, fail safe). Set `EMAIL_VERIFICATION_ENABLED=false` in `.env` for now.
+- Reminder from the last feature: the Resend account is still in test mode, so even when enabled it only delivers to the account owner until a domain is verified.
 
 ## History
 

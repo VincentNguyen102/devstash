@@ -1,7 +1,10 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { MailCheck } from "lucide-react";
 
 import { ResendVerificationForm } from "@/components/auth/resend-verification-form";
+import { isEmailVerificationEnabled } from "@/lib/email-verification";
 
 interface CheckEmailPageProps {
   searchParams: Promise<{ email?: string }>;
@@ -10,6 +13,13 @@ interface CheckEmailPageProps {
 export default async function CheckEmailPage({
   searchParams,
 }: CheckEmailPageProps) {
+  // Read the flag at request time so it always matches the server behavior.
+  await connection();
+
+  if (!isEmailVerificationEnabled()) {
+    redirect("/sign-in");
+  }
+
   const { email } = await searchParams;
   const hasEmail = typeof email === "string" && email.length > 0;
 

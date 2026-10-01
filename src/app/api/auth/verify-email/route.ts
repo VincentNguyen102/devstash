@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
 
-import { verifyEmailToken } from "@/lib/email-verification";
+import {
+  isEmailVerificationEnabled,
+  verifyEmailToken,
+} from "@/lib/email-verification";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
+
+  if (!isEmailVerificationEnabled()) {
+    return NextResponse.redirect(new URL("/sign-in", origin));
+  }
+
   const token = searchParams.get("token");
 
   if (!token) {
