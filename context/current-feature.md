@@ -1,33 +1,18 @@
-# Current Feature: Items List View
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-In Progress
+Not Started
 
 ## Goals
 
 <!-- Goals & requirements -->
 
-- Create the dynamic route `/items/[type]` (e.g. `/items/snippets`, `/items/notes`)
-- Fetch and display items filtered by the item type
-- Render a responsive grid of `ItemCard` components
-- Two columns on medium breakpoint and up
-- Each card shows a left border coloured by the item type
-- Follow existing codebase patterns
-
 ## Notes
 
 <!-- Any extra notes -->
-
-- Spec: `context/features/item-list-view-spec.md`
-- The route already exists as a placeholder at `src/app/(dashboard)/items/[type]/page.tsx` using `src/lib/mock-data.ts`; it must be switched to DB-backed data.
-- `ItemRow` exists for the dashboard list; this feature needs a new grid-oriented `ItemCard` component (`src/components/dashboard/item-card.tsx`).
-- The per-type left-border accent already exists as `accentClass` in `src/lib/item-type-meta.ts` (recently switched from a full ring to a thick left border) — reuse `getTypeVisual`.
-- Likely add a `getItemsByType(typeId)` helper to `src/lib/db/items.ts`, mirroring `findItemSummaries` (reuse `ItemSummary`) and calling `connection()` for dynamic rendering.
-- Keep the existing `notFound()` behaviour for unknown type ids; use `getItemTypes()` (or the system type list) to validate/name the type.
-- The page lives in the `(dashboard)` route group and is covered by the auth proxy matcher.
 
 ## History
 
@@ -52,3 +37,4 @@ In Progress
 - Forgot Password completed — reused the Auth.js `VerificationToken` table for password-reset tokens with namespaced identifiers (`password-reset:<email>`) so they never collide with or consume email-verification tokens (cross-flow guards added to both `verifyEmailToken` and the reset lookup, verified); extracted shared token helpers (`generateToken`/`hashToken`/`PASSWORD_RESET_IDENTIFIER_PREFIX`) to `src/lib/tokens.ts`, and refactored `src/lib/email.ts` around a shared Resend helper with a dev fallback that logs the link on delivery failure (added `sendPasswordResetEmail`); added `src/lib/password-reset.ts` (single-use, 1-hour, sha256-hashed tokens with a read-only validity check and a consume-and-update function) and `src/actions/password-reset.ts` (`requestPasswordReset` always returns a generic response to prevent enumeration and only issues tokens for credential accounts; `submitPasswordReset` validates with zod, hashes at bcrypt 12 rounds, updates `User.password`, consumes the token and redirects to `/sign-in?reset=success`); added `/forgot-password` and `/reset-password` pages with client forms (invalid/expired states), plus a "Forgot password?" link and a reset-success notice on the sign-in page; reset is independent of `EMAIL_VERIFICATION_ENABLED`; verified `npm run build` + `npm run lint` and end-to-end (valid token renders the form, invalid → "Invalid link", expired → "Link expired", reset success, token reuse → invalid, old password rejected / new password signs in, cross-flow `verifyEmailToken` on a reset token → invalid without consuming it); note: the dev fallback logs the reset link while Resend stays in test mode
 - Profile Page completed — built out the `/profile` route (`src/app/(dashboard)/profile/page.tsx`) with a user-scoped `getProfile(userId)` data helper (`src/lib/db/profile.ts`) showing avatar (GitHub image or initials), name, email, member-since date, usage totals (items/collections) and a per-type breakdown including zero-count types; added `src/actions/profile.ts` with `changePassword` (verifies the current bcrypt hash, credential accounts only) and `deleteAccount` (cascade delete + client sign-out), plus `src/components/profile/*` and a reusable Radix `src/components/ui/dialog.tsx` primitive for the change-password and delete-account confirmation dialogs; moved `SYSTEM_TYPE_ORDER`/`systemTypeOrder()` into `src/lib/item-type-meta.ts` so `items.ts` and `profile.ts` share one ordering source; and centralized the password Zod schemas in `src/lib/validations/password.ts` (`passwordField`, `requiredPasswordField`, `currentPasswordField`, `withPasswordConfirmation`), refactoring register/reset/change/sign-in to use it; verified `npm run build` + `npm run lint` and in the browser (profile info/stats, wrong + valid change-password, delete-account dialog and full cascade delete confirmed against the dev DB with a throwaway account, and the demo credentials still sign in)
 - Rate Limiting for Auth completed — added Upstash Redis rate limiting to the auth flows with `@upstash/ratelimit`/`@upstash/redis`; created a reusable `src/lib/rate-limit.ts` (cached sliding-window limiters per flow, `x-forwarded-for` IP extraction with fallbacks, key/message helpers, `{ success, remaining, reset, retryAfterSeconds }` results and fail-open behaviour when Upstash is unconfigured or errors); applied limits at the action/route boundary because only register is an HTTP route — `authenticate` (login, 5/15 min, IP+email), `POST /api/auth/register` (3/1 h, IP, returns real `429` + `Retry-After`), `requestPasswordReset` (3/1 h, IP), `submitPasswordReset` (5/15 min, IP) and `resendVerificationEmail` (3/15 min, IP+email); added `useRateLimitToast` so server-action forms also toast the friendly message (inline error retained), made the register form toast the `429`, and documented `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` in `.env.example`; verified `npm run build` + `npm run lint`, direct limiter checks against the configured Upstash instance for all five limits (blocked on attempt `limit + 1`), fail-open with the env vars unset, the register route end-to-end (`400` ×3 → `429` + `Retry-After`), and login rate limiting in the browser (inline message + toast after 5 attempts)
+- Items List View completed — replaced the mock `/items/[type]` placeholder with a DB-backed page that fetches the demo user's items for the route type and renders them in a responsive two-column grid (`md:grid-cols-2`) of new `ItemCard` components; added `getItemsByType(typeId)` and `getItemTypeById(typeId)` to `src/lib/db/items.ts` (extending `findItemSummaries` to filter by `typeId`, reusing `ItemSummary`, and calling `connection()`), plus `notFound()` for unknown ids and an empty state; the new card shows the type icon, title, pinned/favorite indicators, description, tags and date with a type-coloured thick left border; also switched item/collection highlighting from a full type-coloured ring to a left accent (`borderClass` → `accentClass` in `src/lib/item-type-meta.ts`, with hover) and made the sidebar logo link to `/dashboard`; verified `npm run build` + `npm run lint` and in the browser (snippet/command accent colours, two-column grid, empty state, 404 for unknown types, logo redirect)
