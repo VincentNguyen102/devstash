@@ -10,6 +10,10 @@ import {
   resetPasswordWithToken,
 } from "@/lib/password-reset";
 import { prisma } from "@/lib/prisma";
+import {
+  passwordField,
+  withPasswordConfirmation,
+} from "@/lib/validations/password";
 
 const requestSchema = z.object({
   email: z.email("Enter a valid email address"),
@@ -70,16 +74,13 @@ export async function requestPasswordReset(
   }
 }
 
-const resetSchema = z
-  .object({
+const resetSchema = withPasswordConfirmation(
+  {
     token: z.string().min(1),
-    password: z.string().min(8, "Password must be at least 8 characters"),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  });
+    password: passwordField,
+  },
+  "password",
+);
 
 export interface ResetPasswordState {
   success: boolean;

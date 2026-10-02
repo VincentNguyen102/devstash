@@ -9,18 +9,19 @@ import {
   isEmailVerificationEnabled,
 } from "@/lib/email-verification";
 import { prisma } from "@/lib/prisma";
+import {
+  passwordField,
+  withPasswordConfirmation,
+} from "@/lib/validations/password";
 
-const registerSchema = z
-  .object({
+const registerSchema = withPasswordConfirmation(
+  {
     name: z.string().trim().min(1, "Name is required"),
     email: z.email("Enter a valid email address"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  });
+    password: passwordField,
+  },
+  "password",
+);
 
 export async function POST(request: Request) {
   try {

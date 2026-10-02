@@ -8,11 +8,12 @@ import { z } from "zod";
 import authConfig from "@/auth.config";
 import { isEmailVerificationEnabled } from "@/lib/email-verification";
 import { prisma } from "@/lib/prisma";
+import { requiredPasswordField } from "@/lib/validations/password";
 
 // Only the email/password pair is read from the credentials sign-in form.
 const credentialsSchema = z.object({
   email: z.email(),
-  password: z.string().min(1),
+  password: requiredPasswordField,
 });
 
 // Thrown when the credentials are valid but the email has not been verified
