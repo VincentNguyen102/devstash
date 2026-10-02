@@ -46,6 +46,7 @@ Example v4 configuration:
 @theme {
   --color-primary: oklch(50% 0.2 250);
 }
+```
 
 ## File Organization
 
@@ -89,9 +90,18 @@ Example v4 configuration:
 - Return `{ success, data, error }` pattern from actions
 - Display user-friendly error messages via toast
 
+## Testing
+
+- Vitest with the Node environment (`vitest.config.mts`) — no jsdom or testing-library
+- Unit test **server actions and utilities only**; components are verified in the browser
+- Colocate tests next to the source as `[module].test.ts` (e.g. `src/lib/tokens.test.ts`, `src/actions/auth.test.ts`)
+- Import `describe`/`it`/`expect`/`vi` from `vitest` (globals are disabled)
+- Mock external I/O before importing the module under test: `@/lib/prisma`, `@/auth`, `next-auth`, `next/headers` and email senders
+- Focus on validation, transformations, error handling and boundary cases
+- Commands: `npm run test`, `npm run test:watch`, `npm run test:coverage`
+
 ## Code Quality
 
 - No commented-out code unless specified
 - No unused imports or variables
 - Keep functions under 50 lines when possible
-```

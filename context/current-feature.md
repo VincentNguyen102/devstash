@@ -1,18 +1,27 @@
-# Current Feature
+# Current Feature: Vitest Unit Testing Setup
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Set up Vitest for unit testing server actions and utilities (no component tests)
+- Add `test`, `test:watch` and `test:coverage` npm scripts plus a `vitest.config.mts` (Node environment, `@/*` alias, coverage scoped to `src/actions` + `src/lib`)
+- Add initial tests for existing utilities/actions to validate the setup
+- Update the workflow in `context/ai-interaction.md` and related docs to include unit testing
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- Vitest 4.1.x + `@vitest/coverage-v8`; Vite 8 resolves the `@/*` tsconfig paths natively, so no `vite-tsconfig-paths` plugin is needed
+- Tests are colocated as `*.test.ts` next to the source; only `src/actions/**` and `src/lib/**` are collected
+- Initial tests: `tokens`, `password` validation, `rate-limit` helpers and the `authenticate` server action (framework/DB I/O mocked)
 
 ## History
 

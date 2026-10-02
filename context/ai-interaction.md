@@ -15,7 +15,7 @@ This is the common workflow that we will use for every single feature/fix:
 1. **Document** - Document the feature in @context/current-feature.md.
 2. **Branch** - Create new branch for feature, fix, etc
 3. **Implement** - Implement the feature/fix that I create in @context/current-feature.md
-4. **Test** - Verify it works in the browser. Implement unit testing later. Run `npm run build` and fix any errors
+4. **Test** - Verify it works in the browser. Add/update Vitest unit tests for the server actions and utilities you touched (see Testing below). Run `npm run test` and `npm run build`, and fix any errors
 5. **Iterate** - Iterate and change things if needed
 6. **Commit** - Only after build passes and everything works
 7. **Merge** - Merge to main
@@ -24,6 +24,15 @@ This is the common workflow that we will use for every single feature/fix:
 10. Mark as completed in @context/current-feature.md and add to history
 
 Do NOT commit without permission and until the build passes. If build fails, fix the issues first.
+
+## Testing
+
+Unit tests use **Vitest** and cover **server actions and utilities only** — never components.
+
+- **Commands**: `npm run test` (run once), `npm run test:watch` (watch mode), `npm run test:coverage` (coverage report)
+- **Location**: colocate tests next to the source as `[module].test.ts` in `src/actions/` or `src/lib/`
+- **Scope**: validation, transformations, error handling, rate-limit branches, etc. Components and full flows are still verified in the browser
+- When you change a server action or utility, add or update its tests as part of the **Test** step, and only commit once `npm run test` and `npm run build` both pass
 
 ## Branching
 
