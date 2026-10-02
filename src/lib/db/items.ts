@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 
+import { systemTypeOrder } from "@/lib/item-type-meta";
 import { prisma } from "@/lib/prisma";
 
 // Auth is not wired up yet, so dashboard data is scoped to the seeded demo
@@ -29,23 +30,6 @@ export interface ItemTypeSummary {
   color: string | null;
   /** Number of the demo user's items of this type. */
   itemCount: number;
-}
-
-// Display order for the built-in item types. Ids are stable slugs, so this keeps
-// the sidebar order deterministic without an explicit column in the database.
-const SYSTEM_TYPE_ORDER = [
-  "snippet",
-  "prompt",
-  "command",
-  "note",
-  "file",
-  "image",
-  "url",
-];
-
-function systemTypeOrder(typeId: string): number {
-  const index = SYSTEM_TYPE_ORDER.indexOf(typeId);
-  return index === -1 ? SYSTEM_TYPE_ORDER.length : index;
 }
 
 /** Query the demo user's items, newest first, mapped to the row shape. */

@@ -42,6 +42,27 @@ const ICON_BY_TYPE_ID: Record<string, LucideIcon> = {
   url: LinkIcon,
 };
 
+/**
+ * Canonical display order for the built-in item types. Ids are stable slugs, so
+ * this keeps ordering deterministic without an explicit column in the database.
+ * Custom/unknown types sort last.
+ */
+export const SYSTEM_TYPE_ORDER: string[] = [
+  "snippet",
+  "prompt",
+  "command",
+  "note",
+  "file",
+  "image",
+  "url",
+];
+
+/** Sort index for an item type id; unknown types sort after all system types. */
+export function systemTypeOrder(typeId: string): number {
+  const index = SYSTEM_TYPE_ORDER.indexOf(typeId);
+  return index === -1 ? SYSTEM_TYPE_ORDER.length : index;
+}
+
 const VISUALS_BY_TYPE_ID: Record<string, Omit<TypeVisual, "Icon">> = {
   snippet: {
     textClass: "text-blue-400",
