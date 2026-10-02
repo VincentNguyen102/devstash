@@ -12,13 +12,13 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
 });
 
 export function ItemRow({ item }: { item: ItemSummary }) {
-  const { Icon, textClass, bgClass, borderClass } = getTypeVisual(item.typeId);
+  const { Icon, textClass, bgClass, accentClass } = getTypeVisual(item.typeId);
 
   return (
     <article
       className={cn(
-        "flex items-start gap-3 rounded-xl bg-card p-3 ring-1 sm:gap-4 sm:p-4",
-        borderClass
+        "flex items-start gap-3 rounded-xl border-l-4 bg-card p-3 ring-1 ring-foreground/10 transition-colors hover:bg-muted/40 sm:gap-4 sm:p-4",
+        accentClass
       )}
     >
       <span

@@ -117,11 +117,17 @@ export function SidebarContent({
 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
-      <div className="flex h-14 shrink-0 items-center gap-2 border-b border-sidebar-border px-4">
-        <div className="flex size-7 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-          <CodeXml className="size-4" />
-        </div>
-        <span className="text-base font-semibold">DevStash</span>
+      <div className="flex h-14 shrink-0 items-center border-b border-sidebar-border">
+        <Link
+          href="/dashboard"
+          onClick={onNavigate}
+          className="flex h-full w-full items-center gap-2 px-4 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        >
+          <div className="flex size-7 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
+            <CodeXml className="size-4" />
+          </div>
+          <span className="text-base font-semibold">DevStash</span>
+        </Link>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 py-3">

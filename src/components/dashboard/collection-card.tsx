@@ -17,8 +17,8 @@ export function CollectionCard({
 }: {
   collection: CollectionSummary;
 }) {
-  const borderClass = collection.dominantTypeId
-    ? getTypeVisual(collection.dominantTypeId).borderClass
+  const accentClass = collection.dominantTypeId
+    ? getTypeVisual(collection.dominantTypeId).accentClass
     : undefined;
 
   return (
@@ -28,8 +28,8 @@ export function CollectionCard({
     >
       <Card
         className={cn(
-          "h-full transition-shadow hover:ring-foreground/25",
-          borderClass
+          "h-full border-l-4 transition-shadow hover:ring-foreground/25",
+          accentClass
         )}
       >
         <CardHeader>

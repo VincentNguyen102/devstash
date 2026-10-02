@@ -1,0 +1,80 @@
+import { Pin, Star } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import type { ItemSummary } from "@/lib/db/items";
+import { getTypeVisual } from "@/lib/item-type-meta";
+import { cn } from "@/lib/utils";
+
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  timeZone: "UTC",
+});
+
+export function ItemCard({ item }: { item: ItemSummary }) {
+  const { Icon, textClass, bgClass, accentClass } = getTypeVisual(item.typeId);
+
+  return (
+    <Card
+      className={cn(
+        "h-full border-l-4 transition-shadow hover:ring-foreground/25",
+        accentClass
+      )}
+    >
+      <CardHeader>
+        <CardTitle className="flex items-start gap-2">
+          <span
+            className={cn(
+              "flex size-8 shrink-0 items-center justify-center rounded-lg",
+              bgClass
+            )}
+          >
+            <Icon aria-hidden className={cn("size-4", textClass)} />
+          </span>
+          <span className="min-w-0 flex-1 truncate">{item.title}</span>
+          {item.isPinned ? (
+            <Pin
+              aria-hidden
+              className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
+            />
+          ) : null}
+          {item.isFavorite ? (
+            <Star
+              aria-hidden
+              className="mt-0.5 size-3.5 shrink-0 fill-yellow-400 text-yellow-400"
+            />
+          ) : null}
+        </CardTitle>
+        <CardDescription className="line-clamp-2">
+          {item.description}
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent className="flex flex-1 flex-col gap-4">
+        {item.tags.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {item.tags.map((tag) => (
+              <Badge key={tag} variant="secondary" className="rounded-md">
+                {tag}
+              </Badge>
+            ))}
+          </div>
+        ) : null}
+
+        <time
+          dateTime={item.updatedAt.toISOString()}
+          className="mt-auto text-xs text-muted-foreground"
+        >
+          {dateFormatter.format(item.updatedAt)}
+        </time>
+      </CardContent>
+    </Card>
+  );
+}

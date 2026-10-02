@@ -1,18 +1,33 @@
-# Current Feature
+# Current Feature: Items List View
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Create the dynamic route `/items/[type]` (e.g. `/items/snippets`, `/items/notes`)
+- Fetch and display items filtered by the item type
+- Render a responsive grid of `ItemCard` components
+- Two columns on medium breakpoint and up
+- Each card shows a left border coloured by the item type
+- Follow existing codebase patterns
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- Spec: `context/features/item-list-view-spec.md`
+- The route already exists as a placeholder at `src/app/(dashboard)/items/[type]/page.tsx` using `src/lib/mock-data.ts`; it must be switched to DB-backed data.
+- `ItemRow` exists for the dashboard list; this feature needs a new grid-oriented `ItemCard` component (`src/components/dashboard/item-card.tsx`).
+- The per-type left-border accent already exists as `accentClass` in `src/lib/item-type-meta.ts` (recently switched from a full ring to a thick left border) — reuse `getTypeVisual`.
+- Likely add a `getItemsByType(typeId)` helper to `src/lib/db/items.ts`, mirroring `findItemSummaries` (reuse `ItemSummary`) and calling `connection()` for dynamic rendering.
+- Keep the existing `notFound()` behaviour for unknown type ids; use `getItemTypes()` (or the system type list) to validate/name the type.
+- The page lives in the `(dashboard)` route group and is covered by the auth proxy matcher.
 
 ## History
 

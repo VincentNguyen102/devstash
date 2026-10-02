@@ -34,7 +34,7 @@ export interface ItemTypeSummary {
 
 /** Query the demo user's items, newest first, mapped to the row shape. */
 async function findItemSummaries(
-  filter: { isPinned?: boolean },
+  filter: { isPinned?: boolean; typeId?: string },
   limit?: number,
 ): Promise<ItemSummary[]> {
   const items = await prisma.item.findMany({
@@ -81,6 +81,13 @@ export async function getRecentItems(limit = 10): Promise<ItemSummary[]> {
   return findItemSummaries({}, limit);
 }
 
+/** The demo user's items of a single item type, most recently updated first. */
+export async function getItemsByType(typeId: string): Promise<ItemSummary[]> {
+  await connection();
+
+  return findItemSummaries({ typeId });
+}
+
 /** Aggregate item counts for the dashboard stat cards. */
 export async function getItemStats(): Promise<ItemStats> {
   await connection();
@@ -124,4 +131,41 @@ export async function getItemTypes(): Promise<ItemTypeSummary[]> {
       itemCount: countByTypeId.get(type.id) ?? 0,
     }))
     .sort((a, b) => systemTypeOrder(a.id) - systemTypeOrder(b.id));
+}
+
+/**
+ * A single item type with the demo user's item count, or null when the id is
+ * unknown. Used by the `/items/[type]` page to validate the route segment.
+ */
+export async function getItemTypeById(
+  typeId: string,
+): Promise<ItemTypeSummary | null> {
+  await connection();
+
+  const type = await prisma.itemType.findUnique({
+    where: { id: typeId },
+    select: {
+      id: true,
+      name: true,
+      icon: true,
+      color: true,
+      _count: {
+        select: {
+          items: { where: { user: { email: DEMO_USER_EMAIL } } },
+        },
+      },
+    },
+  });
+
+  if (!type) {
+    return null;
+  }
+
+  return {
+    id: type.id,
+    name: type.name,
+    icon: type.icon,
+    color: type.color,
+    itemCount: type._count.items,
+  };
 }

@@ -16,8 +16,8 @@ export interface TypeVisual {
   textClass: string;
   /** Tinted background class for icon containers. */
   bgClass: string;
-  /** Border (ring) colour class, e.g. for a card tied to this type. */
-  borderClass: string;
+  /** Accent colour classes for the thick left border of a card/row. */
+  accentClass: string;
 }
 
 /** Lucide icons keyed by the icon name stored on an `ItemType` row. */
@@ -67,44 +67,44 @@ const VISUALS_BY_TYPE_ID: Record<string, Omit<TypeVisual, "Icon">> = {
   snippet: {
     textClass: "text-blue-400",
     bgClass: "bg-blue-400/10",
-    borderClass: "ring-blue-400/40",
+    accentClass: "border-blue-400/60 hover:border-blue-400",
   },
   prompt: {
     textClass: "text-violet-400",
     bgClass: "bg-violet-400/10",
-    borderClass: "ring-violet-400/40",
+    accentClass: "border-violet-400/60 hover:border-violet-400",
   },
   command: {
     textClass: "text-orange-400",
     bgClass: "bg-orange-400/10",
-    borderClass: "ring-orange-400/40",
+    accentClass: "border-orange-400/60 hover:border-orange-400",
   },
   note: {
     textClass: "text-yellow-400",
     bgClass: "bg-yellow-400/10",
-    borderClass: "ring-yellow-400/40",
+    accentClass: "border-yellow-400/60 hover:border-yellow-400",
   },
   file: {
     textClass: "text-slate-400",
     bgClass: "bg-slate-400/10",
-    borderClass: "ring-slate-400/40",
+    accentClass: "border-slate-400/60 hover:border-slate-400",
   },
   image: {
     textClass: "text-pink-400",
     bgClass: "bg-pink-400/10",
-    borderClass: "ring-pink-400/40",
+    accentClass: "border-pink-400/60 hover:border-pink-400",
   },
   url: {
     textClass: "text-green-400",
     bgClass: "bg-green-400/10",
-    borderClass: "ring-green-400/40",
+    accentClass: "border-green-400/60 hover:border-green-400",
   },
 };
 
 const FALLBACK_VISUAL: Omit<TypeVisual, "Icon"> = {
   textClass: "text-muted-foreground",
   bgClass: "bg-muted",
-  borderClass: "ring-foreground/10",
+  accentClass: "border-foreground/15 hover:border-foreground/30",
 };
 
 /**
