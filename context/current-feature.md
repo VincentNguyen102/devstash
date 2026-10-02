@@ -1,18 +1,38 @@
-# Current Feature
+# Current Feature: Profile Page
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Build out the `/profile` page at `src/app/(dashboard)/profile/page.tsx` (currently a placeholder).
+- Display user info: email, name, avatar (GitHub image or initials), and account creation date.
+- Show usage stats: total items, total collections, and a breakdown by item type (snippets, prompts, notes, commands, links, files, images).
+- Add account actions:
+  - Change password — only for users who signed up with email/password (hide for GitHub OAuth users).
+  - Delete account — with a confirmation dialog to prevent accidental deletion.
+- Follow existing codebase patterns for data fetching (server components + Prisma), components, and Server Actions.
+- Keep the route protected (already covered by the `(dashboard)` layout auth check).
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- Spec: `context/features/profile-spec.md`.
+- Avatar logic: reuse `UserAvatar` (`src/components/auth/user-avatar.tsx`) — GitHub `image` from OAuth if present, otherwise `getInitials(name)`; fall back to email when `name` is missing.
+- Change-password visibility: detect email/password accounts via `User.password` being non-null (GitHub-only accounts have `password: null`). Fetch this server-side; do not expose the hash to the client.
+- Deletion: cascade deletes are already configured in `prisma/schema.prisma` (User → items, collections, tags, accounts, sessions), so deleting the `User` row cleans up related data. Confirm before deleting, then sign the user out.
+- Data scoping gotcha: existing DB helpers (`src/lib/db/items.ts`, `src/lib/db/collections.ts`) are hardcoded to `DEMO_USER_EMAIL`. The profile page must scope stats to the authenticated `session.user.id`/email, so add user-scoped helpers (or extend the existing ones) rather than reusing the demo scoping.
+- Use `auth()` for the session (`session.user.id` is exposed via the JWT session callback).
+- Item type breakdown should use the system types in canonical order (`getItemTypes()` order: snippet, prompt, command, note, file, image, url) and include types with zero items.
+- Account creation date comes from `User.createdAt`; format it for display.
+- Server Actions should follow the `{ success, data, error }` pattern with Zod validation; destructive/failed paths surface via `sonner` toasts (already mounted in the root layout).
+- Verify with `npm run build` + `npm run lint`, then test in the browser.
 
 ## History
 
