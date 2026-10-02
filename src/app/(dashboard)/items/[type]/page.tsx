@@ -26,7 +26,7 @@ export default async function ItemTypePage(props: PageProps<"/items/[type]">) {
       <section className="space-y-4">
         <SectionHeading title={`All ${itemType.name}`} />
         {items.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {items.map((item) => (
               <ItemCard key={item.id} item={item} />
             ))}

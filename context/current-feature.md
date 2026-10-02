@@ -1,18 +1,28 @@
-# Current Feature
+# Current Feature: Three-Column Item Listing
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Change the item listing grid to show **three columns on larger screens** instead of two
+- Keep it responsive: a single column on mobile, scaling up as space allows
+- Preserve the existing `ItemCard` layout, spacing and type-colour accents
+- Verify the grid at mobile / tablet / desktop widths in the browser
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- Target file: `src/app/(dashboard)/items/[type]/page.tsx` — currently `<div className="grid gap-4 md:grid-cols-2">`
+- Tailwind CSS v4: use responsive utilities only (no `tailwind.config`)
+- Keep `md:grid-cols-2` and add `lg:grid-cols-3` so cards stay readable; confirm the exact breakpoint in the browser
+- Presentational change only — no server actions/utilities touched, so no unit tests expected; browser verification + `npm run build`
 
 ## History
 
