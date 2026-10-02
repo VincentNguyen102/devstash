@@ -1,28 +1,18 @@
-# Current Feature: Three-Column Item Listing
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-In Progress
+Not Started
 
 ## Goals
 
 <!-- Goals & requirements -->
 
-- Change the item listing grid to show **three columns on larger screens** instead of two
-- Keep it responsive: a single column on mobile, scaling up as space allows
-- Preserve the existing `ItemCard` layout, spacing and type-colour accents
-- Verify the grid at mobile / tablet / desktop widths in the browser
-
 ## Notes
 
 <!-- Any extra notes -->
-
-- Target file: `src/app/(dashboard)/items/[type]/page.tsx` — currently `<div className="grid gap-4 md:grid-cols-2">`
-- Tailwind CSS v4: use responsive utilities only (no `tailwind.config`)
-- Keep `md:grid-cols-2` and add `lg:grid-cols-3` so cards stay readable; confirm the exact breakpoint in the browser
-- Presentational change only — no server actions/utilities touched, so no unit tests expected; browser verification + `npm run build`
 
 ## History
 
@@ -49,3 +39,4 @@ In Progress
 - Rate Limiting for Auth completed — added Upstash Redis rate limiting to the auth flows with `@upstash/ratelimit`/`@upstash/redis`; created a reusable `src/lib/rate-limit.ts` (cached sliding-window limiters per flow, `x-forwarded-for` IP extraction with fallbacks, key/message helpers, `{ success, remaining, reset, retryAfterSeconds }` results and fail-open behaviour when Upstash is unconfigured or errors); applied limits at the action/route boundary because only register is an HTTP route — `authenticate` (login, 5/15 min, IP+email), `POST /api/auth/register` (3/1 h, IP, returns real `429` + `Retry-After`), `requestPasswordReset` (3/1 h, IP), `submitPasswordReset` (5/15 min, IP) and `resendVerificationEmail` (3/15 min, IP+email); added `useRateLimitToast` so server-action forms also toast the friendly message (inline error retained), made the register form toast the `429`, and documented `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` in `.env.example`; verified `npm run build` + `npm run lint`, direct limiter checks against the configured Upstash instance for all five limits (blocked on attempt `limit + 1`), fail-open with the env vars unset, the register route end-to-end (`400` ×3 → `429` + `Retry-After`), and login rate limiting in the browser (inline message + toast after 5 attempts)
 - Items List View completed — replaced the mock `/items/[type]` placeholder with a DB-backed page that fetches the demo user's items for the route type and renders them in a responsive two-column grid (`md:grid-cols-2`) of new `ItemCard` components; added `getItemsByType(typeId)` and `getItemTypeById(typeId)` to `src/lib/db/items.ts` (extending `findItemSummaries` to filter by `typeId`, reusing `ItemSummary`, and calling `connection()`), plus `notFound()` for unknown ids and an empty state; the new card shows the type icon, title, pinned/favorite indicators, description, tags and date with a type-coloured thick left border; also switched item/collection highlighting from a full type-coloured ring to a left accent (`borderClass` → `accentClass` in `src/lib/item-type-meta.ts`, with hover) and made the sidebar logo link to `/dashboard`; verified `npm run build` + `npm run lint` and in the browser (snippet/command accent colours, two-column grid, empty state, 404 for unknown types, logo redirect)
 - Vitest Unit Testing Setup completed — added Vitest 4.1.x + `@vitest/coverage-v8` and a `vitest.config.mts` (Node environment, native Vite 8 tsconfig-path resolution for `@/*`, tests collected only from `src/actions/**` and `src/lib/**`, coverage scoped to actions/utilities) plus `test`/`test:watch`/`test:coverage` npm scripts; added the first colocated unit tests (`tokens`, password validation, rate-limit helpers and the `authenticate` server action with `@/auth`/`next-auth`/rate-limit mocked), 28 tests passing; documented the testing scope and workflow in `context/ai-interaction.md` (step 4 + new Testing section), `context/coding-standards.md` (new Testing section, also fixed an unclosed CSS fence), `README.md`, `AGENTS.md` and the feature skill's test action; verified `npm run test` + `npm run lint` + `npm run build`
+- Three-Column Item Listing completed — changed the `/items/[type]` listing grid from two columns to three on large screens (`md:grid-cols-2 lg:grid-cols-3` in `src/app/(dashboard)/items/[type]/page.tsx`), keeping it responsive (one column on mobile, two from `md`, three from `lg`) with the existing `ItemCard` layout and type-colour accents unchanged; presentational-only change (no server actions/utilities), so no unit tests added; verified in the browser at the `lg` breakpoint (three columns at 1096px, 2/1 columns below it) and with `npm run test` + `npm run lint` + `npm run build`
