@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import Link from "next/link";
 
 import { authenticate, signInWithGitHub } from "@/actions/auth";
+import { useRateLimitToast } from "@/components/auth/use-rate-limit-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -28,6 +29,8 @@ interface SignInFormProps {
 
 export function SignInForm({ callbackUrl, error }: SignInFormProps) {
   const [state, formAction, isPending] = useActionState(authenticate, null);
+
+  useRateLimitToast(state);
 
   const displayError =
     state?.message ??

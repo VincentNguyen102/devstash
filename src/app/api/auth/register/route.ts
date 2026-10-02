@@ -10,6 +10,12 @@ import {
 } from "@/lib/email-verification";
 import { prisma } from "@/lib/prisma";
 import {
+  checkRateLimit,
+  getClientIpFrom,
+  rateLimitKey,
+  rateLimitMessage,
+} from "@/lib/rate-limit";
+import {
   passwordField,
   withPasswordConfirmation,
 } from "@/lib/validations/password";
@@ -25,6 +31,21 @@ const registerSchema = withPasswordConfirmation(
 
 export async function POST(request: Request) {
   try {
+    const limit = await checkRateLimit(
+      "register",
+      rateLimitKey(getClientIpFrom(request.headers)),
+    );
+
+    if (!limit.success) {
+      return NextResponse.json(
+        { success: false, error: rateLimitMessage(limit.retryAfterSeconds) },
+        {
+          status: 429,
+          headers: { "Retry-After": String(limit.retryAfterSeconds) },
+        },
+      );
+    }
+
     const body = await request.json();
     const parsed = registerSchema.safeParse(body);
 

@@ -9,6 +9,12 @@ import {
   isEmailVerificationEnabled,
 } from "@/lib/email-verification";
 import { prisma } from "@/lib/prisma";
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitKey,
+  rateLimitMessage,
+} from "@/lib/rate-limit";
 
 const resendSchema = z.object({
   email: z.email("Enter a valid email address"),
@@ -18,6 +24,7 @@ export interface ResendVerificationState {
   success: boolean;
   data?: { message: string };
   error?: string;
+  rateLimited?: boolean;
 }
 
 /**
@@ -46,6 +53,20 @@ export async function resendVerificationEmail(
   }
 
   const email = parsed.data.email.trim().toLowerCase();
+  const ip = await getClientIp();
+  const limit = await checkRateLimit(
+    "resendVerification",
+    rateLimitKey(ip, email),
+  );
+
+  if (!limit.success) {
+    return {
+      success: false,
+      error: rateLimitMessage(limit.retryAfterSeconds),
+      rateLimited: true,
+    };
+  }
+
   const message =
     "If an account exists for that email, we've sent a new verification link.";
 

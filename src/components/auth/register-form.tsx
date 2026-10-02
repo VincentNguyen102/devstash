@@ -51,6 +51,13 @@ export function RegisterForm({ emailVerificationEnabled }: RegisterFormProps) {
 
       const data = (await response.json()) as RegisterResponse;
 
+      if (response.status === 429) {
+        toast.error(
+          data.error ?? "Too many attempts. Please try again later.",
+        );
+        return;
+      }
+
       if (!response.ok || !data.success) {
         setError(data.error ?? "Registration failed. Please try again.");
         return;

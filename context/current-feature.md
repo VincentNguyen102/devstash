@@ -1,18 +1,51 @@
-# Current Feature
+# Current Feature: Rate Limiting for Auth
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Add rate limiting to auth-related API routes to prevent brute force attacks, credential stuffing, and email-sending abuse
+- Use Upstash Redis with `@upstash/ratelimit` (serverless-compatible) and a sliding window algorithm
+- Create a reusable rate limiting utility at `src/lib/rate-limit.ts`
+- Extract the client IP from the `x-forwarded-for` header (Vercel) or the request
+- Key limits by IP, and combine IP + email where applicable for tighter limits
+- Return `{ success, remaining, reset }` from rate limit checks
+- Protect the endpoints below with the specified limits/windows/keys:
+  - `/api/auth/callback/credentials` (login) — 5 attempts / 15 min — IP + email
+  - `/api/auth/register` — 3 attempts / 1 hour — IP
+  - `/api/auth/forgot-password` — 3 attempts / 1 hour — IP
+  - `/api/auth/reset-password` — 5 attempts / 15 min — IP
+  - `/api/auth/resend-verification` — 3 attempts / 15 min — IP + email
+- Return `429 Too Many Requests` with `{ error: "Too many attempts. Please try again in X minutes." }` and a `Retry-After` header
+- Display user-friendly error messages on the frontend (toast notification)
+- Fail open (allow the request) if Upstash is unavailable
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- Spec: `@context/features/rate-limiting-spec.md`
+- Environment variables: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
+- Upstash free tier allows 10k requests/day (sufficient for auth limiting)
+- Consider adding rate limiting middleware for a cleaner implementation later
+
+### Implementation Notes
+
+- The spec lists API routes, but register is the only auth flow that is an HTTP route — login, forgot-password, reset-password and resend-verification are Server Actions. Limits were applied at the action/route boundary instead of inventing new routes.
+  - login → `authenticate` in `src/actions/auth.ts` (IP + email), which calls `signIn("credentials")`; no custom sign-in handler needed.
+  - register → `POST /api/auth/register` (IP).
+  - forgot-password → `requestPasswordReset` (IP).
+  - reset-password → `submitPasswordReset` (IP).
+  - resend-verification → `resendVerificationEmail` (IP + email).
+- `src/lib/rate-limit.ts` owns the limiter config, IP/key helpers, message formatting and fail-open behaviour. Limiter instances are cached per process.
+- Only the register route can return a real HTTP `429` + `Retry-After` header. Server Actions return their result through React state, so they surface the same message inline and as a toast (`useRateLimitToast`) — no 429 status is possible for an action.
+- Verified: direct limiter checks against the configured Upstash instance for all five limits (blocked on attempt `limit + 1`), fail-open when the env vars are unset, register route end-to-end (`400` ×3 → `429` + `Retry-After`), and login in the browser (inline message + toast after 5 attempts). `npm run lint` and `npm run build` pass.
 
 ## History
 

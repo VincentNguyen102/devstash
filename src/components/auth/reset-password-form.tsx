@@ -7,6 +7,7 @@ import {
   submitPasswordReset,
   type ResetPasswordState,
 } from "@/actions/password-reset";
+import { useRateLimitToast } from "@/components/auth/use-rate-limit-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -21,6 +22,8 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
     submitPasswordReset,
     INITIAL_STATE,
   );
+
+  useRateLimitToast(state);
 
   const showRequestNewLink =
     state?.code === "invalid" || state?.code === "expired";

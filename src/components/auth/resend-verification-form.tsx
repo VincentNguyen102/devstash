@@ -6,6 +6,7 @@ import {
   resendVerificationEmail,
   type ResendVerificationState,
 } from "@/actions/email-verification";
+import { useRateLimitToast } from "@/components/auth/use-rate-limit-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -22,6 +23,8 @@ export function ResendVerificationForm({
     resendVerificationEmail,
     INITIAL_STATE,
   );
+
+  useRateLimitToast(state);
 
   const message = state?.success ? state.data?.message : state?.error;
 

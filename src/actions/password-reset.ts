@@ -11,6 +11,12 @@ import {
 } from "@/lib/password-reset";
 import { prisma } from "@/lib/prisma";
 import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitKey,
+  rateLimitMessage,
+} from "@/lib/rate-limit";
+import {
   passwordField,
   withPasswordConfirmation,
 } from "@/lib/validations/password";
@@ -23,6 +29,7 @@ export interface ForgotPasswordState {
   success: boolean;
   data?: { message: string };
   error?: string;
+  rateLimited?: boolean;
 }
 
 /**
@@ -34,6 +41,17 @@ export async function requestPasswordReset(
   _prevState: ForgotPasswordState | null,
   formData: FormData,
 ): Promise<ForgotPasswordState> {
+  const ip = await getClientIp();
+  const limit = await checkRateLimit("forgotPassword", rateLimitKey(ip));
+
+  if (!limit.success) {
+    return {
+      success: false,
+      error: rateLimitMessage(limit.retryAfterSeconds),
+      rateLimited: true,
+    };
+  }
+
   const parsed = requestSchema.safeParse({ email: formData.get("email") });
 
   if (!parsed.success) {
@@ -86,12 +104,24 @@ export interface ResetPasswordState {
   success: boolean;
   error?: string;
   code?: "invalid" | "expired";
+  rateLimited?: boolean;
 }
 
 export async function submitPasswordReset(
   _prevState: ResetPasswordState | null,
   formData: FormData,
 ): Promise<ResetPasswordState> {
+  const ip = await getClientIp();
+  const limit = await checkRateLimit("resetPassword", rateLimitKey(ip));
+
+  if (!limit.success) {
+    return {
+      success: false,
+      error: rateLimitMessage(limit.retryAfterSeconds),
+      rateLimited: true,
+    };
+  }
+
   const parsed = resetSchema.safeParse({
     token: formData.get("token"),
     password: formData.get("password"),

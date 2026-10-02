@@ -3,10 +3,17 @@
 import { AuthError, CredentialsSignin } from "next-auth";
 
 import { signIn } from "@/auth";
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitKey,
+  rateLimitMessage,
+} from "@/lib/rate-limit";
 
 export interface AuthFormState {
   message: string;
   code?: "email_not_verified";
+  rateLimited?: boolean;
 }
 
 function getCallbackUrl(formData: FormData): string {
@@ -20,6 +27,19 @@ export async function authenticate(
   _prevState: AuthFormState | null,
   formData: FormData,
 ): Promise<AuthFormState | null> {
+  const email = String(formData.get("email") ?? "")
+    .trim()
+    .toLowerCase();
+  const ip = await getClientIp();
+  const limit = await checkRateLimit("login", rateLimitKey(ip, email));
+
+  if (!limit.success) {
+    return {
+      message: rateLimitMessage(limit.retryAfterSeconds),
+      rateLimited: true,
+    };
+  }
+
   try {
     await signIn("credentials", {
       email: formData.get("email"),
