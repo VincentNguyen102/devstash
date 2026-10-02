@@ -1,51 +1,18 @@
-# Current Feature: Rate Limiting for Auth
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-In Progress
+Not Started
 
 ## Goals
 
 <!-- Goals & requirements -->
 
-- Add rate limiting to auth-related API routes to prevent brute force attacks, credential stuffing, and email-sending abuse
-- Use Upstash Redis with `@upstash/ratelimit` (serverless-compatible) and a sliding window algorithm
-- Create a reusable rate limiting utility at `src/lib/rate-limit.ts`
-- Extract the client IP from the `x-forwarded-for` header (Vercel) or the request
-- Key limits by IP, and combine IP + email where applicable for tighter limits
-- Return `{ success, remaining, reset }` from rate limit checks
-- Protect the endpoints below with the specified limits/windows/keys:
-  - `/api/auth/callback/credentials` (login) — 5 attempts / 15 min — IP + email
-  - `/api/auth/register` — 3 attempts / 1 hour — IP
-  - `/api/auth/forgot-password` — 3 attempts / 1 hour — IP
-  - `/api/auth/reset-password` — 5 attempts / 15 min — IP
-  - `/api/auth/resend-verification` — 3 attempts / 15 min — IP + email
-- Return `429 Too Many Requests` with `{ error: "Too many attempts. Please try again in X minutes." }` and a `Retry-After` header
-- Display user-friendly error messages on the frontend (toast notification)
-- Fail open (allow the request) if Upstash is unavailable
-
 ## Notes
 
 <!-- Any extra notes -->
-
-- Spec: `@context/features/rate-limiting-spec.md`
-- Environment variables: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
-- Upstash free tier allows 10k requests/day (sufficient for auth limiting)
-- Consider adding rate limiting middleware for a cleaner implementation later
-
-### Implementation Notes
-
-- The spec lists API routes, but register is the only auth flow that is an HTTP route — login, forgot-password, reset-password and resend-verification are Server Actions. Limits were applied at the action/route boundary instead of inventing new routes.
-  - login → `authenticate` in `src/actions/auth.ts` (IP + email), which calls `signIn("credentials")`; no custom sign-in handler needed.
-  - register → `POST /api/auth/register` (IP).
-  - forgot-password → `requestPasswordReset` (IP).
-  - reset-password → `submitPasswordReset` (IP).
-  - resend-verification → `resendVerificationEmail` (IP + email).
-- `src/lib/rate-limit.ts` owns the limiter config, IP/key helpers, message formatting and fail-open behaviour. Limiter instances are cached per process.
-- Only the register route can return a real HTTP `429` + `Retry-After` header. Server Actions return their result through React state, so they surface the same message inline and as a toast (`useRateLimitToast`) — no 429 status is possible for an action.
-- Verified: direct limiter checks against the configured Upstash instance for all five limits (blocked on attempt `limit + 1`), fail-open when the env vars are unset, register route end-to-end (`400` ×3 → `429` + `Retry-After`), and login in the browser (inline message + toast after 5 attempts). `npm run lint` and `npm run build` pass.
 
 ## History
 
@@ -69,3 +36,4 @@ In Progress
 - Toggle Email Verification completed — added `isEmailVerificationEnabled()` to `src/lib/email-verification.ts`, reading `EMAIL_VERIFICATION_ENABLED` (opt-out: enabled unless explicitly `"false"`/`"0"`); when disabled, `POST /api/auth/register` sets `emailVerified` at creation and skips the token + email, the Credentials gate in `src/auth.ts` is skipped, and `/check-email`, `/verify-email`, `GET /api/auth/verify-email` and the resend action redirect/no-op; the `register` server page passes the flag as a prop to `RegisterForm`, which returns to the "account created — you can now sign in" → `/sign-in` flow; register/check-email/verify-email pages call `connection()` so the flag is read at request time instead of being baked into a static page; documented `EMAIL_VERIFICATION_ENABLED` in `.env.example` and set it `false` in `.env` (no Resend domain yet); verified `npm run build` + `npm run lint` and both states end-to-end (off: register 201 → sign-in 302 `/dashboard` with session, verification pages redirect to `/sign-in`, no send attempted; on: register 201, sign-in blocked with `code=email_not_verified`, `/check-email` 200)
 - Forgot Password completed — reused the Auth.js `VerificationToken` table for password-reset tokens with namespaced identifiers (`password-reset:<email>`) so they never collide with or consume email-verification tokens (cross-flow guards added to both `verifyEmailToken` and the reset lookup, verified); extracted shared token helpers (`generateToken`/`hashToken`/`PASSWORD_RESET_IDENTIFIER_PREFIX`) to `src/lib/tokens.ts`, and refactored `src/lib/email.ts` around a shared Resend helper with a dev fallback that logs the link on delivery failure (added `sendPasswordResetEmail`); added `src/lib/password-reset.ts` (single-use, 1-hour, sha256-hashed tokens with a read-only validity check and a consume-and-update function) and `src/actions/password-reset.ts` (`requestPasswordReset` always returns a generic response to prevent enumeration and only issues tokens for credential accounts; `submitPasswordReset` validates with zod, hashes at bcrypt 12 rounds, updates `User.password`, consumes the token and redirects to `/sign-in?reset=success`); added `/forgot-password` and `/reset-password` pages with client forms (invalid/expired states), plus a "Forgot password?" link and a reset-success notice on the sign-in page; reset is independent of `EMAIL_VERIFICATION_ENABLED`; verified `npm run build` + `npm run lint` and end-to-end (valid token renders the form, invalid → "Invalid link", expired → "Link expired", reset success, token reuse → invalid, old password rejected / new password signs in, cross-flow `verifyEmailToken` on a reset token → invalid without consuming it); note: the dev fallback logs the reset link while Resend stays in test mode
 - Profile Page completed — built out the `/profile` route (`src/app/(dashboard)/profile/page.tsx`) with a user-scoped `getProfile(userId)` data helper (`src/lib/db/profile.ts`) showing avatar (GitHub image or initials), name, email, member-since date, usage totals (items/collections) and a per-type breakdown including zero-count types; added `src/actions/profile.ts` with `changePassword` (verifies the current bcrypt hash, credential accounts only) and `deleteAccount` (cascade delete + client sign-out), plus `src/components/profile/*` and a reusable Radix `src/components/ui/dialog.tsx` primitive for the change-password and delete-account confirmation dialogs; moved `SYSTEM_TYPE_ORDER`/`systemTypeOrder()` into `src/lib/item-type-meta.ts` so `items.ts` and `profile.ts` share one ordering source; and centralized the password Zod schemas in `src/lib/validations/password.ts` (`passwordField`, `requiredPasswordField`, `currentPasswordField`, `withPasswordConfirmation`), refactoring register/reset/change/sign-in to use it; verified `npm run build` + `npm run lint` and in the browser (profile info/stats, wrong + valid change-password, delete-account dialog and full cascade delete confirmed against the dev DB with a throwaway account, and the demo credentials still sign in)
+- Rate Limiting for Auth completed — added Upstash Redis rate limiting to the auth flows with `@upstash/ratelimit`/`@upstash/redis`; created a reusable `src/lib/rate-limit.ts` (cached sliding-window limiters per flow, `x-forwarded-for` IP extraction with fallbacks, key/message helpers, `{ success, remaining, reset, retryAfterSeconds }` results and fail-open behaviour when Upstash is unconfigured or errors); applied limits at the action/route boundary because only register is an HTTP route — `authenticate` (login, 5/15 min, IP+email), `POST /api/auth/register` (3/1 h, IP, returns real `429` + `Retry-After`), `requestPasswordReset` (3/1 h, IP), `submitPasswordReset` (5/15 min, IP) and `resendVerificationEmail` (3/15 min, IP+email); added `useRateLimitToast` so server-action forms also toast the friendly message (inline error retained), made the register form toast the `429`, and documented `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` in `.env.example`; verified `npm run build` + `npm run lint`, direct limiter checks against the configured Upstash instance for all five limits (blocked on attempt `limit + 1`), fail-open with the env vars unset, the register route end-to-end (`400` ×3 → `429` + `Retry-After`), and login rate limiting in the browser (inline message + toast after 5 attempts)
