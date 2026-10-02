@@ -1,38 +1,18 @@
-# Current Feature: Profile Page
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-In Progress
+Not Started
 
 ## Goals
 
 <!-- Goals & requirements -->
 
-- Build out the `/profile` page at `src/app/(dashboard)/profile/page.tsx` (currently a placeholder).
-- Display user info: email, name, avatar (GitHub image or initials), and account creation date.
-- Show usage stats: total items, total collections, and a breakdown by item type (snippets, prompts, notes, commands, links, files, images).
-- Add account actions:
-  - Change password — only for users who signed up with email/password (hide for GitHub OAuth users).
-  - Delete account — with a confirmation dialog to prevent accidental deletion.
-- Follow existing codebase patterns for data fetching (server components + Prisma), components, and Server Actions.
-- Keep the route protected (already covered by the `(dashboard)` layout auth check).
-
 ## Notes
 
 <!-- Any extra notes -->
-
-- Spec: `context/features/profile-spec.md`.
-- Avatar logic: reuse `UserAvatar` (`src/components/auth/user-avatar.tsx`) — GitHub `image` from OAuth if present, otherwise `getInitials(name)`; fall back to email when `name` is missing.
-- Change-password visibility: detect email/password accounts via `User.password` being non-null (GitHub-only accounts have `password: null`). Fetch this server-side; do not expose the hash to the client.
-- Deletion: cascade deletes are already configured in `prisma/schema.prisma` (User → items, collections, tags, accounts, sessions), so deleting the `User` row cleans up related data. Confirm before deleting, then sign the user out.
-- Data scoping gotcha: existing DB helpers (`src/lib/db/items.ts`, `src/lib/db/collections.ts`) are hardcoded to `DEMO_USER_EMAIL`. The profile page must scope stats to the authenticated `session.user.id`/email, so add user-scoped helpers (or extend the existing ones) rather than reusing the demo scoping.
-- Use `auth()` for the session (`session.user.id` is exposed via the JWT session callback).
-- Item type breakdown should use the system types in canonical order (`getItemTypes()` order: snippet, prompt, command, note, file, image, url) and include types with zero items.
-- Account creation date comes from `User.createdAt`; format it for display.
-- Server Actions should follow the `{ success, data, error }` pattern with Zod validation; destructive/failed paths surface via `sonner` toasts (already mounted in the root layout).
-- Verify with `npm run build` + `npm run lint`, then test in the browser.
 
 ## History
 
@@ -55,3 +35,4 @@ In Progress
 - Email Verification on Register completed — added Resend-based email verification: `src/lib/email-verification.ts` issues SHA-256-hashed, single-use tokens (24h TTL) in the existing Auth.js `VerificationToken` table (resending invalidates prior links) and `src/lib/email.ts` sends a dark-themed verification email via Resend (dev-only fallback logs the link when `RESEND_API_KEY` is missing); `POST /api/auth/register` now creates a token and sends the email without rolling back the account on delivery failure; `GET /api/auth/verify-email` consumes the token and redirects to `/verify-email` (`success`/`expired`/`invalid`/`error` states) and a new `/check-email` page plus a resend server action (`src/actions/email-verification.ts`) let users request a fresh link without revealing which emails have accounts; `src/auth.ts` gates the Credentials provider on `emailVerified` via a `CredentialsSignin` subclass (`code: email_not_verified`) surfaced by `src/actions/auth.ts`/`sign-in-form.tsx` with a "Send a new link" link (GitHub OAuth is unaffected); updated `register-form.tsx` to redirect to `/check-email` and documented `RESEND_API_KEY`/`RESEND_FROM_EMAIL`/`NEXT_PUBLIC_APP_URL` in `.env.example`; verified `npm run build` + `npm run lint` and end-to-end (register 201, unverified sign-in → `code=email_not_verified`, wrong password → generic, valid token → success, reuse → invalid, expired → expired+email, verified sign-in → 302 `/dashboard` with session); note: the Resend account is in test mode so it only delivers to the account owner until a domain is verified
 - Toggle Email Verification completed — added `isEmailVerificationEnabled()` to `src/lib/email-verification.ts`, reading `EMAIL_VERIFICATION_ENABLED` (opt-out: enabled unless explicitly `"false"`/`"0"`); when disabled, `POST /api/auth/register` sets `emailVerified` at creation and skips the token + email, the Credentials gate in `src/auth.ts` is skipped, and `/check-email`, `/verify-email`, `GET /api/auth/verify-email` and the resend action redirect/no-op; the `register` server page passes the flag as a prop to `RegisterForm`, which returns to the "account created — you can now sign in" → `/sign-in` flow; register/check-email/verify-email pages call `connection()` so the flag is read at request time instead of being baked into a static page; documented `EMAIL_VERIFICATION_ENABLED` in `.env.example` and set it `false` in `.env` (no Resend domain yet); verified `npm run build` + `npm run lint` and both states end-to-end (off: register 201 → sign-in 302 `/dashboard` with session, verification pages redirect to `/sign-in`, no send attempted; on: register 201, sign-in blocked with `code=email_not_verified`, `/check-email` 200)
 - Forgot Password completed — reused the Auth.js `VerificationToken` table for password-reset tokens with namespaced identifiers (`password-reset:<email>`) so they never collide with or consume email-verification tokens (cross-flow guards added to both `verifyEmailToken` and the reset lookup, verified); extracted shared token helpers (`generateToken`/`hashToken`/`PASSWORD_RESET_IDENTIFIER_PREFIX`) to `src/lib/tokens.ts`, and refactored `src/lib/email.ts` around a shared Resend helper with a dev fallback that logs the link on delivery failure (added `sendPasswordResetEmail`); added `src/lib/password-reset.ts` (single-use, 1-hour, sha256-hashed tokens with a read-only validity check and a consume-and-update function) and `src/actions/password-reset.ts` (`requestPasswordReset` always returns a generic response to prevent enumeration and only issues tokens for credential accounts; `submitPasswordReset` validates with zod, hashes at bcrypt 12 rounds, updates `User.password`, consumes the token and redirects to `/sign-in?reset=success`); added `/forgot-password` and `/reset-password` pages with client forms (invalid/expired states), plus a "Forgot password?" link and a reset-success notice on the sign-in page; reset is independent of `EMAIL_VERIFICATION_ENABLED`; verified `npm run build` + `npm run lint` and end-to-end (valid token renders the form, invalid → "Invalid link", expired → "Link expired", reset success, token reuse → invalid, old password rejected / new password signs in, cross-flow `verifyEmailToken` on a reset token → invalid without consuming it); note: the dev fallback logs the reset link while Resend stays in test mode
+- Profile Page completed — built out the `/profile` route (`src/app/(dashboard)/profile/page.tsx`) with a user-scoped `getProfile(userId)` data helper (`src/lib/db/profile.ts`) showing avatar (GitHub image or initials), name, email, member-since date, usage totals (items/collections) and a per-type breakdown including zero-count types; added `src/actions/profile.ts` with `changePassword` (verifies the current bcrypt hash, credential accounts only) and `deleteAccount` (cascade delete + client sign-out), plus `src/components/profile/*` and a reusable Radix `src/components/ui/dialog.tsx` primitive for the change-password and delete-account confirmation dialogs; moved `SYSTEM_TYPE_ORDER`/`systemTypeOrder()` into `src/lib/item-type-meta.ts` so `items.ts` and `profile.ts` share one ordering source; and centralized the password Zod schemas in `src/lib/validations/password.ts` (`passwordField`, `requiredPasswordField`, `currentPasswordField`, `withPasswordConfirmation`), refactoring register/reset/change/sign-in to use it; verified `npm run build` + `npm run lint` and in the browser (profile info/stats, wrong + valid change-password, delete-account dialog and full cascade delete confirmed against the dev DB with a throwaway account, and the demo credentials still sign in)
