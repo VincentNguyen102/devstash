@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/dialog";
 import { CodeEditor } from "@/components/ui/code-editor";
 import { Input } from "@/components/ui/input";
+import { MarkdownEditor } from "@/components/ui/markdown-editor";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -46,6 +47,7 @@ import {
   CODE_TYPE_IDS,
   CONTENT_TYPE_IDS,
   LANGUAGE_TYPE_IDS,
+  MARKDOWN_TYPE_IDS,
   URL_TYPE_IDS,
 } from "@/lib/item-type-fields";
 import { getTypeVisual } from "@/lib/item-type-meta";
@@ -276,6 +278,7 @@ function ItemDetailView({
   const showsLanguage = LANGUAGE_TYPE_IDS.has(item.typeId);
   const showsUrl = URL_TYPE_IDS.has(item.typeId);
   const usesCodeEditor = CODE_TYPE_IDS.has(item.typeId);
+  const usesMarkdownEditor = MARKDOWN_TYPE_IDS.has(item.typeId);
   const canSave = form.title.trim().length > 0;
 
   function updateField<K extends keyof EditFormState>(
@@ -417,6 +420,14 @@ function ItemDetailView({
                     onChange={(next) => updateField("content", next)}
                   />
                 </EditField>
+              ) : usesMarkdownEditor ? (
+                <EditField label="Content">
+                  <MarkdownEditor
+                    aria-label="Content"
+                    value={form.content}
+                    onChange={(next) => updateField("content", next)}
+                  />
+                </EditField>
               ) : (
                 <EditField label="Content" htmlFor="item-content">
                   <Textarea
@@ -488,6 +499,12 @@ function ItemDetailView({
                     aria-label="Content"
                     value={item.content}
                     language={item.language}
+                    readOnly
+                  />
+                ) : usesMarkdownEditor ? (
+                  <MarkdownEditor
+                    aria-label="Content"
+                    value={item.content}
                     readOnly
                   />
                 ) : (

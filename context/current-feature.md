@@ -1,18 +1,46 @@
-# Current Feature
+# Current Feature: Markdown Editor
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Create a `MarkdownEditor` component with a tabbed interface (Write / Preview)
+- Use `react-markdown` with `remark-gfm` for GitHub Flavored Markdown support
+- Replace the `Textarea` with `MarkdownEditor` for **notes** and **prompts** only
+- Keep `CodeEditor` for snippets and commands (no changes)
+- Match the existing dark theme styling (`bg-[#1e1e1e]` container, `bg-[#2d2d2d]` header)
+- Add a copy button in the header (same style as `CodeEditor`)
+- Support both display (readonly) and edit modes
+- In readonly mode, only show the Preview tab
+- In edit mode, default to the Write tab with Preview available
+- Style markdown output via a custom `.markdown-preview` CSS class:
+  - Headings (h1–h6) visually distinct with proper sizing and weight
+  - Code blocks with dark background and monospace font
+  - Inline code with subtle background highlight
+  - Lists (ordered/unordered) with proper indentation and bullets
+  - Blockquotes with left border accent
+  - Links in blue with hover state
+  - Tables with borders and header background
+- Fluid height with a max of 400px, matching `CodeEditor` behaviour
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- Integration points:
+  - `NewItemDialog` — use for the note and prompt content field
+  - `ItemDrawer` (edit mode) — use for the note and prompt content field
+  - `ItemDrawer` (view mode) — use in readonly mode for note and prompt content
+- Spec: `context/features/markdown-editor-spec.md`
+- Styling is done with Tailwind CSS v4 (CSS-based config in `src/app/globals.css`); `.markdown-preview` must be defined there (e.g. via `@layer`) rather than a JS config.
+- `react-markdown` + `remark-gfm` are not yet installed and will need to be added as dependencies.
+- This is a presentational/component change; per the testing standards, components are verified in the browser, not with Vitest (add unit tests only if a server action/utility is touched).
 
 ## History
 

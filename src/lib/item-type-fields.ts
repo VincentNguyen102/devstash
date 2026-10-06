@@ -17,6 +17,12 @@ export const CODE_TYPE_IDS: ReadonlySet<string> = new Set([
   "command",
 ]);
 
+/** Types rendered with the Markdown editor (Write/Preview) instead of a textarea. */
+export const MARKDOWN_TYPE_IDS: ReadonlySet<string> = new Set([
+  "note",
+  "prompt",
+]);
+
 /** Types whose `language` field is shown and editable. */
 export const LANGUAGE_TYPE_IDS: ReadonlySet<string> = new Set([
   "snippet",
