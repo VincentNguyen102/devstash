@@ -1,0 +1,316 @@
+"use client";
+
+import { useState, type FormEvent, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
+import { toast } from "sonner";
+
+import { createItem } from "@/actions/items";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { getTypeVisual } from "@/lib/item-type-meta";
+import {
+  CREATE_ITEM_TYPE_IDS,
+  type CreateItemTypeId,
+} from "@/lib/validations/item";
+import { cn } from "@/lib/utils";
+
+/** Selector options, in canonical order. `url` is presented as "Link". */
+const CREATE_TYPES: { id: CreateItemTypeId; label: string }[] = [
+  { id: "snippet", label: "Snippet" },
+  { id: "prompt", label: "Prompt" },
+  { id: "command", label: "Command" },
+  { id: "note", label: "Note" },
+  { id: "url", label: "Link" },
+];
+
+/** Item types whose `content` field is shown in the create form. */
+const CONTENT_TYPE_IDS = new Set<CreateItemTypeId>([
+  "snippet",
+  "prompt",
+  "command",
+  "note",
+]);
+
+/** Item types whose `language` field is shown in the create form. */
+const LANGUAGE_TYPE_IDS = new Set<CreateItemTypeId>(["snippet", "command"]);
+
+interface CreateFormState {
+  typeId: CreateItemTypeId;
+  title: string;
+  description: string;
+  content: string;
+  language: string;
+  url: string;
+  tags: string;
+}
+
+const INITIAL_FORM: CreateFormState = {
+  typeId: CREATE_ITEM_TYPE_IDS[0],
+  title: "",
+  description: "",
+  content: "",
+  language: "",
+  url: "",
+  tags: "",
+};
+
+/** Splits the comma-separated tag input into a de-duplicated array. */
+function parseTags(value: string): string[] {
+  return [
+    ...new Set(
+      value
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean),
+    ),
+  ];
+}
+
+/**
+ * "New Item" button and modal. Type-specific fields are shown as the type
+ * changes, the payload is validated by the `createItem` server action, and a
+ * successful create closes the dialog and refreshes the current view.
+ */
+export function ItemCreateDialog() {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [form, setForm] = useState<CreateFormState>(INITIAL_FORM);
+
+  const showContent = CONTENT_TYPE_IDS.has(form.typeId);
+  const showLanguage = LANGUAGE_TYPE_IDS.has(form.typeId);
+  const showUrl = form.typeId === "url";
+  const canSubmit =
+    form.title.trim().length > 0 &&
+    (form.typeId !== "url" || form.url.trim().length > 0);
+
+  function updateField<K extends keyof CreateFormState>(
+    field: K,
+    value: CreateFormState[K],
+  ) {
+    setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function handleOpenChange(next: boolean) {
+    if (isSubmitting) return;
+
+    setOpen(next);
+
+    if (!next) setForm(INITIAL_FORM);
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!canSubmit || isSubmitting) return;
+
+    setIsSubmitting(true);
+
+    try {
+      const result = await createItem({
+        typeId: form.typeId,
+        title: form.title,
+        description: form.description,
+        content: showContent ? form.content : "",
+        language: showLanguage ? form.language : "",
+        url: showUrl ? form.url : "",
+        tags: parseTags(form.tags),
+      });
+
+      if (!result.success) {
+        toast.error(result.error ?? "Couldn't create item.");
+        return;
+      }
+
+      toast.success("Item created");
+      setForm(INITIAL_FORM);
+      setOpen(false);
+      router.refresh();
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button size="lg">
+          <Plus aria-hidden />
+          New Item
+        </Button>
+      </DialogTrigger>
+
+      <DialogContent showCloseButton={!isSubmitting}>
+        <DialogHeader>
+          <DialogTitle>New item</DialogTitle>
+          <DialogDescription>
+            Add a snippet, prompt, command, note or link to your stash.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <span className="text-sm font-medium">Type</span>
+            <div
+              role="group"
+              aria-label="Item type"
+              className="grid grid-cols-5 gap-1.5"
+            >
+              {CREATE_TYPES.map(({ id, label }) => {
+                const { Icon, textClass } = getTypeVisual(id);
+                const isActive = form.typeId === id;
+
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    aria-pressed={isActive}
+                    disabled={isSubmitting}
+                    onClick={() => updateField("typeId", id)}
+                    className={cn(
+                      "flex flex-col items-center gap-1 rounded-lg border border-border p-2 text-xs text-muted-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50",
+                      isActive && "border-foreground/30 bg-muted text-foreground"
+                    )}
+                  >
+                    <Icon
+                      aria-hidden
+                      className={cn("size-4", isActive && textClass)}
+                    />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <FormField label="Title" htmlFor="create-item-title">
+            <Input
+              id="create-item-title"
+              value={form.title}
+              onChange={(event) => updateField("title", event.target.value)}
+              placeholder="My snippet"
+              disabled={isSubmitting}
+              required
+            />
+          </FormField>
+
+          <FormField label="Description" htmlFor="create-item-description">
+            <Textarea
+              id="create-item-description"
+              value={form.description}
+              onChange={(event) =>
+                updateField("description", event.target.value)
+              }
+              placeholder="Add a description"
+              rows={3}
+              disabled={isSubmitting}
+            />
+          </FormField>
+
+          {showContent ? (
+            <FormField label="Content" htmlFor="create-item-content">
+              <Textarea
+                id="create-item-content"
+                value={form.content}
+                onChange={(event) => updateField("content", event.target.value)}
+                placeholder="Add content"
+                rows={6}
+                disabled={isSubmitting}
+                className="font-mono text-xs leading-relaxed"
+              />
+            </FormField>
+          ) : null}
+
+          {showLanguage ? (
+            <FormField label="Language" htmlFor="create-item-language">
+              <Input
+                id="create-item-language"
+                value={form.language}
+                onChange={(event) => updateField("language", event.target.value)}
+                placeholder="e.g. typescript"
+                disabled={isSubmitting}
+              />
+            </FormField>
+          ) : null}
+
+          {showUrl ? (
+            <FormField label="URL" htmlFor="create-item-url">
+              <Input
+                id="create-item-url"
+                type="url"
+                value={form.url}
+                onChange={(event) => updateField("url", event.target.value)}
+                placeholder="https://example.com"
+                disabled={isSubmitting}
+                required
+              />
+            </FormField>
+          ) : null}
+
+          <FormField
+            label="Tags"
+            htmlFor="create-item-tags"
+            hint="Separate tags with commas."
+          >
+            <Input
+              id="create-item-tags"
+              value={form.tags}
+              onChange={(event) => updateField("tags", event.target.value)}
+              placeholder="react, hooks, typescript"
+              disabled={isSubmitting}
+            />
+          </FormField>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!canSubmit || isSubmitting}>
+              {isSubmitting ? "Creating..." : "Create item"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function FormField({
+  label,
+  htmlFor,
+  hint,
+  children,
+}: {
+  label: string;
+  htmlFor: string;
+  hint?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <label htmlFor={htmlFor} className="text-sm font-medium">
+        {label}
+      </label>
+      {children}
+      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+    </div>
+  );
+}

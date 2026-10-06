@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // error handling can be exercised without a database or Next.js runtime.
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
+  createItemRecord: vi.fn(),
   updateItemRecord: vi.fn(),
   deleteItemRecord: vi.fn(),
 }));
@@ -11,11 +12,12 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
 
 vi.mock("@/lib/db/items", () => ({
+  createItem: mocks.createItemRecord,
   updateItem: mocks.updateItemRecord,
   deleteItem: mocks.deleteItemRecord,
 }));
 
-import { deleteItem, updateItem } from "@/actions/items";
+import { createItem, deleteItem, updateItem } from "@/actions/items";
 
 const validInput = {
   title: "My Snippet",
@@ -28,8 +30,84 @@ const validInput = {
 
 beforeEach(() => {
   mocks.auth.mockResolvedValue({ user: { id: "user-1" } });
+  mocks.createItemRecord.mockResolvedValue({ id: "item-1", title: "My Snippet" });
   mocks.updateItemRecord.mockResolvedValue({ id: "item-1", title: "My Snippet" });
   mocks.deleteItemRecord.mockResolvedValue(true);
+});
+
+const validCreateInput = {
+  typeId: "snippet" as const,
+  title: "My Snippet",
+  description: "A description",
+  content: "const x = 1;",
+  url: "",
+  language: "ts",
+  tags: ["react"],
+};
+
+describe("createItem", () => {
+  it("requires a signed-in user", async () => {
+    mocks.auth.mockResolvedValue(null);
+
+    const result = await createItem(validCreateInput);
+
+    expect(result).toEqual({
+      success: false,
+      error: "You must be signed in to do that.",
+    });
+    expect(mocks.createItemRecord).not.toHaveBeenCalled();
+  });
+
+  it("validates the payload before hitting the database", async () => {
+    const result = await createItem({ ...validCreateInput, title: "  " });
+
+    expect(result).toEqual({ success: false, error: "Title is required" });
+    expect(mocks.createItemRecord).not.toHaveBeenCalled();
+  });
+
+  it("requires a URL for url items", async () => {
+    const result = await createItem({
+      ...validCreateInput,
+      typeId: "url",
+      url: "",
+    });
+
+    expect(result).toEqual({ success: false, error: "URL is required" });
+    expect(mocks.createItemRecord).not.toHaveBeenCalled();
+  });
+
+  it("passes parsed data to the query and returns the created item", async () => {
+    const item = { id: "item-1", title: "My Snippet" };
+    mocks.createItemRecord.mockResolvedValue(item);
+
+    const result = await createItem(validCreateInput);
+
+    expect(result).toEqual({ success: true, data: item });
+    expect(mocks.createItemRecord).toHaveBeenCalledWith("user-1", {
+      typeId: "snippet",
+      title: "My Snippet",
+      description: "A description",
+      content: "const x = 1;",
+      url: null,
+      language: "ts",
+      tags: ["react"],
+    });
+  });
+
+  it("returns a generic error when the query fails", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    mocks.createItemRecord.mockRejectedValue(new Error("boom"));
+
+    const result = await createItem(validCreateInput);
+
+    expect(result).toEqual({
+      success: false,
+      error: "Something went wrong. Please try again.",
+    });
+    consoleError.mockRestore();
+  });
 });
 
 describe("updateItem", () => {

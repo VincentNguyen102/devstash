@@ -2,7 +2,7 @@ import { connection } from "next/server";
 
 import { systemTypeOrder } from "@/lib/item-type-meta";
 import { prisma } from "@/lib/prisma";
-import type { UpdateItemData } from "@/lib/validations/item";
+import type { CreateItemData, UpdateItemData } from "@/lib/validations/item";
 
 // Auth is not wired up yet, so dashboard data is scoped to the seeded demo
 // user. Replace this with the signed-in user once NextAuth is in place.
@@ -266,6 +266,46 @@ export async function deleteItem(
   });
 
   return count > 0;
+}
+
+/**
+ * Creates an item owned by `userId`. Text types are stored as `text` content;
+ * each supplied tag name is connected to the user's tag (created on demand).
+ * Returns the refreshed detail, or null if the item cannot be read back.
+ */
+export async function createItem(
+  userId: string,
+  data: CreateItemData,
+): Promise<ItemDetail | null> {
+  await connection();
+
+  const tagNames = [...new Set(data.tags)];
+
+  const item = await prisma.item.create({
+    data: {
+      title: data.title,
+      contentType: "text",
+      description: data.description,
+      content: data.content,
+      url: data.url,
+      language: data.language,
+      userId,
+      typeId: data.typeId,
+      tags: {
+        create: tagNames.map((name) => ({
+          tag: {
+            connectOrCreate: {
+              where: { userId_name: { userId, name } },
+              create: { name, userId },
+            },
+          },
+        })),
+      },
+    },
+    select: { id: true },
+  });
+
+  return getItemDetail(item.id, userId);
 }
 
 /**

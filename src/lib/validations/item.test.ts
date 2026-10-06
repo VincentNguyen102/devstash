@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { updateItemSchema } from "@/lib/validations/item";
+import { createItemSchema, updateItemSchema } from "@/lib/validations/item";
 
 function buildInput(overrides: Record<string, unknown> = {}) {
   return {
@@ -87,5 +87,65 @@ describe("updateItemSchema", () => {
       language: null,
       tags: [],
     });
+  });
+});
+
+function buildCreateInput(overrides: Record<string, unknown> = {}) {
+  return {
+    typeId: "snippet",
+    title: "My Snippet",
+    description: "A description",
+    content: "const x = 1;",
+    url: "",
+    language: "ts",
+    tags: ["react"],
+    ...overrides,
+  };
+}
+
+describe("createItemSchema", () => {
+  it("accepts a valid text item and applies the same normalisation as edit", () => {
+    const result = createItemSchema.parse(buildCreateInput());
+
+    expect(result).toEqual({
+      typeId: "snippet",
+      title: "My Snippet",
+      description: "A description",
+      content: "const x = 1;",
+      url: null,
+      language: "ts",
+      tags: ["react"],
+    });
+  });
+
+  it("rejects an unknown item type", () => {
+    expect(
+      createItemSchema.safeParse(buildCreateInput({ typeId: "file" })).success,
+    ).toBe(false);
+  });
+
+  it("requires a URL for url items", () => {
+    const result = createItemSchema.safeParse(
+      buildCreateInput({ typeId: "url", url: "  " }),
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe("URL is required");
+  });
+
+  it("rejects an invalid URL for url items", () => {
+    expect(
+      createItemSchema.safeParse(
+        buildCreateInput({ typeId: "url", url: "not-a-url" }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it("accepts a valid URL for url items", () => {
+    const result = createItemSchema.parse(
+      buildCreateInput({ typeId: "url", url: " https://example.com " }),
+    );
+
+    expect(result.url).toBe("https://example.com");
   });
 });

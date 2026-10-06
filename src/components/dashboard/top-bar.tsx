@@ -1,5 +1,6 @@
-import { FolderPlus, PanelLeft, Plus, Search } from "lucide-react";
+import { FolderPlus, PanelLeft, Search } from "lucide-react";
 
+import { ItemCreateDialog } from "@/components/dashboard/item-create-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -36,10 +37,7 @@ export function TopBar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
           <FolderPlus aria-hidden />
           New Collection
         </Button>
-        <Button size="lg">
-          <Plus aria-hidden />
-          New Item
-        </Button>
+        <ItemCreateDialog />
       </div>
     </header>
   );
