@@ -1,35 +1,18 @@
-# Current Feature: Type-Specific Add Button
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-In Progress
+Not Started
 
 ## Goals
 
 <!-- Goals & requirements -->
 
-- Add a type-specific "Add" button to each `/items/[type]` page (e.g. "New Snippet", "New Command") that opens the New Item dialog
-- Preselect the page's item type in the New Item dialog when opened from that page
-- Make `ItemCreateDialog` accept a default item type (and a way to customize its trigger) so it can be reused on type pages
-- Keep the existing top-bar "New Item" button working, still opening the dialog without a page-specific preselection
-- Only offer creation for creatable types (`snippet`, `prompt`, `command`, `note`, `url`); `file` and `image` pages are left untouched for now (no add button) and will be handled in a later request.
-- Creating from a type page refreshes the list and shows the new item
-
 ## Notes
 
 <!-- Any extra notes -->
-
-Inline request (no spec file).
-
-- Files involved: `src/app/(dashboard)/items/[type]/page.tsx` (server component), `src/components/dashboard/item-create-dialog.tsx` (client, currently owns `INITIAL_FORM` with `typeId = CREATE_ITEM_TYPE_IDS[0]` and renders its own "New Item" trigger), `src/components/dashboard/top-bar.tsx` (mounts the global dialog).
-- The route param `type` is the item type slug (typeId), already used by `getItemTypeById`/`getItemsByType`.
-- Creatable types come from `CREATE_ITEM_TYPE_IDS` / `CreateItemTypeId` in `src/lib/validations/item.ts`; `file` and `image` are not creatable (Pro) and the page should not offer a plain create action for them.
-- `getTypeVisual` in `src/lib/item-type-meta.ts` provides each type's icon/colour for the button.
-- Preselecting only needs local state: initialize the form's `typeId` from the prop and reset back to it when the dialog closes.
-- Presentational/UI change only (no server actions or utilities expected), so likely no new Vitest tests.
-- `reactCompiler: true` is enabled in the Next.js config.
 
 ## History
 
@@ -62,3 +45,4 @@ Inline request (no spec file).
 - Item Delete completed — the drawer's Delete (trash) button now permanently deletes the item: clicking it opens a shadcn `Dialog` confirmation (shows the item title, destructive Delete / Cancel, both disabled while pending, and the dialog cannot be dismissed mid-flight); confirming calls `deleteItem(itemId)` in `src/actions/items.ts` (`auth()` session check, ownership enforced by the query, `{ success, error }` result, try/catch) and `deleteItem(itemId, userId)` in `src/lib/db/items.ts` (ownership-scoped `deleteMany`, returns `false` when the item does not exist or belongs to someone else; tag links removed by the existing `ItemTag` cascade — no migration needed); on success it shows an "Item deleted" toast, closes the drawer and calls `router.refresh()` so the underlying list/sidebar counts update; added 4 unit tests to `src/actions/items.test.ts` (46 passing) and verified in the browser (confirmation dialog, disabled/pending state, success toast, item removed and Snippets count 4→3, Cancel leaves the item intact) plus `npm run test` + `npm run lint` + `npm run build`; the seed item deleted during testing was restored with `npm run db:seed`
 - Item Create completed — the top-bar "New Item" button now opens a shadcn `Dialog` (`src/components/dashboard/item-create-dialog.tsx`, wired into `top-bar.tsx`) with a type selector for `snippet`, `prompt`, `command`, `note` and `url` (labelled "Link"); fields render per type (title required, description and tags always; content for snippet/prompt/command/note; language for snippet/command; URL required for `url`), Create is disabled until the title (and URL for links) is filled, and the dialog locks while pending; added `createItemSchema` plus `CREATE_ITEM_TYPE_IDS`/`CreateItemTypeId` to `src/lib/validations/item.ts` (extends the edit fields and requires a URL for `url` items via `superRefine`), `createItem(userId, data)` to `src/lib/db/items.ts` (creates a `text` item, `connectOrCreate`s the user's tags through `ItemTag`, returns the refreshed `ItemDetail`) and the `createItem` server action in `src/actions/items.ts` (auth check, Zod parse, `{ success, data, error }`); on success it toasts "Item created", closes and resets the modal and calls `router.refresh()`; added 9 unit tests (`src/lib/validations/item.test.ts`, `src/actions/items.test.ts`, 56 passing) and verified end-to-end via the Playwright MCP (sign in, dialog field sets per type, URL-required gating, create → toast → refreshed dashboard, drawer showed the persisted description/URL/tags, then deleted to restore the dev data; no console errors) plus `npm run test` + `npm run lint` + `npm run build`; the spec is `context/features/item-create-spec.md`
 - Monaco Code Editor completed — snippets and commands now use a new `CodeEditor` component (`src/components/ui/code-editor.tsx`) instead of a `Textarea` in both the item drawer (display + edit modes) and the New Item dialog, while notes, prompts and links keep the textarea; the component uses `@monaco-editor/react` (Monaco loaded lazily on the client via `next/dynamic`, runtime from the jsDelivr CDN) with a custom `devstash-dark` theme, macOS window dots, a language label, a copy button (check feedback + toast), read-only and editable modes, and a fluid height clamped between 96 and 400px with a theme-matching scrollbar; extracted the shared clipboard helper to `src/lib/clipboard.ts`, added `src/lib/monaco-language.ts` (stored-language → Monaco language id aliases) and centralized the per-type form field sets in `src/lib/item-type-fields.ts` (deduping `item-drawer.tsx`/`item-create-dialog.tsx`); suppressed the known benign Monaco `Canceled` disposal rejection; added 8 unit tests (`clipboard`, `monaco-language`, 64 passing) and verified in the browser via Playwright (read-only display, inline edit, live language header, save persisted after reload, copy toast + check icon, snippet uses the editor while prompt keeps the textarea, no console errors) plus `npm run test` + `npm run lint` + `npm run build`; the modified seed item was restored with `npm run db:seed`; the spec is `context/features/code-editor-spec.md`
+- Type-Specific Add Button completed — each creatable item type page (`/items/[type]` for snippet/prompt/command/note/url) now renders its own add button in the header (e.g. "New Command", "New Link") with the type's icon/colour, opening the New Item dialog with that type preselected; `ItemCreateDialog` gained `defaultTypeId` (defaults to the first creatable type) and an optional `trigger` element, and its selector options/labels are derived from `CREATE_ITEM_TYPE_IDS` instead of a hardcoded list; added the `isCreateItemTypeId` guard to `src/lib/validations/item.ts` and `CREATE_TYPE_LABELS` to `src/lib/item-type-meta.ts` (3 unit tests, 67 passing); the top-bar "New Item" button keeps working with the default (Snippet) and `file`/`image` pages are intentionally left without a create button for a later request; verified in the browser via Playwright (`New Command`/`New Link` present, type preselected, `file` page has no button, top-bar defaults to Snippet, created a command from the page → toast + list 5→6 then deleted it to restore the data, no console errors) plus `npm run test` + `npm run lint` + `npm run build`
