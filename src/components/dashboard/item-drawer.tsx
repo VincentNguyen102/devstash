@@ -36,10 +36,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { CodeEditor } from "@/components/ui/code-editor";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import { copyToClipboard } from "@/lib/clipboard";
 import type { ItemDetail } from "@/lib/db/items";
+import {
+  CODE_TYPE_IDS,
+  CONTENT_TYPE_IDS,
+  LANGUAGE_TYPE_IDS,
+  URL_TYPE_IDS,
+} from "@/lib/item-type-fields";
 import { getTypeVisual } from "@/lib/item-type-meta";
 import { cn } from "@/lib/utils";
 
@@ -49,15 +57,6 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
   timeZone: "UTC",
 });
-
-/** Item types whose `content` field is editable in the drawer. */
-const CONTENT_TYPE_IDS = new Set(["snippet", "prompt", "command", "note"]);
-
-/** Item types whose `language` field is editable in the drawer. */
-const LANGUAGE_TYPE_IDS = new Set(["snippet", "command"]);
-
-/** Item types whose `url` field is editable in the drawer. */
-const URL_TYPE_IDS = new Set(["url"]);
 
 interface ItemDrawerContextValue {
   openItem: (itemId: string) => void;
@@ -276,6 +275,7 @@ function ItemDetailView({
   const showsContent = CONTENT_TYPE_IDS.has(item.typeId);
   const showsLanguage = LANGUAGE_TYPE_IDS.has(item.typeId);
   const showsUrl = URL_TYPE_IDS.has(item.typeId);
+  const usesCodeEditor = CODE_TYPE_IDS.has(item.typeId);
   const canSave = form.title.trim().length > 0;
 
   function updateField<K extends keyof EditFormState>(
@@ -408,18 +408,29 @@ function ItemDetailView({
             </EditField>
 
             {showsContent ? (
-              <EditField label="Content" htmlFor="item-content">
-                <Textarea
-                  id="item-content"
-                  value={form.content}
-                  onChange={(event) =>
-                    updateField("content", event.target.value)
-                  }
-                  placeholder="Add content"
-                  rows={8}
-                  className="font-mono text-xs leading-relaxed"
-                />
-              </EditField>
+              usesCodeEditor ? (
+                <EditField label="Content">
+                  <CodeEditor
+                    aria-label="Content"
+                    value={form.content}
+                    language={form.language}
+                    onChange={(next) => updateField("content", next)}
+                  />
+                </EditField>
+              ) : (
+                <EditField label="Content" htmlFor="item-content">
+                  <Textarea
+                    id="item-content"
+                    value={form.content}
+                    onChange={(event) =>
+                      updateField("content", event.target.value)
+                    }
+                    placeholder="Add content"
+                    rows={8}
+                    className="font-mono text-xs leading-relaxed"
+                  />
+                </EditField>
+              )
             ) : null}
 
             {showsLanguage ? (
@@ -472,9 +483,18 @@ function ItemDetailView({
 
             {item.content ? (
               <DetailSection title="Content">
-                <pre className="overflow-x-auto rounded-lg border border-border bg-muted/40 p-4 font-mono text-xs leading-relaxed">
-                  <code>{item.content}</code>
-                </pre>
+                {usesCodeEditor ? (
+                  <CodeEditor
+                    aria-label="Content"
+                    value={item.content}
+                    language={item.language}
+                    readOnly
+                  />
+                ) : (
+                  <pre className="overflow-x-auto rounded-lg border border-border bg-muted/40 p-4 font-mono text-xs leading-relaxed">
+                    <code>{item.content}</code>
+                  </pre>
+                )}
               </DetailSection>
             ) : null}
 
@@ -720,15 +740,19 @@ function EditField({
   children,
 }: {
   label: string;
-  htmlFor: string;
+  htmlFor?: string;
   hint?: string;
   children: ReactNode;
 }) {
   return (
     <div className="space-y-2">
-      <label htmlFor={htmlFor} className="text-sm font-medium">
-        {label}
-      </label>
+      {htmlFor ? (
+        <label htmlFor={htmlFor} className="text-sm font-medium">
+          {label}
+        </label>
+      ) : (
+        <span className="text-sm font-medium">{label}</span>
+      )}
       {children}
       {hint ? (
         <p className="text-xs text-muted-foreground">{hint}</p>
@@ -775,36 +799,6 @@ function DrawerSkeleton() {
       </div>
     </div>
   );
-}
-
-/**
- * Copies text to the clipboard, falling back to a temporary textarea when the
- * async Clipboard API is unavailable or blocked (e.g. missing permission).
- */
-async function copyToClipboard(text: string): Promise<boolean> {
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch {
-    // Fall through to the legacy approach below.
-  }
-
-  try {
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    textarea.setAttribute("readonly", "");
-    textarea.style.position = "fixed";
-    textarea.style.opacity = "0";
-    document.body.appendChild(textarea);
-    textarea.select();
-    const copied = document.execCommand("copy");
-    document.body.removeChild(textarea);
-    return copied;
-  } catch {
-    return false;
-  }
 }
 
 function formatFileSize(bytes: number): string {

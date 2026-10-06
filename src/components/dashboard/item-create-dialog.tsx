@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { createItem } from "@/actions/items";
 import { Button } from "@/components/ui/button";
+import { CodeEditor } from "@/components/ui/code-editor";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +19,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  CODE_TYPE_IDS,
+  CONTENT_TYPE_IDS,
+  LANGUAGE_TYPE_IDS,
+} from "@/lib/item-type-fields";
 import { getTypeVisual } from "@/lib/item-type-meta";
 import {
   CREATE_ITEM_TYPE_IDS,
@@ -33,17 +39,6 @@ const CREATE_TYPES: { id: CreateItemTypeId; label: string }[] = [
   { id: "note", label: "Note" },
   { id: "url", label: "Link" },
 ];
-
-/** Item types whose `content` field is shown in the create form. */
-const CONTENT_TYPE_IDS = new Set<CreateItemTypeId>([
-  "snippet",
-  "prompt",
-  "command",
-  "note",
-]);
-
-/** Item types whose `language` field is shown in the create form. */
-const LANGUAGE_TYPE_IDS = new Set<CreateItemTypeId>(["snippet", "command"]);
 
 interface CreateFormState {
   typeId: CreateItemTypeId;
@@ -90,6 +85,7 @@ export function ItemCreateDialog() {
 
   const showContent = CONTENT_TYPE_IDS.has(form.typeId);
   const showLanguage = LANGUAGE_TYPE_IDS.has(form.typeId);
+  const showCodeEditor = CODE_TYPE_IDS.has(form.typeId);
   const showUrl = form.typeId === "url";
   const canSubmit =
     form.title.trim().length > 0 &&
@@ -221,17 +217,31 @@ export function ItemCreateDialog() {
           </FormField>
 
           {showContent ? (
-            <FormField label="Content" htmlFor="create-item-content">
-              <Textarea
-                id="create-item-content"
-                value={form.content}
-                onChange={(event) => updateField("content", event.target.value)}
-                placeholder="Add content"
-                rows={6}
-                disabled={isSubmitting}
-                className="font-mono text-xs leading-relaxed"
-              />
-            </FormField>
+            showCodeEditor ? (
+              <FormField label="Content">
+                <CodeEditor
+                  aria-label="Content"
+                  value={form.content}
+                  language={form.language}
+                  disabled={isSubmitting}
+                  onChange={(next) => updateField("content", next)}
+                />
+              </FormField>
+            ) : (
+              <FormField label="Content" htmlFor="create-item-content">
+                <Textarea
+                  id="create-item-content"
+                  value={form.content}
+                  onChange={(event) =>
+                    updateField("content", event.target.value)
+                  }
+                  placeholder="Add content"
+                  rows={6}
+                  disabled={isSubmitting}
+                  className="font-mono text-xs leading-relaxed"
+                />
+              </FormField>
+            )
           ) : null}
 
           {showLanguage ? (
@@ -300,15 +310,19 @@ function FormField({
   children,
 }: {
   label: string;
-  htmlFor: string;
+  htmlFor?: string;
   hint?: string;
   children: ReactNode;
 }) {
   return (
     <div className="space-y-2">
-      <label htmlFor={htmlFor} className="text-sm font-medium">
-        {label}
-      </label>
+      {htmlFor ? (
+        <label htmlFor={htmlFor} className="text-sm font-medium">
+          {label}
+        </label>
+      ) : (
+        <span className="text-sm font-medium">{label}</span>
+      )}
       {children}
       {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
     </div>
