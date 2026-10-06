@@ -9,6 +9,8 @@ import {
   Terminal,
 } from "lucide-react";
 
+import type { CreateItemTypeId } from "@/lib/validations/item";
+
 export interface TypeVisual {
   /** Icon component for the item type. */
   Icon: LucideIcon;
@@ -62,6 +64,15 @@ export function systemTypeOrder(typeId: string): number {
   const index = SYSTEM_TYPE_ORDER.indexOf(typeId);
   return index === -1 ? SYSTEM_TYPE_ORDER.length : index;
 }
+
+/** Singular display labels for the creatable item types (`url` reads "Link"). */
+export const CREATE_TYPE_LABELS: Record<CreateItemTypeId, string> = {
+  snippet: "Snippet",
+  prompt: "Prompt",
+  command: "Command",
+  note: "Note",
+  url: "Link",
+};
 
 const VISUALS_BY_TYPE_ID: Record<string, Omit<TypeVisual, "Icon">> = {
   snippet: {
