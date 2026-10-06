@@ -57,6 +57,11 @@ export const CREATE_ITEM_TYPE_IDS = [
 
 export type CreateItemTypeId = (typeof CREATE_ITEM_TYPE_IDS)[number];
 
+/** Type guard for the creatable item type ids. */
+export function isCreateItemTypeId(value: string): value is CreateItemTypeId {
+  return (CREATE_ITEM_TYPE_IDS as readonly string[]).includes(value);
+}
+
 /**
  * Validation for creating an item. Reuses the edit fields (title, description,
  * content, url, language, tags) and adds the item type. A `url` item must carry

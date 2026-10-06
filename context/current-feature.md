@@ -1,18 +1,35 @@
-# Current Feature
+# Current Feature: Type-Specific Add Button
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Add a type-specific "Add" button to each `/items/[type]` page (e.g. "New Snippet", "New Command") that opens the New Item dialog
+- Preselect the page's item type in the New Item dialog when opened from that page
+- Make `ItemCreateDialog` accept a default item type (and a way to customize its trigger) so it can be reused on type pages
+- Keep the existing top-bar "New Item" button working, still opening the dialog without a page-specific preselection
+- Only offer creation for creatable types (`snippet`, `prompt`, `command`, `note`, `url`); `file` and `image` pages are left untouched for now (no add button) and will be handled in a later request.
+- Creating from a type page refreshes the list and shows the new item
+
 ## Notes
 
 <!-- Any extra notes -->
+
+Inline request (no spec file).
+
+- Files involved: `src/app/(dashboard)/items/[type]/page.tsx` (server component), `src/components/dashboard/item-create-dialog.tsx` (client, currently owns `INITIAL_FORM` with `typeId = CREATE_ITEM_TYPE_IDS[0]` and renders its own "New Item" trigger), `src/components/dashboard/top-bar.tsx` (mounts the global dialog).
+- The route param `type` is the item type slug (typeId), already used by `getItemTypeById`/`getItemsByType`.
+- Creatable types come from `CREATE_ITEM_TYPE_IDS` / `CreateItemTypeId` in `src/lib/validations/item.ts`; `file` and `image` are not creatable (Pro) and the page should not offer a plain create action for them.
+- `getTypeVisual` in `src/lib/item-type-meta.ts` provides each type's icon/colour for the button.
+- Preselecting only needs local state: initialize the form's `typeId` from the prop and reset back to it when the dialog closes.
+- Presentational/UI change only (no server actions or utilities expected), so likely no new Vitest tests.
+- `reactCompiler: true` is enabled in the Next.js config.
 
 ## History
 

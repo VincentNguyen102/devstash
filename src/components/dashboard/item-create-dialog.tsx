@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -24,7 +24,7 @@ import {
   CONTENT_TYPE_IDS,
   LANGUAGE_TYPE_IDS,
 } from "@/lib/item-type-fields";
-import { getTypeVisual } from "@/lib/item-type-meta";
+import { CREATE_TYPE_LABELS, getTypeVisual } from "@/lib/item-type-meta";
 import {
   CREATE_ITEM_TYPE_IDS,
   type CreateItemTypeId,
@@ -32,13 +32,10 @@ import {
 import { cn } from "@/lib/utils";
 
 /** Selector options, in canonical order. `url` is presented as "Link". */
-const CREATE_TYPES: { id: CreateItemTypeId; label: string }[] = [
-  { id: "snippet", label: "Snippet" },
-  { id: "prompt", label: "Prompt" },
-  { id: "command", label: "Command" },
-  { id: "note", label: "Note" },
-  { id: "url", label: "Link" },
-];
+const CREATE_TYPES = CREATE_ITEM_TYPE_IDS.map((id) => ({
+  id,
+  label: CREATE_TYPE_LABELS[id],
+}));
 
 interface CreateFormState {
   typeId: CreateItemTypeId;
@@ -50,15 +47,25 @@ interface CreateFormState {
   tags: string;
 }
 
-const INITIAL_FORM: CreateFormState = {
-  typeId: CREATE_ITEM_TYPE_IDS[0],
-  title: "",
-  description: "",
-  content: "",
-  language: "",
-  url: "",
-  tags: "",
-};
+/** A blank create form for the given item type. */
+function createInitialForm(typeId: CreateItemTypeId): CreateFormState {
+  return {
+    typeId,
+    title: "",
+    description: "",
+    content: "",
+    language: "",
+    url: "",
+    tags: "",
+  };
+}
+
+interface ItemCreateDialogProps {
+  /** Type selected when the dialog opens. Defaults to the first creatable type. */
+  defaultTypeId?: CreateItemTypeId;
+  /** Custom trigger element; defaults to the top-bar "New Item" button. */
+  trigger?: ReactNode;
+}
 
 /** Splits the comma-separated tag input into a de-duplicated array. */
 function parseTags(value: string): string[] {
@@ -76,12 +83,22 @@ function parseTags(value: string): string[] {
  * "New Item" button and modal. Type-specific fields are shown as the type
  * changes, the payload is validated by the `createItem` server action, and a
  * successful create closes the dialog and refreshes the current view.
+ *
+ * Pass `defaultTypeId` to preselect a type (e.g. from an item type page) and
+ * `trigger` to replace the default "New Item" button.
  */
-export function ItemCreateDialog() {
+export function ItemCreateDialog({
+  defaultTypeId = CREATE_ITEM_TYPE_IDS[0],
+  trigger,
+}: ItemCreateDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [form, setForm] = useState<CreateFormState>(INITIAL_FORM);
+  const initialForm = useMemo(
+    () => createInitialForm(defaultTypeId),
+    [defaultTypeId],
+  );
+  const [form, setForm] = useState<CreateFormState>(initialForm);
 
   const showContent = CONTENT_TYPE_IDS.has(form.typeId);
   const showLanguage = LANGUAGE_TYPE_IDS.has(form.typeId);
@@ -103,7 +120,7 @@ export function ItemCreateDialog() {
 
     setOpen(next);
 
-    if (!next) setForm(INITIAL_FORM);
+    if (!next) setForm(initialForm);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -130,7 +147,7 @@ export function ItemCreateDialog() {
       }
 
       toast.success("Item created");
-      setForm(INITIAL_FORM);
+      setForm(initialForm);
       setOpen(false);
       router.refresh();
     } catch {
@@ -143,10 +160,12 @@ export function ItemCreateDialog() {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button size="lg">
-          <Plus aria-hidden />
-          New Item
-        </Button>
+        {trigger ?? (
+          <Button size="lg">
+            <Plus aria-hidden />
+            New Item
+          </Button>
+        )}
       </DialogTrigger>
 
       <DialogContent showCloseButton={!isSubmitting}>

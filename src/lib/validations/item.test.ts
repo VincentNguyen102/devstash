@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { createItemSchema, updateItemSchema } from "@/lib/validations/item";
+import {
+  CREATE_ITEM_TYPE_IDS,
+  createItemSchema,
+  isCreateItemTypeId,
+  updateItemSchema,
+} from "@/lib/validations/item";
 
 function buildInput(overrides: Record<string, unknown> = {}) {
   return {
@@ -147,5 +152,24 @@ describe("createItemSchema", () => {
     );
 
     expect(result.url).toBe("https://example.com");
+  });
+});
+
+describe("isCreateItemTypeId", () => {
+  it("accepts every creatable type id", () => {
+    for (const id of CREATE_ITEM_TYPE_IDS) {
+      expect(isCreateItemTypeId(id)).toBe(true);
+    }
+  });
+
+  it("rejects non-creatable system types", () => {
+    expect(isCreateItemTypeId("file")).toBe(false);
+    expect(isCreateItemTypeId("image")).toBe(false);
+  });
+
+  it("rejects unknown or mis-cased values", () => {
+    expect(isCreateItemTypeId("")).toBe(false);
+    expect(isCreateItemTypeId("Snippet")).toBe(false);
+    expect(isCreateItemTypeId("custom-type")).toBe(false);
   });
 });
