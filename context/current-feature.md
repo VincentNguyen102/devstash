@@ -1,33 +1,18 @@
-# Current Feature: Delete Item
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-In Progress
+Not Started
 
 ## Goals
 
 <!-- Goals & requirements -->
 
-- Users can delete one of their own items from the item drawer's Delete (trash) button.
-- Deletion requires explicit confirmation through a shadcn confirmation dialog (destructive "Delete" + "Cancel", cannot be dismissed while the delete is in flight).
-- A success toast confirms the deletion; failures surface a user-friendly error toast.
-- Deleting is scoped to the signed-in user: an auth check plus ownership enforced in the query, so another user's item can never be removed.
-- The item and its tag links are removed from the database.
-- After deletion the drawer closes and the underlying list/dashboard refreshes so the item disappears.
-- Server action and data helper are covered by colocated Vitest unit tests (`npm run test`).
-
 ## Notes
 
 <!-- Any extra notes -->
-
-- The Delete button already exists as a UI-only placeholder in `ActionBar` in `src/components/dashboard/item-drawer.tsx` — wire it up rather than adding new UI.
-- Reuse the existing `src/components/ui/dialog.tsx` primitive (no `AlertDialog` component exists in this project); follow the confirmation pattern from `src/components/profile/delete-account-dialog.tsx`.
-- Add `deleteItem(itemId)` to `src/actions/items.ts` (session check via `auth()`, `{ success, error }` result, try/catch) and a `deleteItem(itemId, userId)` helper to `src/lib/db/items.ts` (ownership-scoped delete).
-- `ItemTag` has `onDelete: Cascade` in `prisma/schema.prisma`, so deleting an `Item` removes its tag links automatically — no migration or schema change needed.
-- The `sonner` `<Toaster />` is already mounted in the root layout and `toast` is already imported in the drawer.
-- No new dependencies expected.
 
 ## History
 
@@ -57,3 +42,4 @@ In Progress
 - Three-Column Item Listing completed — changed the `/items/[type]` listing grid from two columns to three on large screens (`md:grid-cols-2 lg:grid-cols-3` in `src/app/(dashboard)/items/[type]/page.tsx`), keeping it responsive (one column on mobile, two from `md`, three from `lg`) with the existing `ItemCard` layout and type-colour accents unchanged; presentational-only change (no server actions/utilities), so no unit tests added; verified in the browser at the `lg` breakpoint (three columns at 1096px, 2/1 columns below it) and with `npm run test` + `npm run lint` + `npm run build`
 - Item Drawer completed — added a right-side detail drawer that opens from item cards/rows on both the dashboard and `/items/[type]` with no page navigation: added the shadcn `Sheet` primitive (`src/components/ui/sheet.tsx`) and a client `ItemDrawerProvider`/`useItemDrawer` (`src/components/dashboard/item-drawer.tsx`) mounted once in `DashboardShell`, with `ItemCard`/`ItemRow` made client components that open it on click/keyboard; added `getItemDetail(itemId, userId)` to `src/lib/db/items.ts` and an auth-checked `GET /api/items/[id]` route (`src/app/api/items/[id]/route.ts`, 401 unauthenticated / 404 not owned) returning the full detail; the drawer shows a loading skeleton and renders the type icon, title, type/language badges, an action bar (Favorite yellow when active, Pin, Copy, Edit, Delete) plus Description, Content, URL/File, Tags, Collections and Created/Updated sections; Copy works (async Clipboard API with a textarea fallback) while Favorite/Pin/Edit/Delete are UI-only placeholders for now; note the detail API is scoped to the signed-in user while the list helpers still use the demo user (sign in as `demo@devstash.io` to open seeded items), and `reactCompiler: true` is enabled; no new unit tests (no server actions/utilities changed) — verified in the browser and with `npm run test` + `npm run lint` + `npm run build`
 - Item Drawer — Edit Mode completed — the drawer's Edit (pencil) button now switches it to an inline edit mode without navigating: the action bar is replaced by Save/Cancel and Title, Description, Tags plus type-specific Content (snippet/prompt/command/note), Language (snippet/command) and URL (`url`) become controlled inputs while item type, collections and dates stay read-only; added `updateItem(itemId, data)` to `src/actions/items.ts` (Zod validation via the new `src/lib/validations/item.ts`, `auth()` session check, ownership enforced by the query, `{ success, data, error }` result) and `updateItem(itemId, userId, data)` to `src/lib/db/items.ts` (upserts the user's tags, replaces the item's tag links and fields in a transaction, returns the refreshed `ItemDetail`); Cancel discards, Save disables on an empty title, shows a success/error toast, updates the drawer from the returned detail and calls `router.refresh()`; added a shadcn-style `Textarea` primitive (`src/components/ui/textarea.tsx`) and colocated unit tests (`src/lib/validations/item.test.ts`, `src/actions/items.test.ts`, 14 new tests); verified in the browser (snippet + link field sets, save persisted and refreshed the underlying cards, cancel/disabled-Save/invalid-URL cases) and with `npm run test` (42 passing) + `npm run lint` + `npm run build`
+- Item Delete completed — the drawer's Delete (trash) button now permanently deletes the item: clicking it opens a shadcn `Dialog` confirmation (shows the item title, destructive Delete / Cancel, both disabled while pending, and the dialog cannot be dismissed mid-flight); confirming calls `deleteItem(itemId)` in `src/actions/items.ts` (`auth()` session check, ownership enforced by the query, `{ success, error }` result, try/catch) and `deleteItem(itemId, userId)` in `src/lib/db/items.ts` (ownership-scoped `deleteMany`, returns `false` when the item does not exist or belongs to someone else; tag links removed by the existing `ItemTag` cascade — no migration needed); on success it shows an "Item deleted" toast, closes the drawer and calls `router.refresh()` so the underlying list/sidebar counts update; added 4 unit tests to `src/actions/items.test.ts` (46 passing) and verified in the browser (confirmation dialog, disabled/pending state, success toast, item removed and Snippets count 4→3, Cancel leaves the item intact) plus `npm run test` + `npm run lint` + `npm run build`; the seed item deleted during testing was restored with `npm run db:seed`
