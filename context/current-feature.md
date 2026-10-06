@@ -1,35 +1,18 @@
-# Current Feature: Item Drawer
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-In Progress
+Not Started
 
 ## Goals
 
 <!-- Goals & requirements -->
 
-- Add the shadcn `Sheet` component (opens from the right) to `src/components/ui/`
-- Create a client wrapper component that manages drawer state and wraps the item cards/rows, since the dashboard and items list pages are server components
-- Clicking an `ItemCard` opens the right-side drawer with that item's full data
-- Works on both the dashboard (`ItemRow`) and the items list page (`ItemCard`)
-- Action bar in the drawer: Favorite (star icon, yellow when active), Pin, Copy, Edit (pencil icon) and Delete (trash icon, right-aligned), per the reference screenshot
-- Fetch full item detail (content, collection, language, etc.) on click via a new API route `GET /api/items/[id]` with an auth check
-- Add the item-detail query function to `src/lib/db/items.ts` and call it from the API route
-- Show a skeleton/loading state in the drawer while the detail is fetching
-- Keep it snappy — fetch on click, no page navigation
-
 ## Notes
 
 <!-- Any extra notes -->
-
-- Reference design: `context/screenshots/dashboard-ui-drawer.png` (screenshot shows title + type icon, tags, action bar, Description, Content code block, Tags, Collections and Details sections)
-- This drawer **is** the item detail view — there is no separate item page
-- Out of scope for now: the code editor and item-specific extras/editing. This pass is only the drawer detail display
-- `src/components/ui/` currently has avatar, badge, button, card, dialog, input, separator and sonner — there is no `sheet.tsx` yet, so it needs to be added (shadcn CLI or hand-written following the existing primitives)
-- Card data continues to be fetched by the server component; only the full detail is fetched client-side on click
-- The API route/query must scope items to the signed-in user (`auth()` session), not the demo user used by the existing dashboard helpers, and return `404` for items the user doesn't own
 
 ## History
 
@@ -57,3 +40,4 @@ In Progress
 - Items List View completed — replaced the mock `/items/[type]` placeholder with a DB-backed page that fetches the demo user's items for the route type and renders them in a responsive two-column grid (`md:grid-cols-2`) of new `ItemCard` components; added `getItemsByType(typeId)` and `getItemTypeById(typeId)` to `src/lib/db/items.ts` (extending `findItemSummaries` to filter by `typeId`, reusing `ItemSummary`, and calling `connection()`), plus `notFound()` for unknown ids and an empty state; the new card shows the type icon, title, pinned/favorite indicators, description, tags and date with a type-coloured thick left border; also switched item/collection highlighting from a full type-coloured ring to a left accent (`borderClass` → `accentClass` in `src/lib/item-type-meta.ts`, with hover) and made the sidebar logo link to `/dashboard`; verified `npm run build` + `npm run lint` and in the browser (snippet/command accent colours, two-column grid, empty state, 404 for unknown types, logo redirect)
 - Vitest Unit Testing Setup completed — added Vitest 4.1.x + `@vitest/coverage-v8` and a `vitest.config.mts` (Node environment, native Vite 8 tsconfig-path resolution for `@/*`, tests collected only from `src/actions/**` and `src/lib/**`, coverage scoped to actions/utilities) plus `test`/`test:watch`/`test:coverage` npm scripts; added the first colocated unit tests (`tokens`, password validation, rate-limit helpers and the `authenticate` server action with `@/auth`/`next-auth`/rate-limit mocked), 28 tests passing; documented the testing scope and workflow in `context/ai-interaction.md` (step 4 + new Testing section), `context/coding-standards.md` (new Testing section, also fixed an unclosed CSS fence), `README.md`, `AGENTS.md` and the feature skill's test action; verified `npm run test` + `npm run lint` + `npm run build`
 - Three-Column Item Listing completed — changed the `/items/[type]` listing grid from two columns to three on large screens (`md:grid-cols-2 lg:grid-cols-3` in `src/app/(dashboard)/items/[type]/page.tsx`), keeping it responsive (one column on mobile, two from `md`, three from `lg`) with the existing `ItemCard` layout and type-colour accents unchanged; presentational-only change (no server actions/utilities), so no unit tests added; verified in the browser at the `lg` breakpoint (three columns at 1096px, 2/1 columns below it) and with `npm run test` + `npm run lint` + `npm run build`
+- Item Drawer completed — added a right-side detail drawer that opens from item cards/rows on both the dashboard and `/items/[type]` with no page navigation: added the shadcn `Sheet` primitive (`src/components/ui/sheet.tsx`) and a client `ItemDrawerProvider`/`useItemDrawer` (`src/components/dashboard/item-drawer.tsx`) mounted once in `DashboardShell`, with `ItemCard`/`ItemRow` made client components that open it on click/keyboard; added `getItemDetail(itemId, userId)` to `src/lib/db/items.ts` and an auth-checked `GET /api/items/[id]` route (`src/app/api/items/[id]/route.ts`, 401 unauthenticated / 404 not owned) returning the full detail; the drawer shows a loading skeleton and renders the type icon, title, type/language badges, an action bar (Favorite yellow when active, Pin, Copy, Edit, Delete) plus Description, Content, URL/File, Tags, Collections and Created/Updated sections; Copy works (async Clipboard API with a textarea fallback) while Favorite/Pin/Edit/Delete are UI-only placeholders for now; note the detail API is scoped to the signed-in user while the list helpers still use the demo user (sign in as `demo@devstash.io` to open seeded items), and `reactCompiler: true` is enabled; no new unit tests (no server actions/utilities changed) — verified in the browser and with `npm run test` + `npm run lint` + `npm run build`
