@@ -18,11 +18,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { MarkdownEditor } from "@/components/ui/markdown-editor";
 import { Textarea } from "@/components/ui/textarea";
 import {
   CODE_TYPE_IDS,
   CONTENT_TYPE_IDS,
   LANGUAGE_TYPE_IDS,
+  MARKDOWN_TYPE_IDS,
 } from "@/lib/item-type-fields";
 import { CREATE_TYPE_LABELS, getTypeVisual } from "@/lib/item-type-meta";
 import {
@@ -103,6 +105,7 @@ export function ItemCreateDialog({
   const showContent = CONTENT_TYPE_IDS.has(form.typeId);
   const showLanguage = LANGUAGE_TYPE_IDS.has(form.typeId);
   const showCodeEditor = CODE_TYPE_IDS.has(form.typeId);
+  const showMarkdownEditor = MARKDOWN_TYPE_IDS.has(form.typeId);
   const showUrl = form.typeId === "url";
   const canSubmit =
     form.title.trim().length > 0 &&
@@ -168,7 +171,10 @@ export function ItemCreateDialog({
         )}
       </DialogTrigger>
 
-      <DialogContent showCloseButton={!isSubmitting}>
+      <DialogContent
+        showCloseButton={!isSubmitting}
+        className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
+      >
         <DialogHeader>
           <DialogTitle>New item</DialogTitle>
           <DialogDescription>
@@ -242,6 +248,15 @@ export function ItemCreateDialog({
                   aria-label="Content"
                   value={form.content}
                   language={form.language}
+                  disabled={isSubmitting}
+                  onChange={(next) => updateField("content", next)}
+                />
+              </FormField>
+            ) : showMarkdownEditor ? (
+              <FormField label="Content">
+                <MarkdownEditor
+                  aria-label="Content"
+                  value={form.content}
                   disabled={isSubmitting}
                   onChange={(next) => updateField("content", next)}
                 />

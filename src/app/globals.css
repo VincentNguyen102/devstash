@@ -128,3 +128,169 @@
     @apply font-sans;
     }
 }
+
+/*
+ * Dark markdown rendering for the MarkdownEditor preview. Colours are explicit
+ * (rather than theme tokens) because the editor chrome is always dark, matching
+ * the CodeEditor.
+ */
+@layer components {
+  .markdown-preview {
+    color: #c9d1d9;
+    font-size: 0.875rem;
+    line-height: 1.65;
+    overflow-wrap: break-word;
+  }
+
+  .markdown-preview > :first-child {
+    margin-top: 0;
+  }
+
+  .markdown-preview > :last-child {
+    margin-bottom: 0;
+  }
+
+  .markdown-preview h1,
+  .markdown-preview h2,
+  .markdown-preview h3,
+  .markdown-preview h4,
+  .markdown-preview h5,
+  .markdown-preview h6 {
+    margin: 1.25em 0 0.5em;
+    color: #e6edf3;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .markdown-preview h1 {
+    font-size: 1.5rem;
+  }
+
+  .markdown-preview h2 {
+    padding-bottom: 0.3em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 1.3rem;
+  }
+
+  .markdown-preview h3 {
+    font-size: 1.15rem;
+  }
+
+  .markdown-preview h4 {
+    font-size: 1rem;
+  }
+
+  .markdown-preview h5 {
+    font-size: 0.9rem;
+  }
+
+  .markdown-preview h6 {
+    color: #7d8590;
+    font-size: 0.85rem;
+  }
+
+  .markdown-preview p {
+    margin: 0.75em 0;
+  }
+
+  .markdown-preview a {
+    color: #60a5fa;
+    text-decoration: none;
+  }
+
+  .markdown-preview a:hover {
+    color: #93c5fd;
+    text-decoration: underline;
+  }
+
+  .markdown-preview strong {
+    color: #e6edf3;
+    font-weight: 600;
+  }
+
+  .markdown-preview code {
+    padding: 0.15em 0.35em;
+    border-radius: 0.3rem;
+    background: rgba(255, 255, 255, 0.08);
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+  }
+
+  .markdown-preview pre {
+    margin: 0.75em 0;
+    padding: 0.75rem 1rem;
+    overflow-x: auto;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    background: #0d0d0d;
+  }
+
+  .markdown-preview pre code {
+    padding: 0;
+    background: transparent;
+    font-size: 0.8rem;
+  }
+
+  .markdown-preview ul,
+  .markdown-preview ol {
+    margin: 0.75em 0;
+    padding-left: 1.4em;
+  }
+
+  .markdown-preview ul {
+    list-style: disc;
+  }
+
+  .markdown-preview ul ul {
+    list-style: circle;
+  }
+
+  .markdown-preview ol {
+    list-style: decimal;
+  }
+
+  .markdown-preview li {
+    margin: 0.25em 0;
+  }
+
+  .markdown-preview li::marker {
+    color: #7d8590;
+  }
+
+  .markdown-preview blockquote {
+    margin: 0.75em 0;
+    padding: 0.1em 0 0.1em 1em;
+    border-left: 3px solid rgba(255, 255, 255, 0.2);
+    color: #7d8590;
+  }
+
+  .markdown-preview hr {
+    margin: 1.25em 0;
+    border: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .markdown-preview table {
+    width: 100%;
+    margin: 0.75em 0;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+  }
+
+  .markdown-preview th,
+  .markdown-preview td {
+    padding: 0.4em 0.6em;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: left;
+  }
+
+  .markdown-preview th {
+    background: rgba(255, 255, 255, 0.05);
+    font-weight: 600;
+  }
+
+  .markdown-preview img {
+    max-width: 100%;
+    border-radius: 0.5rem;
+  }
+}
