@@ -1,18 +1,36 @@
-# Current Feature
+# Current Feature: Monaco Code Editor
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Create a `CodeEditor` component using Monaco Editor with a dark theme
+- Replace the `Textarea` with `CodeEditor` for snippets and commands only
+- Keep `Textarea` for notes, prompts, and other non-code types
+- Add macOS-style window dots (red/yellow/green) at the top of the editor
+- Add a quick copy button in the editor header
+- Add the language in the editor header next to the copy button
+- Support both display (readonly) and edit modes
+- Make the editor height fluid with a max height of 400px and a theme-matching scrollbar
+
 ## Notes
 
 <!-- Any extra notes -->
+
+Spec: `context/features/code-editor-spec.md`
+
+- "Code" item types are `snippet` and `command`; all other types (`note`, `prompt`, `url`, …) keep the existing `Textarea`.
+- Integration points: the item drawer (`src/components/dashboard/item-drawer.tsx`) supports both display and edit modes today, and the item create dialog (`src/components/dashboard/item-create-dialog.tsx`) renders content/language fields per type — both should use `CodeEditor` for code types.
+- Existing `Textarea` primitive lives at `src/components/ui/textarea.tsx`.
+- `language` is already part of the item edit/create schemas (`src/lib/validations/item.ts`); surface it in the editor header.
+- `reactCompiler: true` is enabled in the Next.js config.
+- Testing scope is server actions and utilities only (Vitest), so the presentational editor component likely needs no new unit tests.
 
 ## History
 
