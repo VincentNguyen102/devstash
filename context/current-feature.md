@@ -1,37 +1,18 @@
-# Current Feature: Item Drawer — Edit Mode
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-In Progress
+Not Started
 
 ## Goals
 
 <!-- Goals & requirements -->
 
-- Edit button (pencil) in the item drawer's action bar toggles view mode → inline edit mode (same drawer stays open)
-- In edit mode, the action bar is replaced with Save and Cancel buttons
-- Cancel discards changes and returns to view mode
-- Save persists via server action, returns to view mode, and refreshes the drawer data
-- Toast notification on save success or error
-- Editable fields (all types): Title (required text), Description (optional textarea), Tags (comma-separated input → tag array)
-- Type-specific fields: Content (snippet, prompt, command, note — textarea), Language (snippet, command — text input), URL (link — text input)
-- Non-editable / display-only in edit mode: item type, collections, created/updated dates
-- Zod schema validates the update payload in the server action before hitting the DB (`title` non-empty trimmed; `description`/`content`/`url`/`language` string-or-null optional with `url` a valid URL; `tags` array of trimmed non-empty strings); Zod errors returned in `{ success: false, error }`
-- Server action `updateItem(itemId, data)` in `src/actions/items.ts` following the `{ success, data, error }` pattern — Zod validation, session via `auth()`, ownership check, then query function
-- Query function `updateItem` in `src/lib/db/items.ts` — disconnect all existing tags then connect-or-create new ones; returns updated `ItemDetail` so the drawer refreshes without a second fetch
-
 ## Notes
 
 <!-- Any extra notes -->
-
-- Keep it simple — no form library; controlled inputs with local state
-- Client-side: disable Save when the title is empty (basic UX guard)
-- Server-side: Zod is the source of truth for validation
-- The content textarea does not need to be a code editor (that comes later)
-- After save, call `router.refresh()` so the underlying card list reflects changes
-- Builds on the "Item Drawer" feature (right-side `Sheet` drawer opened from item cards/rows; `ItemDrawerProvider`/`useItemDrawer` in `src/components/dashboard/item-drawer.tsx`; `getItemDetail` in `src/lib/db/items.ts`)
 
 ## History
 
@@ -60,3 +41,4 @@ In Progress
 - Vitest Unit Testing Setup completed — added Vitest 4.1.x + `@vitest/coverage-v8` and a `vitest.config.mts` (Node environment, native Vite 8 tsconfig-path resolution for `@/*`, tests collected only from `src/actions/**` and `src/lib/**`, coverage scoped to actions/utilities) plus `test`/`test:watch`/`test:coverage` npm scripts; added the first colocated unit tests (`tokens`, password validation, rate-limit helpers and the `authenticate` server action with `@/auth`/`next-auth`/rate-limit mocked), 28 tests passing; documented the testing scope and workflow in `context/ai-interaction.md` (step 4 + new Testing section), `context/coding-standards.md` (new Testing section, also fixed an unclosed CSS fence), `README.md`, `AGENTS.md` and the feature skill's test action; verified `npm run test` + `npm run lint` + `npm run build`
 - Three-Column Item Listing completed — changed the `/items/[type]` listing grid from two columns to three on large screens (`md:grid-cols-2 lg:grid-cols-3` in `src/app/(dashboard)/items/[type]/page.tsx`), keeping it responsive (one column on mobile, two from `md`, three from `lg`) with the existing `ItemCard` layout and type-colour accents unchanged; presentational-only change (no server actions/utilities), so no unit tests added; verified in the browser at the `lg` breakpoint (three columns at 1096px, 2/1 columns below it) and with `npm run test` + `npm run lint` + `npm run build`
 - Item Drawer completed — added a right-side detail drawer that opens from item cards/rows on both the dashboard and `/items/[type]` with no page navigation: added the shadcn `Sheet` primitive (`src/components/ui/sheet.tsx`) and a client `ItemDrawerProvider`/`useItemDrawer` (`src/components/dashboard/item-drawer.tsx`) mounted once in `DashboardShell`, with `ItemCard`/`ItemRow` made client components that open it on click/keyboard; added `getItemDetail(itemId, userId)` to `src/lib/db/items.ts` and an auth-checked `GET /api/items/[id]` route (`src/app/api/items/[id]/route.ts`, 401 unauthenticated / 404 not owned) returning the full detail; the drawer shows a loading skeleton and renders the type icon, title, type/language badges, an action bar (Favorite yellow when active, Pin, Copy, Edit, Delete) plus Description, Content, URL/File, Tags, Collections and Created/Updated sections; Copy works (async Clipboard API with a textarea fallback) while Favorite/Pin/Edit/Delete are UI-only placeholders for now; note the detail API is scoped to the signed-in user while the list helpers still use the demo user (sign in as `demo@devstash.io` to open seeded items), and `reactCompiler: true` is enabled; no new unit tests (no server actions/utilities changed) — verified in the browser and with `npm run test` + `npm run lint` + `npm run build`
+- Item Drawer — Edit Mode completed — the drawer's Edit (pencil) button now switches it to an inline edit mode without navigating: the action bar is replaced by Save/Cancel and Title, Description, Tags plus type-specific Content (snippet/prompt/command/note), Language (snippet/command) and URL (`url`) become controlled inputs while item type, collections and dates stay read-only; added `updateItem(itemId, data)` to `src/actions/items.ts` (Zod validation via the new `src/lib/validations/item.ts`, `auth()` session check, ownership enforced by the query, `{ success, data, error }` result) and `updateItem(itemId, userId, data)` to `src/lib/db/items.ts` (upserts the user's tags, replaces the item's tag links and fields in a transaction, returns the refreshed `ItemDetail`); Cancel discards, Save disables on an empty title, shows a success/error toast, updates the drawer from the returned detail and calls `router.refresh()`; added a shadcn-style `Textarea` primitive (`src/components/ui/textarea.tsx`) and colocated unit tests (`src/lib/validations/item.test.ts`, `src/actions/items.test.ts`, 14 new tests); verified in the browser (snippet + link field sets, save persisted and refreshed the underlying cards, cancel/disabled-Save/invalid-URL cases) and with `npm run test` (42 passing) + `npm run lint` + `npm run build`
