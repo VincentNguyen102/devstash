@@ -42,3 +42,40 @@ export type UpdateItemInput = z.input<typeof updateItemSchema>;
 
 /** Shape passed to the data layer after parsing. */
 export type UpdateItemData = z.output<typeof updateItemSchema>;
+
+/**
+ * Item types that can be created from the New Item dialog. These are the text
+ * system types; `url` backs the "Link" option in the selector.
+ */
+export const CREATE_ITEM_TYPE_IDS = [
+  "snippet",
+  "prompt",
+  "command",
+  "note",
+  "url",
+] as const;
+
+export type CreateItemTypeId = (typeof CREATE_ITEM_TYPE_IDS)[number];
+
+/**
+ * Validation for creating an item. Reuses the edit fields (title, description,
+ * content, url, language, tags) and adds the item type. A `url` item must carry
+ * a URL; content and language stay optional for the text types.
+ */
+export const createItemSchema = updateItemSchema
+  .extend({ typeId: z.enum(CREATE_ITEM_TYPE_IDS) })
+  .superRefine((data, ctx) => {
+    if (data.typeId === "url" && !data.url) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["url"],
+        message: "URL is required",
+      });
+    }
+  });
+
+/** Shape accepted by the action (before defaults/transforms). */
+export type CreateItemInput = z.input<typeof createItemSchema>;
+
+/** Shape passed to the data layer after parsing. */
+export type CreateItemData = z.output<typeof createItemSchema>;

@@ -2,11 +2,64 @@
 
 import { auth } from "@/auth";
 import {
+  createItem as createItemRecord,
   deleteItem as deleteItemRecord,
   updateItem as updateItemRecord,
   type ItemDetail,
 } from "@/lib/db/items";
-import { updateItemSchema, type UpdateItemInput } from "@/lib/validations/item";
+import {
+  createItemSchema,
+  updateItemSchema,
+  type CreateItemInput,
+  type UpdateItemInput,
+} from "@/lib/validations/item";
+
+export interface CreateItemResult {
+  success: boolean;
+  data?: ItemDetail;
+  error?: string;
+}
+
+/**
+ * Creates an item owned by the signed-in user. Zod validates the payload (the
+ * source of truth), including the required URL for `url` items, and the
+ * refreshed detail is returned so the caller can react without a second fetch.
+ */
+export async function createItem(
+  input: CreateItemInput,
+): Promise<CreateItemResult> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { success: false, error: "You must be signed in to do that." };
+  }
+
+  const parsed = createItemSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid input.",
+    };
+  }
+
+  try {
+    const item = await createItemRecord(session.user.id, parsed.data);
+
+    if (!item) {
+      return { success: false, error: "Couldn't create item." };
+    }
+
+    return { success: true, data: item };
+  } catch (error) {
+    console.error("Create item failed", error);
+
+    return {
+      success: false,
+      error: "Something went wrong. Please try again.",
+    };
+  }
+}
 
 export interface UpdateItemResult {
   success: boolean;

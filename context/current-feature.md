@@ -1,18 +1,38 @@
-# Current Feature
+# Current Feature: Item Create
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Add items from the **"New Item"** button in the top bar, opening a modal (shadcn `Dialog`).
+- Include a **type selector** for `snippet`, `prompt`, `command`, `note` and `url` (shown as "link").
+- Render fields based on the selected type:
+  - All types: **title** (required), description, tags.
+  - `snippet` / `command`: content, language.
+  - `prompt` / `note`: content.
+  - `url`: **URL** (required).
+- Server action **`createItem`** with Zod validation (`src/actions/items.ts`).
+- Query function **`createItem`** in `src/lib/db/items.ts`.
+- On success: show a toast, close the modal and refresh the view.
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- Spec: `context/features/item-create-spec.md`.
+- The spec says "link"; the DB/system type id is `url` (`SYSTEM_TYPE_ORDER` in `src/lib/item-type-meta.ts`), so the selector label is Link and the stored `typeId` is `url`.
+- The top bar with the **New Item** button lives in the `(dashboard)` layout (`DashboardShell`); it is a client component today.
+- A shadcn `Dialog` primitive already exists at `src/components/ui/dialog.tsx`, plus `Textarea` (`src/components/ui/textarea.tsx`); reuse them.
+- Follow the item input patterns from the drawer edit mode: Zod schema in `src/lib/validations/item.ts`, `{ success, data, error }` action result, auth check via `auth()` and ownership enforced in the data layer.
+- Both the action and the query helper are named `createItem` per the spec; import the query with an alias (as `updateItem`/`deleteItem` already do).
+- The `Item` model uses `contentType` (`text`/`file`); text types write `content`, `url` writes `url`. Tags are user-scoped `Tag` rows linked through `ItemTag`.
+- User-scoped like the drawer (not the demo/mock user).
 
 ## History
 
