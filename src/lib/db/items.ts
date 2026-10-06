@@ -2,6 +2,7 @@ import { connection } from "next/server";
 
 import { systemTypeOrder } from "@/lib/item-type-meta";
 import { prisma } from "@/lib/prisma";
+import type { UpdateItemData } from "@/lib/validations/item";
 
 // Auth is not wired up yet, so dashboard data is scoped to the seeded demo
 // user. Replace this with the signed-in user once NextAuth is in place.
@@ -247,4 +248,62 @@ export async function getItemDetail(
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
   };
+}
+
+/**
+ * Updates an item owned by `userId`. Tags are replaced wholesale: the item's
+ * existing links are disconnected and each supplied name is connected to the
+ * user's tag (created on demand). Returns the refreshed detail so the drawer
+ * can render it without a second round-trip, or null when the item does not
+ * exist or belongs to someone else.
+ */
+export async function updateItem(
+  itemId: string,
+  userId: string,
+  data: UpdateItemData,
+): Promise<ItemDetail | null> {
+  await connection();
+
+  const existing = await prisma.item.findFirst({
+    where: { id: itemId, userId },
+    select: { id: true },
+  });
+
+  if (!existing) {
+    return null;
+  }
+
+  const tagNames = [...new Set(data.tags)];
+
+  await prisma.$transaction(async (tx) => {
+    const tagIds: string[] = [];
+
+    for (const name of tagNames) {
+      const tag = await tx.tag.upsert({
+        where: { userId_name: { userId, name } },
+        create: { userId, name },
+        update: {},
+        select: { id: true },
+      });
+
+      tagIds.push(tag.id);
+    }
+
+    await tx.item.update({
+      where: { id: itemId },
+      data: {
+        title: data.title,
+        description: data.description,
+        content: data.content,
+        url: data.url,
+        language: data.language,
+        tags: {
+          deleteMany: {},
+          create: tagIds.map((tagId) => ({ tagId })),
+        },
+      },
+    });
+  });
+
+  return getItemDetail(itemId, userId);
 }

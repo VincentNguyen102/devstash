@@ -1,0 +1,54 @@
+"use server";
+
+import { auth } from "@/auth";
+import { updateItem as updateItemRecord, type ItemDetail } from "@/lib/db/items";
+import { updateItemSchema, type UpdateItemInput } from "@/lib/validations/item";
+
+export interface UpdateItemResult {
+  success: boolean;
+  data?: ItemDetail;
+  error?: string;
+}
+
+/**
+ * Persists edits to an item owned by the signed-in user. Zod validates the
+ * payload (the source of truth), ownership is enforced by the query helper, and
+ * the refreshed detail is returned so the drawer can update without a second
+ * fetch.
+ */
+export async function updateItem(
+  itemId: string,
+  input: UpdateItemInput,
+): Promise<UpdateItemResult> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { success: false, error: "You must be signed in to do that." };
+  }
+
+  const parsed = updateItemSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid input.",
+    };
+  }
+
+  try {
+    const item = await updateItemRecord(itemId, session.user.id, parsed.data);
+
+    if (!item) {
+      return { success: false, error: "Item not found." };
+    }
+
+    return { success: true, data: item };
+  } catch (error) {
+    console.error("Update item failed", error);
+
+    return {
+      success: false,
+      error: "Something went wrong. Please try again.",
+    };
+  }
+}

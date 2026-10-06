@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Calendar,
   Copy,
@@ -23,9 +24,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { updateItem } from "@/actions/items";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
 import type { ItemDetail } from "@/lib/db/items";
 import { getTypeVisual } from "@/lib/item-type-meta";
 import { cn } from "@/lib/utils";
@@ -36,6 +40,15 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
   timeZone: "UTC",
 });
+
+/** Item types whose `content` field is editable in the drawer. */
+const CONTENT_TYPE_IDS = new Set(["snippet", "prompt", "command", "note"]);
+
+/** Item types whose `language` field is editable in the drawer. */
+const LANGUAGE_TYPE_IDS = new Set(["snippet", "command"]);
+
+/** Item types whose `url` field is editable in the drawer. */
+const URL_TYPE_IDS = new Set(["url"]);
 
 interface ItemDrawerContextValue {
   openItem: (itemId: string) => void;
@@ -154,7 +167,11 @@ function ItemDrawerSheet({
   // a different item is loading.
   const content =
     state.status === "loaded" && (itemId === null || state.item.id === itemId) ? (
-      <ItemDetailView item={state.item} />
+      <ItemDetailView
+        key={state.item.id}
+        item={state.item}
+        onItemUpdated={(item) => setState({ status: "loaded", item })}
+      />
     ) : state.status === "error" &&
       (itemId === null || state.itemId === itemId) ? (
       <DrawerError message={state.error} />
@@ -198,8 +215,103 @@ function DrawerError({ message }: { message: string }) {
   );
 }
 
-function ItemDetailView({ item }: { item: ItemDetail }) {
+/** Local, controlled state for the inline edit form. */
+interface EditFormState {
+  title: string;
+  description: string;
+  content: string;
+  url: string;
+  language: string;
+  tags: string;
+}
+
+function toEditForm(item: ItemDetail): EditFormState {
+  return {
+    title: item.title,
+    description: item.description,
+    content: item.content ?? "",
+    url: item.url ?? "",
+    language: item.language ?? "",
+    tags: item.tags.join(", "),
+  };
+}
+
+/** Splits the comma-separated tag input into a de-duplicated array. */
+function parseTags(value: string): string[] {
+  return [
+    ...new Set(
+      value
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+    ),
+  ];
+}
+
+function ItemDetailView({
+  item,
+  onItemUpdated,
+}: {
+  item: ItemDetail;
+  onItemUpdated: (item: ItemDetail) => void;
+}) {
+  const router = useRouter();
   const { Icon, textClass, bgClass } = getTypeVisual(item.typeId, item.typeIcon);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [form, setForm] = useState<EditFormState>(() => toEditForm(item));
+
+  const showsContent = CONTENT_TYPE_IDS.has(item.typeId);
+  const showsLanguage = LANGUAGE_TYPE_IDS.has(item.typeId);
+  const showsUrl = URL_TYPE_IDS.has(item.typeId);
+  const canSave = form.title.trim().length > 0;
+
+  function updateField<K extends keyof EditFormState>(
+    field: K,
+    value: EditFormState[K],
+  ) {
+    setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function startEditing() {
+    setForm(toEditForm(item));
+    setIsEditing(true);
+  }
+
+  function cancelEditing() {
+    setIsEditing(false);
+  }
+
+  async function handleSave() {
+    if (!canSave || isSaving) return;
+
+    setIsSaving(true);
+
+    try {
+      const result = await updateItem(item.id, {
+        title: form.title,
+        description: form.description,
+        content: form.content,
+        url: form.url,
+        language: form.language,
+        tags: parseTags(form.tags),
+      });
+
+      if (!result.success || !result.data) {
+        toast.error(result.error ?? "Couldn't save changes.");
+        return;
+      }
+
+      onItemUpdated(result.data);
+      setIsEditing(false);
+      toast.success("Item updated");
+      router.refresh();
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   return (
     <>
@@ -215,12 +327,22 @@ function ItemDetailView({ item }: { item: ItemDetail }) {
           </span>
 
           <div className="min-w-0 flex-1 space-y-2">
-            <h2 className="text-lg font-semibold break-words">{item.title}</h2>
+            {isEditing ? (
+              <Input
+                aria-label="Title"
+                value={form.title}
+                onChange={(event) => updateField("title", event.target.value)}
+                placeholder="Title"
+              />
+            ) : (
+              <h2 className="text-lg font-semibold break-words">{item.title}</h2>
+            )}
+
             <div className="flex flex-wrap items-center gap-1.5">
               <Badge variant="secondary" className="rounded-md">
                 {item.typeName}
               </Badge>
-              {item.language ? (
+              {!isEditing && item.language ? (
                 <Badge variant="secondary" className="rounded-md">
                   {item.language}
                 </Badge>
@@ -229,37 +351,147 @@ function ItemDetailView({ item }: { item: ItemDetail }) {
           </div>
         </div>
 
-        <ActionBar item={item} />
+        {isEditing ? (
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={cancelEditing}
+              disabled={isSaving}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleSave}
+              disabled={!canSave || isSaving}
+            >
+              {isSaving ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        ) : (
+          <ActionBar item={item} onEdit={startEditing} />
+        )}
       </header>
 
       <div className="space-y-6 p-6">
-        {item.description ? (
-          <DetailSection title="Description">
-            <p className="text-sm text-muted-foreground">{item.description}</p>
-          </DetailSection>
-        ) : null}
+        {isEditing ? (
+          <>
+            <EditField label="Description" htmlFor="item-description">
+              <Textarea
+                id="item-description"
+                value={form.description}
+                onChange={(event) =>
+                  updateField("description", event.target.value)
+                }
+                placeholder="Add a description"
+                rows={3}
+              />
+            </EditField>
 
-        {item.content ? (
-          <DetailSection title="Content">
-            <pre className="overflow-x-auto rounded-lg border border-border bg-muted/40 p-4 font-mono text-xs leading-relaxed">
-              <code>{item.content}</code>
-            </pre>
-          </DetailSection>
-        ) : null}
+            {showsContent ? (
+              <EditField label="Content" htmlFor="item-content">
+                <Textarea
+                  id="item-content"
+                  value={form.content}
+                  onChange={(event) =>
+                    updateField("content", event.target.value)
+                  }
+                  placeholder="Add content"
+                  rows={8}
+                  className="font-mono text-xs leading-relaxed"
+                />
+              </EditField>
+            ) : null}
 
-        {item.url ? (
-          <DetailSection title="URL">
-            <a
-              href={item.url}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+            {showsLanguage ? (
+              <EditField label="Language" htmlFor="item-language">
+                <Input
+                  id="item-language"
+                  value={form.language}
+                  onChange={(event) =>
+                    updateField("language", event.target.value)
+                  }
+                  placeholder="e.g. typescript"
+                />
+              </EditField>
+            ) : null}
+
+            {showsUrl ? (
+              <EditField label="URL" htmlFor="item-url">
+                <Input
+                  id="item-url"
+                  type="url"
+                  value={form.url}
+                  onChange={(event) => updateField("url", event.target.value)}
+                  placeholder="https://example.com"
+                />
+              </EditField>
+            ) : null}
+
+            <EditField
+              label="Tags"
+              htmlFor="item-tags"
+              hint="Separate tags with commas."
             >
-              <ExternalLink aria-hidden className="size-3.5 shrink-0" />
-              <span className="break-all">{item.url}</span>
-            </a>
-          </DetailSection>
-        ) : null}
+              <Input
+                id="item-tags"
+                value={form.tags}
+                onChange={(event) => updateField("tags", event.target.value)}
+                placeholder="react, hooks, typescript"
+              />
+            </EditField>
+          </>
+        ) : (
+          <>
+            {item.description ? (
+              <DetailSection title="Description">
+                <p className="text-sm text-muted-foreground">
+                  {item.description}
+                </p>
+              </DetailSection>
+            ) : null}
+
+            {item.content ? (
+              <DetailSection title="Content">
+                <pre className="overflow-x-auto rounded-lg border border-border bg-muted/40 p-4 font-mono text-xs leading-relaxed">
+                  <code>{item.content}</code>
+                </pre>
+              </DetailSection>
+            ) : null}
+
+            {item.url ? (
+              <DetailSection title="URL">
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                >
+                  <ExternalLink aria-hidden className="size-3.5 shrink-0" />
+                  <span className="break-all">{item.url}</span>
+                </a>
+              </DetailSection>
+            ) : null}
+
+            {item.tags.length > 0 ? (
+              <DetailSection
+                title="Tags"
+                icon={<Tag aria-hidden className="size-3.5" />}
+              >
+                <div className="flex flex-wrap gap-1.5">
+                  {item.tags.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="rounded-md">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </DetailSection>
+            ) : null}
+          </>
+        )}
 
         {item.fileName ? (
           <DetailSection title="File">
@@ -269,21 +501,6 @@ function ItemDetailView({ item }: { item: ItemDetail }) {
                 ? ` · ${formatFileSize(item.fileSize)}`
                 : ""}
             </p>
-          </DetailSection>
-        ) : null}
-
-        {item.tags.length > 0 ? (
-          <DetailSection
-            title="Tags"
-            icon={<Tag aria-hidden className="size-3.5" />}
-          >
-            <div className="flex flex-wrap gap-1.5">
-              {item.tags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="rounded-md">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
           </DetailSection>
         ) : null}
 
@@ -320,7 +537,7 @@ function ItemDetailView({ item }: { item: ItemDetail }) {
   );
 }
 
-function ActionBar({ item }: { item: ItemDetail }) {
+function ActionBar({ item, onEdit }: { item: ItemDetail; onEdit: () => void }) {
   async function handleCopy() {
     const text = item.content ?? item.url ?? "";
 
@@ -387,6 +604,7 @@ function ActionBar({ item }: { item: ItemDetail }) {
         variant="ghost"
         size="sm"
         className="ml-auto gap-1.5 text-muted-foreground"
+        onClick={onEdit}
       >
         <Pencil aria-hidden className="size-4" />
         Edit
@@ -401,6 +619,30 @@ function ActionBar({ item }: { item: ItemDetail }) {
       >
         <Trash2 aria-hidden className="size-4" />
       </Button>
+    </div>
+  );
+}
+
+function EditField({
+  label,
+  htmlFor,
+  hint,
+  children,
+}: {
+  label: string;
+  htmlFor: string;
+  hint?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <label htmlFor={htmlFor} className="text-sm font-medium">
+        {label}
+      </label>
+      {children}
+      {hint ? (
+        <p className="text-xs text-muted-foreground">{hint}</p>
+      ) : null}
     </div>
   );
 }

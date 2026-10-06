@@ -1,18 +1,37 @@
-# Current Feature
+# Current Feature: Item Drawer — Edit Mode
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Edit button (pencil) in the item drawer's action bar toggles view mode → inline edit mode (same drawer stays open)
+- In edit mode, the action bar is replaced with Save and Cancel buttons
+- Cancel discards changes and returns to view mode
+- Save persists via server action, returns to view mode, and refreshes the drawer data
+- Toast notification on save success or error
+- Editable fields (all types): Title (required text), Description (optional textarea), Tags (comma-separated input → tag array)
+- Type-specific fields: Content (snippet, prompt, command, note — textarea), Language (snippet, command — text input), URL (link — text input)
+- Non-editable / display-only in edit mode: item type, collections, created/updated dates
+- Zod schema validates the update payload in the server action before hitting the DB (`title` non-empty trimmed; `description`/`content`/`url`/`language` string-or-null optional with `url` a valid URL; `tags` array of trimmed non-empty strings); Zod errors returned in `{ success: false, error }`
+- Server action `updateItem(itemId, data)` in `src/actions/items.ts` following the `{ success, data, error }` pattern — Zod validation, session via `auth()`, ownership check, then query function
+- Query function `updateItem` in `src/lib/db/items.ts` — disconnect all existing tags then connect-or-create new ones; returns updated `ItemDetail` so the drawer refreshes without a second fetch
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- Keep it simple — no form library; controlled inputs with local state
+- Client-side: disable Save when the title is empty (basic UX guard)
+- Server-side: Zod is the source of truth for validation
+- The content textarea does not need to be a code editor (that comes later)
+- After save, call `router.refresh()` so the underlying card list reflects changes
+- Builds on the "Item Drawer" feature (right-side `Sheet` drawer opened from item cards/rows; `ItemDrawerProvider`/`useItemDrawer` in `src/components/dashboard/item-drawer.tsx`; `getItemDetail` in `src/lib/db/items.ts`)
 
 ## History
 
