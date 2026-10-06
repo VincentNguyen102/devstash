@@ -1,38 +1,18 @@
-# Current Feature: Item Create
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-In Progress
+Not Started
 
 ## Goals
 
 <!-- Goals & requirements -->
 
-- Add items from the **"New Item"** button in the top bar, opening a modal (shadcn `Dialog`).
-- Include a **type selector** for `snippet`, `prompt`, `command`, `note` and `url` (shown as "link").
-- Render fields based on the selected type:
-  - All types: **title** (required), description, tags.
-  - `snippet` / `command`: content, language.
-  - `prompt` / `note`: content.
-  - `url`: **URL** (required).
-- Server action **`createItem`** with Zod validation (`src/actions/items.ts`).
-- Query function **`createItem`** in `src/lib/db/items.ts`.
-- On success: show a toast, close the modal and refresh the view.
-
 ## Notes
 
 <!-- Any extra notes -->
-
-- Spec: `context/features/item-create-spec.md`.
-- The spec says "link"; the DB/system type id is `url` (`SYSTEM_TYPE_ORDER` in `src/lib/item-type-meta.ts`), so the selector label is Link and the stored `typeId` is `url`.
-- The top bar with the **New Item** button lives in the `(dashboard)` layout (`DashboardShell`); it is a client component today.
-- A shadcn `Dialog` primitive already exists at `src/components/ui/dialog.tsx`, plus `Textarea` (`src/components/ui/textarea.tsx`); reuse them.
-- Follow the item input patterns from the drawer edit mode: Zod schema in `src/lib/validations/item.ts`, `{ success, data, error }` action result, auth check via `auth()` and ownership enforced in the data layer.
-- Both the action and the query helper are named `createItem` per the spec; import the query with an alias (as `updateItem`/`deleteItem` already do).
-- The `Item` model uses `contentType` (`text`/`file`); text types write `content`, `url` writes `url`. Tags are user-scoped `Tag` rows linked through `ItemTag`.
-- User-scoped like the drawer (not the demo/mock user).
 
 ## History
 
@@ -63,3 +43,4 @@ In Progress
 - Item Drawer completed — added a right-side detail drawer that opens from item cards/rows on both the dashboard and `/items/[type]` with no page navigation: added the shadcn `Sheet` primitive (`src/components/ui/sheet.tsx`) and a client `ItemDrawerProvider`/`useItemDrawer` (`src/components/dashboard/item-drawer.tsx`) mounted once in `DashboardShell`, with `ItemCard`/`ItemRow` made client components that open it on click/keyboard; added `getItemDetail(itemId, userId)` to `src/lib/db/items.ts` and an auth-checked `GET /api/items/[id]` route (`src/app/api/items/[id]/route.ts`, 401 unauthenticated / 404 not owned) returning the full detail; the drawer shows a loading skeleton and renders the type icon, title, type/language badges, an action bar (Favorite yellow when active, Pin, Copy, Edit, Delete) plus Description, Content, URL/File, Tags, Collections and Created/Updated sections; Copy works (async Clipboard API with a textarea fallback) while Favorite/Pin/Edit/Delete are UI-only placeholders for now; note the detail API is scoped to the signed-in user while the list helpers still use the demo user (sign in as `demo@devstash.io` to open seeded items), and `reactCompiler: true` is enabled; no new unit tests (no server actions/utilities changed) — verified in the browser and with `npm run test` + `npm run lint` + `npm run build`
 - Item Drawer — Edit Mode completed — the drawer's Edit (pencil) button now switches it to an inline edit mode without navigating: the action bar is replaced by Save/Cancel and Title, Description, Tags plus type-specific Content (snippet/prompt/command/note), Language (snippet/command) and URL (`url`) become controlled inputs while item type, collections and dates stay read-only; added `updateItem(itemId, data)` to `src/actions/items.ts` (Zod validation via the new `src/lib/validations/item.ts`, `auth()` session check, ownership enforced by the query, `{ success, data, error }` result) and `updateItem(itemId, userId, data)` to `src/lib/db/items.ts` (upserts the user's tags, replaces the item's tag links and fields in a transaction, returns the refreshed `ItemDetail`); Cancel discards, Save disables on an empty title, shows a success/error toast, updates the drawer from the returned detail and calls `router.refresh()`; added a shadcn-style `Textarea` primitive (`src/components/ui/textarea.tsx`) and colocated unit tests (`src/lib/validations/item.test.ts`, `src/actions/items.test.ts`, 14 new tests); verified in the browser (snippet + link field sets, save persisted and refreshed the underlying cards, cancel/disabled-Save/invalid-URL cases) and with `npm run test` (42 passing) + `npm run lint` + `npm run build`
 - Item Delete completed — the drawer's Delete (trash) button now permanently deletes the item: clicking it opens a shadcn `Dialog` confirmation (shows the item title, destructive Delete / Cancel, both disabled while pending, and the dialog cannot be dismissed mid-flight); confirming calls `deleteItem(itemId)` in `src/actions/items.ts` (`auth()` session check, ownership enforced by the query, `{ success, error }` result, try/catch) and `deleteItem(itemId, userId)` in `src/lib/db/items.ts` (ownership-scoped `deleteMany`, returns `false` when the item does not exist or belongs to someone else; tag links removed by the existing `ItemTag` cascade — no migration needed); on success it shows an "Item deleted" toast, closes the drawer and calls `router.refresh()` so the underlying list/sidebar counts update; added 4 unit tests to `src/actions/items.test.ts` (46 passing) and verified in the browser (confirmation dialog, disabled/pending state, success toast, item removed and Snippets count 4→3, Cancel leaves the item intact) plus `npm run test` + `npm run lint` + `npm run build`; the seed item deleted during testing was restored with `npm run db:seed`
+- Item Create completed — the top-bar "New Item" button now opens a shadcn `Dialog` (`src/components/dashboard/item-create-dialog.tsx`, wired into `top-bar.tsx`) with a type selector for `snippet`, `prompt`, `command`, `note` and `url` (labelled "Link"); fields render per type (title required, description and tags always; content for snippet/prompt/command/note; language for snippet/command; URL required for `url`), Create is disabled until the title (and URL for links) is filled, and the dialog locks while pending; added `createItemSchema` plus `CREATE_ITEM_TYPE_IDS`/`CreateItemTypeId` to `src/lib/validations/item.ts` (extends the edit fields and requires a URL for `url` items via `superRefine`), `createItem(userId, data)` to `src/lib/db/items.ts` (creates a `text` item, `connectOrCreate`s the user's tags through `ItemTag`, returns the refreshed `ItemDetail`) and the `createItem` server action in `src/actions/items.ts` (auth check, Zod parse, `{ success, data, error }`); on success it toasts "Item created", closes and resets the modal and calls `router.refresh()`; added 9 unit tests (`src/lib/validations/item.test.ts`, `src/actions/items.test.ts`, 56 passing) and verified end-to-end via the Playwright MCP (sign in, dialog field sets per type, URL-required gating, create → toast → refreshed dashboard, drawer showed the persisted description/URL/tags, then deleted to restore the dev data; no console errors) plus `npm run test` + `npm run lint` + `npm run build`; the spec is `context/features/item-create-spec.md`
