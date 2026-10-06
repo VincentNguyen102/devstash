@@ -1,18 +1,33 @@
-# Current Feature
+# Current Feature: Delete Item
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Users can delete one of their own items from the item drawer's Delete (trash) button.
+- Deletion requires explicit confirmation through a shadcn confirmation dialog (destructive "Delete" + "Cancel", cannot be dismissed while the delete is in flight).
+- A success toast confirms the deletion; failures surface a user-friendly error toast.
+- Deleting is scoped to the signed-in user: an auth check plus ownership enforced in the query, so another user's item can never be removed.
+- The item and its tag links are removed from the database.
+- After deletion the drawer closes and the underlying list/dashboard refreshes so the item disappears.
+- Server action and data helper are covered by colocated Vitest unit tests (`npm run test`).
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- The Delete button already exists as a UI-only placeholder in `ActionBar` in `src/components/dashboard/item-drawer.tsx` — wire it up rather than adding new UI.
+- Reuse the existing `src/components/ui/dialog.tsx` primitive (no `AlertDialog` component exists in this project); follow the confirmation pattern from `src/components/profile/delete-account-dialog.tsx`.
+- Add `deleteItem(itemId)` to `src/actions/items.ts` (session check via `auth()`, `{ success, error }` result, try/catch) and a `deleteItem(itemId, userId)` helper to `src/lib/db/items.ts` (ownership-scoped delete).
+- `ItemTag` has `onDelete: Cascade` in `prisma/schema.prisma`, so deleting an `Item` removes its tag links automatically — no migration or schema change needed.
+- The `sonner` `<Toaster />` is already mounted in the root layout and `toast` is already imported in the drawer.
+- No new dependencies expected.
 
 ## History
 

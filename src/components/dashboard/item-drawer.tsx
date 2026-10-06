@@ -24,9 +24,18 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { updateItem } from "@/actions/items";
+import { deleteItem, updateItem } from "@/actions/items";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
@@ -171,6 +180,7 @@ function ItemDrawerSheet({
         key={state.item.id}
         item={state.item}
         onItemUpdated={(item) => setState({ status: "loaded", item })}
+        onDeleted={onClose}
       />
     ) : state.status === "error" &&
       (itemId === null || state.itemId === itemId) ? (
@@ -251,9 +261,11 @@ function parseTags(value: string): string[] {
 function ItemDetailView({
   item,
   onItemUpdated,
+  onDeleted,
 }: {
   item: ItemDetail;
   onItemUpdated: (item: ItemDetail) => void;
+  onDeleted: () => void;
 }) {
   const router = useRouter();
   const { Icon, textClass, bgClass } = getTypeVisual(item.typeId, item.typeIcon);
@@ -372,7 +384,11 @@ function ItemDetailView({
             </Button>
           </div>
         ) : (
-          <ActionBar item={item} onEdit={startEditing} />
+          <ActionBar
+            item={item}
+            onEdit={startEditing}
+            onDeleted={onDeleted}
+          />
         )}
       </header>
 
@@ -537,7 +553,19 @@ function ItemDetailView({
   );
 }
 
-function ActionBar({ item, onEdit }: { item: ItemDetail; onEdit: () => void }) {
+function ActionBar({
+  item,
+  onEdit,
+  onDeleted,
+}: {
+  item: ItemDetail;
+  onEdit: () => void;
+  onDeleted: () => void;
+}) {
+  const router = useRouter();
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   async function handleCopy() {
     const text = item.content ?? item.url ?? "";
 
@@ -551,6 +579,30 @@ function ActionBar({ item, onEdit }: { item: ItemDetail; onEdit: () => void }) {
       toast.success("Copied to clipboard");
     } else {
       toast.error("Couldn't copy to clipboard");
+    }
+  }
+
+  async function handleDelete() {
+    if (isDeleting) return;
+
+    setIsDeleting(true);
+
+    try {
+      const result = await deleteItem(item.id);
+
+      if (!result.success) {
+        toast.error(result.error ?? "Couldn't delete item.");
+        setIsDeleting(false);
+        return;
+      }
+
+      toast.success("Item deleted");
+      setIsDeleteOpen(false);
+      onDeleted();
+      router.refresh();
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+      setIsDeleting(false);
     }
   }
 
@@ -610,15 +662,53 @@ function ActionBar({ item, onEdit }: { item: ItemDetail; onEdit: () => void }) {
         Edit
       </Button>
 
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-        aria-label="Delete item"
+      <Dialog
+        open={isDeleteOpen}
+        onOpenChange={(open) => {
+          if (!isDeleting) setIsDeleteOpen(open);
+        }}
       >
-        <Trash2 aria-hidden className="size-4" />
-      </Button>
+        <DialogTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            aria-label="Delete item"
+          >
+            <Trash2 aria-hidden className="size-4" />
+          </Button>
+        </DialogTrigger>
+
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete item</DialogTitle>
+            <DialogDescription>
+              This permanently deletes &ldquo;{item.title}&rdquo;. This action
+              cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsDeleteOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -5,15 +5,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
   updateItemRecord: vi.fn(),
+  deleteItemRecord: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
 
 vi.mock("@/lib/db/items", () => ({
   updateItem: mocks.updateItemRecord,
+  deleteItem: mocks.deleteItemRecord,
 }));
 
-import { updateItem } from "@/actions/items";
+import { deleteItem, updateItem } from "@/actions/items";
 
 const validInput = {
   title: "My Snippet",
@@ -27,6 +29,7 @@ const validInput = {
 beforeEach(() => {
   mocks.auth.mockResolvedValue({ user: { id: "user-1" } });
   mocks.updateItemRecord.mockResolvedValue({ id: "item-1", title: "My Snippet" });
+  mocks.deleteItemRecord.mockResolvedValue(true);
 });
 
 describe("updateItem", () => {
@@ -81,6 +84,51 @@ describe("updateItem", () => {
     mocks.updateItemRecord.mockRejectedValue(new Error("boom"));
 
     const result = await updateItem("item-1", validInput);
+
+    expect(result).toEqual({
+      success: false,
+      error: "Something went wrong. Please try again.",
+    });
+    consoleError.mockRestore();
+  });
+});
+
+describe("deleteItem", () => {
+  it("requires a signed-in user", async () => {
+    mocks.auth.mockResolvedValue(null);
+
+    const result = await deleteItem("item-1");
+
+    expect(result).toEqual({
+      success: false,
+      error: "You must be signed in to do that.",
+    });
+    expect(mocks.deleteItemRecord).not.toHaveBeenCalled();
+  });
+
+  it("returns an error when the item is not owned by the user", async () => {
+    mocks.deleteItemRecord.mockResolvedValue(false);
+
+    const result = await deleteItem("item-1");
+
+    expect(result).toEqual({ success: false, error: "Item not found." });
+    expect(mocks.deleteItemRecord).toHaveBeenCalledWith("item-1", "user-1");
+  });
+
+  it("deletes the item owned by the signed-in user", async () => {
+    const result = await deleteItem("item-1");
+
+    expect(result).toEqual({ success: true });
+    expect(mocks.deleteItemRecord).toHaveBeenCalledWith("item-1", "user-1");
+  });
+
+  it("returns a generic error when the query fails", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    mocks.deleteItemRecord.mockRejectedValue(new Error("boom"));
+
+    const result = await deleteItem("item-1");
 
     expect(result).toEqual({
       success: false,

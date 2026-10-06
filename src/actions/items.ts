@@ -1,7 +1,11 @@
 "use server";
 
 import { auth } from "@/auth";
-import { updateItem as updateItemRecord, type ItemDetail } from "@/lib/db/items";
+import {
+  deleteItem as deleteItemRecord,
+  updateItem as updateItemRecord,
+  type ItemDetail,
+} from "@/lib/db/items";
 import { updateItemSchema, type UpdateItemInput } from "@/lib/validations/item";
 
 export interface UpdateItemResult {
@@ -45,6 +49,40 @@ export async function updateItem(
     return { success: true, data: item };
   } catch (error) {
     console.error("Update item failed", error);
+
+    return {
+      success: false,
+      error: "Something went wrong. Please try again.",
+    };
+  }
+}
+
+export interface DeleteItemResult {
+  success: boolean;
+  error?: string;
+}
+
+/**
+ * Deletes an item owned by the signed-in user. Ownership is enforced by the
+ * query helper, so another user's item can never be removed.
+ */
+export async function deleteItem(itemId: string): Promise<DeleteItemResult> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { success: false, error: "You must be signed in to do that." };
+  }
+
+  try {
+    const deleted = await deleteItemRecord(itemId, session.user.id);
+
+    if (!deleted) {
+      return { success: false, error: "Item not found." };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Delete item failed", error);
 
     return {
       success: false,
