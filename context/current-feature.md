@@ -1,18 +1,35 @@
-# Current Feature
+# Current Feature: Item Drawer
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Add the shadcn `Sheet` component (opens from the right) to `src/components/ui/`
+- Create a client wrapper component that manages drawer state and wraps the item cards/rows, since the dashboard and items list pages are server components
+- Clicking an `ItemCard` opens the right-side drawer with that item's full data
+- Works on both the dashboard (`ItemRow`) and the items list page (`ItemCard`)
+- Action bar in the drawer: Favorite (star icon, yellow when active), Pin, Copy, Edit (pencil icon) and Delete (trash icon, right-aligned), per the reference screenshot
+- Fetch full item detail (content, collection, language, etc.) on click via a new API route `GET /api/items/[id]` with an auth check
+- Add the item-detail query function to `src/lib/db/items.ts` and call it from the API route
+- Show a skeleton/loading state in the drawer while the detail is fetching
+- Keep it snappy — fetch on click, no page navigation
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- Reference design: `context/screenshots/dashboard-ui-drawer.png` (screenshot shows title + type icon, tags, action bar, Description, Content code block, Tags, Collections and Details sections)
+- This drawer **is** the item detail view — there is no separate item page
+- Out of scope for now: the code editor and item-specific extras/editing. This pass is only the drawer detail display
+- `src/components/ui/` currently has avatar, badge, button, card, dialog, input, separator and sonner — there is no `sheet.tsx` yet, so it needs to be added (shadcn CLI or hand-written following the existing primitives)
+- Card data continues to be fetched by the server component; only the full detail is fetched client-side on click
+- The API route/query must scope items to the signed-in user (`auth()` session), not the demo user used by the existing dashboard helpers, and return `404` for items the user doesn't own
 
 ## History
 

@@ -1,5 +1,8 @@
+"use client";
+
 import { Pin, Star } from "lucide-react";
 
+import { useItemDrawer } from "@/components/dashboard/item-drawer";
 import { Badge } from "@/components/ui/badge";
 import type { ItemSummary } from "@/lib/db/items";
 import { getTypeVisual } from "@/lib/item-type-meta";
@@ -12,12 +15,23 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
 });
 
 export function ItemRow({ item }: { item: ItemSummary }) {
+  const { openItem } = useItemDrawer();
   const { Icon, textClass, bgClass, accentClass } = getTypeVisual(item.typeId);
 
   return (
     <article
+      role="button"
+      tabIndex={0}
+      aria-label={`Open ${item.title}`}
+      onClick={() => openItem(item.id)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openItem(item.id);
+        }
+      }}
       className={cn(
-        "flex items-start gap-3 rounded-xl border-l-4 bg-card p-3 ring-1 ring-foreground/10 transition-colors hover:bg-muted/40 sm:gap-4 sm:p-4",
+        "flex cursor-pointer items-start gap-3 rounded-xl border-l-4 bg-card p-3 ring-1 ring-foreground/10 transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring/50 sm:gap-4 sm:p-4",
         accentClass
       )}
     >

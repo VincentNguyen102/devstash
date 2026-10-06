@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 
+import { ItemDrawerProvider } from "@/components/dashboard/item-drawer";
 import { SidebarContent } from "@/components/dashboard/sidebar";
 import { TopBar } from "@/components/dashboard/top-bar";
 import type { CollectionSummary } from "@/lib/db/collections";
@@ -63,7 +64,9 @@ export function DashboardShell({
 
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar onToggleSidebar={handleToggleSidebar} />
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-6">
+          <ItemDrawerProvider>{children}</ItemDrawerProvider>
+        </main>
       </div>
 
       {mobileOpen ? (

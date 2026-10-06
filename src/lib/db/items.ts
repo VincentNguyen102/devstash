@@ -32,6 +32,27 @@ export interface ItemTypeSummary {
   itemCount: number;
 }
 
+export interface ItemDetail {
+  id: string;
+  title: string;
+  description: string;
+  typeId: string;
+  typeName: string;
+  typeIcon: string | null;
+  content: string | null;
+  url: string | null;
+  fileName: string | null;
+  fileSize: number | null;
+  language: string | null;
+  isFavorite: boolean;
+  isPinned: boolean;
+  tags: string[];
+  collectionId: string | null;
+  collectionName: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 /** Query the demo user's items, newest first, mapped to the row shape. */
 async function findItemSummaries(
   filter: { isPinned?: boolean; typeId?: string },
@@ -167,5 +188,63 @@ export async function getItemTypeById(
     icon: type.icon,
     color: type.color,
     itemCount: type._count.items,
+  };
+}
+
+/**
+ * A single item's full detail for the signed-in user, or null when the item
+ * does not exist or belongs to someone else. Used by `GET /api/items/[id]`.
+ */
+export async function getItemDetail(
+  itemId: string,
+  userId: string,
+): Promise<ItemDetail | null> {
+  await connection();
+
+  const item = await prisma.item.findFirst({
+    where: { id: itemId, userId },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      typeId: true,
+      content: true,
+      url: true,
+      fileName: true,
+      fileSize: true,
+      language: true,
+      isFavorite: true,
+      isPinned: true,
+      createdAt: true,
+      updatedAt: true,
+      type: { select: { name: true, icon: true } },
+      collection: { select: { id: true, name: true } },
+      tags: { select: { tag: { select: { name: true } } } },
+    },
+  });
+
+  if (!item) {
+    return null;
+  }
+
+  return {
+    id: item.id,
+    title: item.title,
+    description: item.description ?? "",
+    typeId: item.typeId,
+    typeName: item.type.name,
+    typeIcon: item.type.icon,
+    content: item.content,
+    url: item.url,
+    fileName: item.fileName,
+    fileSize: item.fileSize,
+    language: item.language,
+    isFavorite: item.isFavorite,
+    isPinned: item.isPinned,
+    tags: item.tags.map(({ tag }) => tag.name),
+    collectionId: item.collection?.id ?? null,
+    collectionName: item.collection?.name ?? null,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
   };
 }

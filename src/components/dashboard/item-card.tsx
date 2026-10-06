@@ -1,5 +1,8 @@
+"use client";
+
 import { Pin, Star } from "lucide-react";
 
+import { useItemDrawer } from "@/components/dashboard/item-drawer";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -19,12 +22,23 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
 });
 
 export function ItemCard({ item }: { item: ItemSummary }) {
+  const { openItem } = useItemDrawer();
   const { Icon, textClass, bgClass, accentClass } = getTypeVisual(item.typeId);
 
   return (
     <Card
+      role="button"
+      tabIndex={0}
+      aria-label={`Open ${item.title}`}
+      onClick={() => openItem(item.id)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openItem(item.id);
+        }
+      }}
       className={cn(
-        "h-full border-l-4 transition-shadow hover:ring-foreground/25",
+        "h-full cursor-pointer border-l-4 transition-shadow hover:ring-foreground/25 focus-visible:ring-2 focus-visible:ring-ring/50",
         accentClass
       )}
     >

@@ -1,0 +1,486 @@
+"use client";
+
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import Link from "next/link";
+import {
+  Calendar,
+  Copy,
+  ExternalLink,
+  Layers,
+  Pencil,
+  Pin,
+  Star,
+  Tag,
+  Trash2,
+} from "lucide-react";
+import { toast } from "sonner";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import type { ItemDetail } from "@/lib/db/items";
+import { getTypeVisual } from "@/lib/item-type-meta";
+import { cn } from "@/lib/utils";
+
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "long",
+  day: "numeric",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+interface ItemDrawerContextValue {
+  openItem: (itemId: string) => void;
+}
+
+const ItemDrawerContext = createContext<ItemDrawerContextValue | null>(null);
+
+/** Open the item detail drawer from any item card or row. */
+export function useItemDrawer(): ItemDrawerContextValue {
+  const context = useContext(ItemDrawerContext);
+
+  if (!context) {
+    throw new Error("useItemDrawer must be used within an ItemDrawerProvider");
+  }
+
+  return context;
+}
+
+/**
+ * Owns the selected item id and renders the detail sheet. Mounted once in the
+ * dashboard shell so the drawer is available on every page without a
+ * navigation.
+ */
+export function ItemDrawerProvider({ children }: { children: ReactNode }) {
+  const [openItemId, setOpenItemId] = useState<string | null>(null);
+
+  const value = useMemo(
+    () => ({ openItem: (itemId: string) => setOpenItemId(itemId) }),
+    []
+  );
+
+  const handleClose = useCallback(() => setOpenItemId(null), []);
+
+  return (
+    <ItemDrawerContext.Provider value={value}>
+      {children}
+      <ItemDrawerSheet itemId={openItemId} onClose={handleClose} />
+    </ItemDrawerContext.Provider>
+  );
+}
+
+/** `ItemDetail` as it arrives over the wire, with dates serialised to strings. */
+type SerializedItemDetail = Omit<ItemDetail, "createdAt" | "updatedAt"> & {
+  createdAt: string;
+  updatedAt: string;
+};
+
+type DrawerState =
+  | { status: "idle" }
+  | { status: "loaded"; item: ItemDetail }
+  | { status: "error"; itemId: string; error: string };
+
+function ItemDrawerSheet({
+  itemId,
+  onClose,
+}: {
+  itemId: string | null;
+  onClose: () => void;
+}) {
+  const [state, setState] = useState<DrawerState>({ status: "idle" });
+
+  useEffect(() => {
+    if (itemId === null) return;
+
+    const requestedId: string = itemId;
+    const controller = new AbortController();
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const response = await fetch(`/api/items/${requestedId}`, {
+          signal: controller.signal,
+        });
+        const body = (await response.json()) as {
+          success: boolean;
+          data?: SerializedItemDetail;
+          error?: string;
+        };
+
+        if (!response.ok || !body.success || !body.data) {
+          throw new Error(body.error ?? "Failed to load item.");
+        }
+
+        if (cancelled) return;
+
+        setState({
+          status: "loaded",
+          item: {
+            ...body.data,
+            createdAt: new Date(body.data.createdAt),
+            updatedAt: new Date(body.data.updatedAt),
+          },
+        });
+      } catch (error) {
+        if (cancelled || controller.signal.aborted) return;
+
+        setState({
+          status: "error",
+          itemId: requestedId,
+          error:
+            error instanceof Error ? error.message : "Failed to load item.",
+        });
+      }
+    }
+
+    load();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [itemId]);
+
+  // Show the loaded item when it matches the current request, keep the last one
+  // visible while the sheet slides closed, and fall back to the skeleton while
+  // a different item is loading.
+  const content =
+    state.status === "loaded" && (itemId === null || state.item.id === itemId) ? (
+      <ItemDetailView item={state.item} />
+    ) : state.status === "error" &&
+      (itemId === null || state.itemId === itemId) ? (
+      <DrawerError message={state.error} />
+    ) : itemId ? (
+      <DrawerSkeleton />
+    ) : null;
+
+  const title =
+    state.status === "loaded" && state.item.id === itemId
+      ? state.item.title
+      : "Item details";
+
+  return (
+    <Sheet
+      open={itemId !== null}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <SheetContent
+        side="right"
+        aria-describedby={undefined}
+        className="w-full gap-0 p-0 sm:max-w-lg"
+      >
+        <SheetHeader className="sr-only">
+          <SheetTitle>{title}</SheetTitle>
+        </SheetHeader>
+
+        <div className="min-h-0 flex-1 overflow-y-auto">{content}</div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function DrawerError({ message }: { message: string }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center">
+      <p className="text-sm font-medium">Couldn&apos;t load this item</p>
+      <p className="text-sm text-muted-foreground">{message}</p>
+    </div>
+  );
+}
+
+function ItemDetailView({ item }: { item: ItemDetail }) {
+  const { Icon, textClass, bgClass } = getTypeVisual(item.typeId, item.typeIcon);
+
+  return (
+    <>
+      <header className="space-y-4 border-b border-border p-6 pr-14">
+        <div className="flex items-start gap-3">
+          <span
+            className={cn(
+              "flex size-10 shrink-0 items-center justify-center rounded-lg",
+              bgClass
+            )}
+          >
+            <Icon aria-hidden className={cn("size-5", textClass)} />
+          </span>
+
+          <div className="min-w-0 flex-1 space-y-2">
+            <h2 className="text-lg font-semibold break-words">{item.title}</h2>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Badge variant="secondary" className="rounded-md">
+                {item.typeName}
+              </Badge>
+              {item.language ? (
+                <Badge variant="secondary" className="rounded-md">
+                  {item.language}
+                </Badge>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        <ActionBar item={item} />
+      </header>
+
+      <div className="space-y-6 p-6">
+        {item.description ? (
+          <DetailSection title="Description">
+            <p className="text-sm text-muted-foreground">{item.description}</p>
+          </DetailSection>
+        ) : null}
+
+        {item.content ? (
+          <DetailSection title="Content">
+            <pre className="overflow-x-auto rounded-lg border border-border bg-muted/40 p-4 font-mono text-xs leading-relaxed">
+              <code>{item.content}</code>
+            </pre>
+          </DetailSection>
+        ) : null}
+
+        {item.url ? (
+          <DetailSection title="URL">
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+            >
+              <ExternalLink aria-hidden className="size-3.5 shrink-0" />
+              <span className="break-all">{item.url}</span>
+            </a>
+          </DetailSection>
+        ) : null}
+
+        {item.fileName ? (
+          <DetailSection title="File">
+            <p className="text-sm text-muted-foreground">
+              {item.fileName}
+              {typeof item.fileSize === "number"
+                ? ` · ${formatFileSize(item.fileSize)}`
+                : ""}
+            </p>
+          </DetailSection>
+        ) : null}
+
+        {item.tags.length > 0 ? (
+          <DetailSection
+            title="Tags"
+            icon={<Tag aria-hidden className="size-3.5" />}
+          >
+            <div className="flex flex-wrap gap-1.5">
+              {item.tags.map((tag) => (
+                <Badge key={tag} variant="secondary" className="rounded-md">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          </DetailSection>
+        ) : null}
+
+        {item.collectionId && item.collectionName ? (
+          <DetailSection
+            title="Collections"
+            icon={<Layers aria-hidden className="size-3.5" />}
+          >
+            <Badge asChild variant="secondary" className="rounded-md">
+              <Link href={`/collections/${item.collectionId}`}>
+                {item.collectionName}
+              </Link>
+            </Badge>
+          </DetailSection>
+        ) : null}
+
+        <DetailSection
+          title="Details"
+          icon={<Calendar aria-hidden className="size-3.5" />}
+        >
+          <dl className="space-y-1 text-sm">
+            <div className="flex items-center justify-between">
+              <dt className="text-muted-foreground">Created</dt>
+              <dd>{dateFormatter.format(item.createdAt)}</dd>
+            </div>
+            <div className="flex items-center justify-between">
+              <dt className="text-muted-foreground">Updated</dt>
+              <dd>{dateFormatter.format(item.updatedAt)}</dd>
+            </div>
+          </dl>
+        </DetailSection>
+      </div>
+    </>
+  );
+}
+
+function ActionBar({ item }: { item: ItemDetail }) {
+  async function handleCopy() {
+    const text = item.content ?? item.url ?? "";
+
+    if (!text) {
+      toast.error("Nothing to copy");
+      return;
+    }
+
+    const copied = await copyToClipboard(text);
+    if (copied) {
+      toast.success("Copied to clipboard");
+    } else {
+      toast.error("Couldn't copy to clipboard");
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className={cn(
+          "gap-1.5 text-muted-foreground",
+          item.isFavorite && "text-yellow-400 hover:text-yellow-400"
+        )}
+      >
+        <Star
+          aria-hidden
+          className={cn("size-4", item.isFavorite && "fill-yellow-400")}
+        />
+        Favorite
+      </Button>
+
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className={cn(
+          "gap-1.5 text-muted-foreground",
+          item.isPinned && "text-foreground"
+        )}
+      >
+        <Pin
+          aria-hidden
+          className={cn("size-4", item.isPinned && "fill-current")}
+        />
+        Pin
+      </Button>
+
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="gap-1.5 text-muted-foreground"
+        onClick={handleCopy}
+      >
+        <Copy aria-hidden className="size-4" />
+        Copy
+      </Button>
+
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="ml-auto gap-1.5 text-muted-foreground"
+      >
+        <Pencil aria-hidden className="size-4" />
+        Edit
+      </Button>
+
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+        aria-label="Delete item"
+      >
+        <Trash2 aria-hidden className="size-4" />
+      </Button>
+    </div>
+  );
+}
+
+function DetailSection({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-2">
+      <h3 className="flex items-center gap-1.5 text-sm font-medium">
+        {icon}
+        {title}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+function DrawerSkeleton() {
+  return (
+    <div className="space-y-6 p-6" aria-busy="true" aria-label="Loading item">
+      <div className="flex items-center gap-3">
+        <div className="size-10 animate-pulse rounded-lg bg-muted" />
+        <div className="h-5 w-40 animate-pulse rounded bg-muted" />
+      </div>
+      <div className="h-8 w-full animate-pulse rounded bg-muted" />
+      <div className="space-y-3">
+        <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+        <div className="h-28 w-full animate-pulse rounded-lg bg-muted" />
+      </div>
+      <div className="space-y-3">
+        <div className="h-4 w-20 animate-pulse rounded bg-muted" />
+        <div className="h-14 w-full animate-pulse rounded-lg bg-muted" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Copies text to the clipboard, falling back to a temporary textarea when the
+ * async Clipboard API is unavailable or blocked (e.g. missing permission).
+ */
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // Fall through to the legacy approach below.
+  }
+
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    const copied = document.execCommand("copy");
+    document.body.removeChild(textarea);
+    return copied;
+  } catch {
+    return false;
+  }
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+
+  const kilobytes = bytes / 1024;
+
+  if (kilobytes < 1024) return `${kilobytes.toFixed(1)} KB`;
+
+  return `${(kilobytes / 1024).toFixed(1)} MB`;
+}
