@@ -1,36 +1,18 @@
-# Current Feature: Monaco Code Editor
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-In Progress
+Not Started
 
 ## Goals
 
 <!-- Goals & requirements -->
 
-- Create a `CodeEditor` component using Monaco Editor with a dark theme
-- Replace the `Textarea` with `CodeEditor` for snippets and commands only
-- Keep `Textarea` for notes, prompts, and other non-code types
-- Add macOS-style window dots (red/yellow/green) at the top of the editor
-- Add a quick copy button in the editor header
-- Add the language in the editor header next to the copy button
-- Support both display (readonly) and edit modes
-- Make the editor height fluid with a max height of 400px and a theme-matching scrollbar
-
 ## Notes
 
 <!-- Any extra notes -->
-
-Spec: `context/features/code-editor-spec.md`
-
-- "Code" item types are `snippet` and `command`; all other types (`note`, `prompt`, `url`, …) keep the existing `Textarea`.
-- Integration points: the item drawer (`src/components/dashboard/item-drawer.tsx`) supports both display and edit modes today, and the item create dialog (`src/components/dashboard/item-create-dialog.tsx`) renders content/language fields per type — both should use `CodeEditor` for code types.
-- Existing `Textarea` primitive lives at `src/components/ui/textarea.tsx`.
-- `language` is already part of the item edit/create schemas (`src/lib/validations/item.ts`); surface it in the editor header.
-- `reactCompiler: true` is enabled in the Next.js config.
-- Testing scope is server actions and utilities only (Vitest), so the presentational editor component likely needs no new unit tests.
 
 ## History
 
@@ -62,3 +44,4 @@ Spec: `context/features/code-editor-spec.md`
 - Item Drawer — Edit Mode completed — the drawer's Edit (pencil) button now switches it to an inline edit mode without navigating: the action bar is replaced by Save/Cancel and Title, Description, Tags plus type-specific Content (snippet/prompt/command/note), Language (snippet/command) and URL (`url`) become controlled inputs while item type, collections and dates stay read-only; added `updateItem(itemId, data)` to `src/actions/items.ts` (Zod validation via the new `src/lib/validations/item.ts`, `auth()` session check, ownership enforced by the query, `{ success, data, error }` result) and `updateItem(itemId, userId, data)` to `src/lib/db/items.ts` (upserts the user's tags, replaces the item's tag links and fields in a transaction, returns the refreshed `ItemDetail`); Cancel discards, Save disables on an empty title, shows a success/error toast, updates the drawer from the returned detail and calls `router.refresh()`; added a shadcn-style `Textarea` primitive (`src/components/ui/textarea.tsx`) and colocated unit tests (`src/lib/validations/item.test.ts`, `src/actions/items.test.ts`, 14 new tests); verified in the browser (snippet + link field sets, save persisted and refreshed the underlying cards, cancel/disabled-Save/invalid-URL cases) and with `npm run test` (42 passing) + `npm run lint` + `npm run build`
 - Item Delete completed — the drawer's Delete (trash) button now permanently deletes the item: clicking it opens a shadcn `Dialog` confirmation (shows the item title, destructive Delete / Cancel, both disabled while pending, and the dialog cannot be dismissed mid-flight); confirming calls `deleteItem(itemId)` in `src/actions/items.ts` (`auth()` session check, ownership enforced by the query, `{ success, error }` result, try/catch) and `deleteItem(itemId, userId)` in `src/lib/db/items.ts` (ownership-scoped `deleteMany`, returns `false` when the item does not exist or belongs to someone else; tag links removed by the existing `ItemTag` cascade — no migration needed); on success it shows an "Item deleted" toast, closes the drawer and calls `router.refresh()` so the underlying list/sidebar counts update; added 4 unit tests to `src/actions/items.test.ts` (46 passing) and verified in the browser (confirmation dialog, disabled/pending state, success toast, item removed and Snippets count 4→3, Cancel leaves the item intact) plus `npm run test` + `npm run lint` + `npm run build`; the seed item deleted during testing was restored with `npm run db:seed`
 - Item Create completed — the top-bar "New Item" button now opens a shadcn `Dialog` (`src/components/dashboard/item-create-dialog.tsx`, wired into `top-bar.tsx`) with a type selector for `snippet`, `prompt`, `command`, `note` and `url` (labelled "Link"); fields render per type (title required, description and tags always; content for snippet/prompt/command/note; language for snippet/command; URL required for `url`), Create is disabled until the title (and URL for links) is filled, and the dialog locks while pending; added `createItemSchema` plus `CREATE_ITEM_TYPE_IDS`/`CreateItemTypeId` to `src/lib/validations/item.ts` (extends the edit fields and requires a URL for `url` items via `superRefine`), `createItem(userId, data)` to `src/lib/db/items.ts` (creates a `text` item, `connectOrCreate`s the user's tags through `ItemTag`, returns the refreshed `ItemDetail`) and the `createItem` server action in `src/actions/items.ts` (auth check, Zod parse, `{ success, data, error }`); on success it toasts "Item created", closes and resets the modal and calls `router.refresh()`; added 9 unit tests (`src/lib/validations/item.test.ts`, `src/actions/items.test.ts`, 56 passing) and verified end-to-end via the Playwright MCP (sign in, dialog field sets per type, URL-required gating, create → toast → refreshed dashboard, drawer showed the persisted description/URL/tags, then deleted to restore the dev data; no console errors) plus `npm run test` + `npm run lint` + `npm run build`; the spec is `context/features/item-create-spec.md`
+- Monaco Code Editor completed — snippets and commands now use a new `CodeEditor` component (`src/components/ui/code-editor.tsx`) instead of a `Textarea` in both the item drawer (display + edit modes) and the New Item dialog, while notes, prompts and links keep the textarea; the component uses `@monaco-editor/react` (Monaco loaded lazily on the client via `next/dynamic`, runtime from the jsDelivr CDN) with a custom `devstash-dark` theme, macOS window dots, a language label, a copy button (check feedback + toast), read-only and editable modes, and a fluid height clamped between 96 and 400px with a theme-matching scrollbar; extracted the shared clipboard helper to `src/lib/clipboard.ts`, added `src/lib/monaco-language.ts` (stored-language → Monaco language id aliases) and centralized the per-type form field sets in `src/lib/item-type-fields.ts` (deduping `item-drawer.tsx`/`item-create-dialog.tsx`); suppressed the known benign Monaco `Canceled` disposal rejection; added 8 unit tests (`clipboard`, `monaco-language`, 64 passing) and verified in the browser via Playwright (read-only display, inline edit, live language header, save persisted after reload, copy toast + check icon, snippet uses the editor while prompt keeps the textarea, no console errors) plus `npm run test` + `npm run lint` + `npm run build`; the modified seed item was restored with `npm run db:seed`; the spec is `context/features/code-editor-spec.md`
