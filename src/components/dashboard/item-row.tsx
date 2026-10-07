@@ -4,15 +4,10 @@ import { Pin, Star } from "lucide-react";
 
 import { useItemDrawer } from "@/components/dashboard/item-drawer";
 import { Badge } from "@/components/ui/badge";
+import { formatShortDate } from "@/lib/date";
 import type { ItemSummary } from "@/lib/db/items";
 import { getTypeVisual } from "@/lib/item-type-meta";
 import { cn } from "@/lib/utils";
-
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  timeZone: "UTC",
-});
 
 export function ItemRow({ item }: { item: ItemSummary }) {
   const { openItem } = useItemDrawer();
@@ -75,7 +70,7 @@ export function ItemRow({ item }: { item: ItemSummary }) {
         dateTime={item.updatedAt.toISOString()}
         className="shrink-0 text-xs text-muted-foreground"
       >
-        {dateFormatter.format(item.updatedAt)}
+        {formatShortDate(item.updatedAt)}
       </time>
     </article>
   );

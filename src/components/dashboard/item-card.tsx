@@ -12,15 +12,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { formatShortDate } from "@/lib/date";
 import type { ItemSummary } from "@/lib/db/items";
 import { getTypeVisual } from "@/lib/item-type-meta";
 import { cn } from "@/lib/utils";
-
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  timeZone: "UTC",
-});
 
 export function ItemCard({ item }: { item: ItemSummary }) {
   const { openItem } = useItemDrawer();
@@ -88,7 +83,7 @@ export function ItemCard({ item }: { item: ItemSummary }) {
           dateTime={item.updatedAt.toISOString()}
           className="mt-auto text-xs text-muted-foreground"
         >
-          {dateFormatter.format(item.updatedAt)}
+          {formatShortDate(item.updatedAt)}
         </time>
       </CardContent>
     </Card>

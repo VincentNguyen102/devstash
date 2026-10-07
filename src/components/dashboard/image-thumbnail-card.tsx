@@ -14,13 +14,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { formatShortDate } from "@/lib/date";
 import type { ItemSummary } from "@/lib/db/items";
-
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  timeZone: "UTC",
-});
 
 /**
  * Gallery card for `image` items: a 16:9 thumbnail that zooms slightly on
@@ -113,7 +108,7 @@ export function ImageThumbnailCard({
           dateTime={item.updatedAt.toISOString()}
           className="mt-auto text-xs text-muted-foreground"
         >
-          {dateFormatter.format(item.updatedAt)}
+          {formatShortDate(item.updatedAt)}
         </time>
       </CardContent>
     </Card>

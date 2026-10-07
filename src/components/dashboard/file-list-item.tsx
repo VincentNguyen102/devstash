@@ -4,17 +4,11 @@ import { Download } from "lucide-react";
 
 import { useItemDrawer } from "@/components/dashboard/item-drawer";
 import { Button } from "@/components/ui/button";
+import { formatMediumDate } from "@/lib/date";
 import type { ItemSummary } from "@/lib/db/items";
 import { getFileVisual } from "@/lib/file-type-meta";
 import { formatFileSize } from "@/lib/upload";
 import { cn } from "@/lib/utils";
-
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-  timeZone: "UTC",
-});
 
 /**
  * A single row in the file list view: extension icon, name, size, upload date
@@ -57,7 +51,7 @@ export function FileListItem({ item }: { item: ItemSummary }) {
             dateTime={item.updatedAt.toISOString()}
             className="tabular-nums"
           >
-            {dateFormatter.format(item.updatedAt)}
+            {formatMediumDate(item.updatedAt)}
           </time>
         </span>
       </button>

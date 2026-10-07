@@ -2,15 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { Check, Copy } from "lucide-react";
-import { toast } from "sonner";
-
 import type { BeforeMount, EditorProps, OnMount } from "@monaco-editor/react";
 
-import { Button } from "@/components/ui/button";
-import { copyToClipboard } from "@/lib/clipboard";
+import { EditorFrame } from "@/components/ui/editor-frame";
+import { EDITOR_MIN_HEIGHT, clampEditorHeight } from "@/lib/editor";
 import { toMonacoLanguage } from "@/lib/monaco-language";
-import { cn } from "@/lib/utils";
 
 /** Monaco is browser-only, so keep it out of the server render and initial bundle. */
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
@@ -18,19 +14,8 @@ const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
   loading: () => <EditorSkeleton />,
 });
 
-/** Minimum editor height in pixels. */
-const MIN_HEIGHT = 96;
-
-/** Maximum editor height in pixels; longer content scrolls internally. */
-const MAX_HEIGHT = 400;
-
 /** Monaco theme name registered before the first editor mounts. */
 const THEME_NAME = "devstash-dark";
-
-function clampHeight(height: number): number {
-  if (!Number.isFinite(height)) return MIN_HEIGHT;
-  return Math.min(Math.max(Math.round(height), MIN_HEIGHT), MAX_HEIGHT);
-}
 
 let cancellationHandlerRegistered = false;
 
@@ -86,8 +71,7 @@ export function CodeEditor({
   "aria-label": ariaLabel = "Code editor",
   className,
 }: CodeEditorProps) {
-  const [height, setHeight] = useState(MIN_HEIGHT);
-  const [copied, setCopied] = useState(false);
+  const [height, setHeight] = useState(EDITOR_MIN_HEIGHT);
   const contentSizeListener = useRef<{ dispose: () => void } | null>(null);
 
   const isReadOnly = readOnly || disabled;
@@ -146,7 +130,8 @@ export function CodeEditor({
   }, []);
 
   const handleMount = useCallback<OnMount>((editor) => {
-    const updateHeight = () => setHeight(clampHeight(editor.getContentHeight()));
+    const updateHeight = () =>
+      setHeight(clampEditorHeight(editor.getContentHeight()));
 
     updateHeight();
     contentSizeListener.current?.dispose();
@@ -188,57 +173,15 @@ export function CodeEditor({
     [isReadOnly]
   );
 
-  async function handleCopy() {
-    const copiedToClipboard = await copyToClipboard(value);
-
-    if (!copiedToClipboard) {
-      toast.error("Couldn't copy to clipboard");
-      return;
-    }
-
-    setCopied(true);
-    toast.success("Copied to clipboard");
-    window.setTimeout(() => setCopied(false), 1500);
-  }
-
   return (
-    <div
-      role="group"
+    <EditorFrame
       aria-label={ariaLabel}
-      className={cn(
-        "overflow-hidden rounded-lg border border-border bg-[#151515]",
-        className
-      )}
+      className={className}
+      label={languageLabel}
+      copyValue={value}
+      copyLabel="Copy code"
+      disabled={disabled}
     >
-      <div className="flex items-center gap-2 border-b border-border bg-[#1c1c1c] px-3 py-2">
-        <div className="flex items-center gap-1.5" aria-hidden>
-          <span className="size-3 rounded-full bg-[#ff5f57]" />
-          <span className="size-3 rounded-full bg-[#febc2e]" />
-          <span className="size-3 rounded-full bg-[#28c840]" />
-        </div>
-
-        <div className="ml-auto flex items-center gap-1.5">
-          <span className="font-mono text-xs text-muted-foreground">
-            {languageLabel}
-          </span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            className="text-muted-foreground hover:text-foreground"
-            aria-label="Copy code"
-            disabled={disabled}
-            onClick={handleCopy}
-          >
-            {copied ? (
-              <Check aria-hidden className="text-green-400" />
-            ) : (
-              <Copy aria-hidden />
-            )}
-          </Button>
-        </div>
-      </div>
-
       <div style={{ height }}>
         <MonacoEditor
           height="100%"
@@ -252,7 +195,7 @@ export function CodeEditor({
           loading={<EditorSkeleton />}
         />
       </div>
-    </div>
+    </EditorFrame>
   );
 }
 

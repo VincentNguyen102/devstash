@@ -39,12 +39,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { FormField } from "@/components/ui/form-field";
 import { CodeEditor } from "@/components/ui/code-editor";
 import { Input } from "@/components/ui/input";
 import { MarkdownEditor } from "@/components/ui/markdown-editor";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { copyToClipboard } from "@/lib/clipboard";
+import { useCopyFeedback } from "@/components/ui/use-copy-feedback";
+import { formatLongDate } from "@/lib/date";
 import type { ItemDetail } from "@/lib/db/items";
 import {
   CODE_TYPE_IDS,
@@ -59,13 +61,6 @@ import { getTypeVisual } from "@/lib/item-type-meta";
 import { parseTags } from "@/lib/tags";
 import { formatFileSize } from "@/lib/upload";
 import { cn } from "@/lib/utils";
-
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "long",
-  day: "numeric",
-  year: "numeric",
-  timeZone: "UTC",
-});
 
 interface ItemDrawerContextValue {
   openItem: (itemId: string) => void;
@@ -393,7 +388,7 @@ function ItemDetailView({
       <div className="space-y-6 p-6">
         {isEditing ? (
           <>
-            <EditField label="Description" htmlFor="item-description">
+            <FormField label="Description" htmlFor="item-description">
               <Textarea
                 id="item-description"
                 value={form.description}
@@ -403,28 +398,28 @@ function ItemDetailView({
                 placeholder="Add a description"
                 rows={3}
               />
-            </EditField>
+            </FormField>
 
             {showsContent ? (
               usesCodeEditor ? (
-                <EditField label="Content">
+                <FormField label="Content">
                   <CodeEditor
                     aria-label="Content"
                     value={form.content}
                     language={form.language}
                     onChange={(next) => updateField("content", next)}
                   />
-                </EditField>
+                </FormField>
               ) : usesMarkdownEditor ? (
-                <EditField label="Content">
+                <FormField label="Content">
                   <MarkdownEditor
                     aria-label="Content"
                     value={form.content}
                     onChange={(next) => updateField("content", next)}
                   />
-                </EditField>
+                </FormField>
               ) : (
-                <EditField label="Content" htmlFor="item-content">
+                <FormField label="Content" htmlFor="item-content">
                   <Textarea
                     id="item-content"
                     value={form.content}
@@ -435,12 +430,12 @@ function ItemDetailView({
                     rows={8}
                     className="font-mono text-xs leading-relaxed"
                   />
-                </EditField>
+                </FormField>
               )
             ) : null}
 
             {showsLanguage ? (
-              <EditField label="Language" htmlFor="item-language">
+              <FormField label="Language" htmlFor="item-language">
                 <Input
                   id="item-language"
                   value={form.language}
@@ -449,11 +444,11 @@ function ItemDetailView({
                   }
                   placeholder="e.g. typescript"
                 />
-              </EditField>
+              </FormField>
             ) : null}
 
             {showsUrl ? (
-              <EditField label="URL" htmlFor="item-url">
+              <FormField label="URL" htmlFor="item-url">
                 <Input
                   id="item-url"
                   type="url"
@@ -461,10 +456,10 @@ function ItemDetailView({
                   onChange={(event) => updateField("url", event.target.value)}
                   placeholder="https://example.com"
                 />
-              </EditField>
+              </FormField>
             ) : null}
 
-            <EditField
+            <FormField
               label="Tags"
               htmlFor="item-tags"
               hint="Separate tags with commas."
@@ -475,7 +470,7 @@ function ItemDetailView({
                 onChange={(event) => updateField("tags", event.target.value)}
                 placeholder="react, hooks, typescript"
               />
-            </EditField>
+            </FormField>
           </>
         ) : (
           <>
@@ -595,11 +590,11 @@ function ItemDetailView({
           <dl className="space-y-1 text-sm">
             <div className="flex items-center justify-between">
               <dt className="text-muted-foreground">Created</dt>
-              <dd>{dateFormatter.format(item.createdAt)}</dd>
+              <dd>{formatLongDate(item.createdAt)}</dd>
             </div>
             <div className="flex items-center justify-between">
               <dt className="text-muted-foreground">Updated</dt>
-              <dd>{dateFormatter.format(item.updatedAt)}</dd>
+              <dd>{formatLongDate(item.updatedAt)}</dd>
             </div>
           </dl>
         </DetailSection>
@@ -618,6 +613,7 @@ function ActionBar({
   onDeleted: () => void;
 }) {
   const router = useRouter();
+  const { copy } = useCopyFeedback();
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -629,12 +625,7 @@ function ActionBar({
       return;
     }
 
-    const copied = await copyToClipboard(text);
-    if (copied) {
-      toast.success("Copied to clipboard");
-    } else {
-      toast.error("Couldn't copy to clipboard");
-    }
+    await copy(text);
   }
 
   async function handleDelete() {
@@ -778,34 +769,6 @@ function ActionBar({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}
-
-function EditField({
-  label,
-  htmlFor,
-  hint,
-  children,
-}: {
-  label: string;
-  htmlFor?: string;
-  hint?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="space-y-2">
-      {htmlFor ? (
-        <label htmlFor={htmlFor} className="text-sm font-medium">
-          {label}
-        </label>
-      ) : (
-        <span className="text-sm font-medium">{label}</span>
-      )}
-      {children}
-      {hint ? (
-        <p className="text-xs text-muted-foreground">{hint}</p>
-      ) : null}
     </div>
   );
 }

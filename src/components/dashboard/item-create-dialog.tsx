@@ -21,6 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { MarkdownEditor } from "@/components/ui/markdown-editor";
 import { Textarea } from "@/components/ui/textarea";
@@ -357,28 +358,3 @@ export function ItemCreateDialog({
   );
 }
 
-function FormField({
-  label,
-  htmlFor,
-  hint,
-  children,
-}: {
-  label: string;
-  htmlFor?: string;
-  hint?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="space-y-2">
-      {htmlFor ? (
-        <label htmlFor={htmlFor} className="text-sm font-medium">
-          {label}
-        </label>
-      ) : (
-        <span className="text-sm font-medium">{label}</span>
-      )}
-      {children}
-      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
-    </div>
-  );
-}
