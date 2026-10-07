@@ -1,29 +1,18 @@
-# Current Feature: Quick Copy on Item Cards
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Complete
+Not Started
 
 ## Goals
 
 <!-- Goals & requirements -->
 
-- Add a small, quick copy icon button to the item grid cards (`ItemCard`) and the image gallery cards (`ImageThumbnailCard`).
-- Clicking the icon copies the item's text content (snippet/prompt/command/note), falling back to the item's URL for link items, and to a link to the stored file for image items.
-- The icon must not open the item drawer (stop propagation) and must show a success (`Check`) state plus a toast, matching the drawer/editor copy behaviour.
-- Hide the icon when the item has nothing copyable.
-- Expose `content` and `url` on `ItemSummary` in `src/lib/db/items.ts` so summaries carry what's needed to copy.
-- Extract the copy-source resolution into a pure utility with unit tests.
-
 ## Notes
 
 <!-- Any extra notes -->
-
-- Scope agreed with the user: grid + image cards only (file rows and collection cards untouched).
-- Copy source agreed: content, else URL. For image items (no content/URL) the actionable fallback is an absolute link to the proxied file (`/api/items/[id]/file`).
-- Reuse `copyToClipboard` from `src/lib/clipboard.ts`; follow the existing copy UX in `CodeEditor` (Check for ~1.5s, sonner toast).
 
 ## History
 
