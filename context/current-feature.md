@@ -1,38 +1,18 @@
-# Current Feature: File List View
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-In Progress
+Not Started
 
 ## Goals
 
 <!-- Goals & requirements -->
 
-- Show `/items/file` as a single-column list layout with rows (like Google Drive/Dropbox) instead of grid cards
-- Each row shows: file icon (by extension), file name, file size, upload date, download button
-- Row hover highlight
-- Click row opens `ItemDrawer`
-- Download button triggers a direct download (and stops propagation so it doesn't open the drawer)
-- Responsive: stack the row info vertically on mobile
-
 ## Notes
 
 <!-- Any extra notes -->
-
-Turn the file items list into a single-column, row-based list instead of the usual card grid.
-
-- The actual route is `/items/file` (singular type id `file`); the spec's
-  `/items/files` maps to it.
-- File sizes/dates come from `ItemSummary` (`fileName` is already exposed;
-  `fileSize` is not — will need adding, or read from the detail API).
-- The download button should reuse the existing proxy route
-  `GET /api/items/[id]/file?download=1` (forces `Content-Disposition: attachment`).
-- Rows should still open the shared item drawer on click/keyboard, like
-  `ItemCard`, with the download control stopping event propagation.
-- File icon can be derived from the extension (e.g. PDF, text, JSON, image…),
-  falling back to a generic file icon.
 
 ## History
 
@@ -69,3 +49,4 @@ Turn the file items list into a single-column, row-based list instead of the usu
 - Markdown Editor completed — notes and prompts now use a new `MarkdownEditor` component (`src/components/ui/markdown-editor.tsx`) in the item drawer (view + edit modes) and the New Item dialog, replacing the plain textarea while snippets/commands keep `CodeEditor` and links/others keep the textarea; the component has Write/Preview tabs (Write default in edit mode, Preview only when read-only), a macOS window frame, a "Markdown" label and a copy button matching `CodeEditor` (`bg-[#151515]` container, `bg-[#1c1c1c]` header), a `react-markdown` + `remark-gfm` preview, and an auto-growing write textarea plus a scrollable preview both clamped between 96 and 400px; dark markdown styling lives in a new `.markdown-preview` component layer in `src/app/globals.css` (distinct headings, code blocks, inline code highlight, list markers, blockquote accent, blue links with hover, bordered tables with header background, images, hr); added `MARKDOWN_TYPE_IDS` (`note`, `prompt`) to `src/lib/item-type-fields.ts` and made the New Item dialog scrollable (`max-h-[calc(100dvh-2rem)] overflow-y-auto`) so a tall preview can't push the Create button off-screen; added `react-markdown@^10`/`remark-gfm@^4` and 5 unit tests for the field sets (`src/lib/item-type-fields.test.ts`, 72 passing) — note the spec's requested colours (`#1e1e1e`/`#2d2d2d`) were overridden to match the actual `CodeEditor` (`#151515`/`#1c1c1c`) for visual consistency; verified in the browser via Playwright (created a note with headings/bold/link/lists/blockquote/code/GFM table → all rendered, copy toast + check icon, read-only drawer shows Preview only with no tabs, edit defaults to Write with Preview available, snippet edit still uses `CodeEditor`, prompt view renders markdown, no console errors) then deleted the test note to restore the seed data; `npm run test` + `npm run lint` + `npm run build` all pass; the spec is `context/features/markdown-editor-spec.md`
 - File Upload with Tigris completed — added file/image uploads backed by Tigris object storage: created the `devstash` bucket and documented `TIGRIS_STORAGE_ACCESS_KEY_ID`/`TIGRIS_STORAGE_SECRET_ACCESS_KEY`/`TIGRIS_STORAGE_BUCKET`/`TIGRIS_STORAGE_ENDPOINT` in `.env.example`; added `src/lib/upload.ts` (pure size/extension/MIME allow-lists, `validateUpload`, user-namespaced `buildStorageKey`, `isStorageKeyForUser`, `formatFileSize`), `src/lib/storage.ts` (server-only `put`/`get`/`remove` wrapper) and `POST /api/upload` (auth-checked, validates kind + file, stores in Tigris, returns key/name/size/contentType) plus `GET /api/items/[id]/file` (ownership-checked streaming proxy with `?download=1` attachment and UTF-8 `Content-Disposition`, `X-Content-Type-Options: nosniff`); `src/lib/db/items.ts` gained `getItemFile` and now persists `contentType`/`fileUrl`/`fileName`/`fileSize` on create and returns the storage key from a transactional `deleteItem`, which the `deleteItem` action best-effort deletes from Tigris; extended `createItemSchema`/`CREATE_ITEM_TYPE_IDS` to include `file`/`image` (requiring an uploaded `fileKey` and enforcing the key belongs to the signed-in user), added a drag-and-drop `FileUpload` component (client validation, XHR upload progress bar, image preview/file info, remove) used by the New Item dialog (now 7 types, so `/items/file` and `/items/image` also get "New File"/"New Image" buttons) and an `ItemDrawer` image preview plus a Download button for file types; added tests for the upload helpers, schemas and actions (98 passing) and verified in the browser via Playwright (uploaded a PDF and a PNG, drawer download returned `application/pdf`/attachment, image proxy returned `image/png`/inline and rendered, deleting both emptied the bucket, bad extension/oversize/bad-kind/unauthenticated all rejected, no console errors) plus `npm run test` + `npm run lint` + `npm run build`; the spec is `context/features/file-image-spec.md`
 - Image Gallery View completed — the `/items/image` list now renders a 3-column gallery (`grid-cols-2 md:grid-cols-3`) of new `ImageThumbnailCard`s instead of the regular `ItemCard`, while every other item type keeps the existing card grid; the card shows the stored image through the existing proxy (`GET /api/items/[id]/file`) in an `aspect-video` (16:9) frame with `object-cover`, a subtle `group-hover:scale-105`/`duration-300` zoom, pinned/favorite badges overlaid on the thumbnail, and the usual title/description/tags/date below; images with no stored object fall back to `ItemCard` so no broken thumbnail is shown, and clicking the card still opens the item drawer; exposed `fileName` on `ItemSummary` in `src/lib/db/items.ts` (added to the `findItemSummaries` select) so the gallery can detect upload-backed images; presentational-only change (no server actions/utilities), so no new unit tests; verified in the browser via Playwright using an existing image item (3 columns ~314px each, computed `aspect-ratio: 16/9`, `object-cover`, hover scale 1 → 1.05 over 0.3s, card click opens the drawer with the image Preview) plus `npm run test` (98 passing) + `npm run lint` + `npm run build`; the spec is `context/features/image-display-spec.md`
+- File List View completed — `/items/file` now renders a single-column row list (`flex flex-col gap-2`) instead of grid cards: the new `FileListItem` (`src/components/dashboard/file-list-item.tsx`) shows an extension-based icon, the file name, size, upload date and a Download link (`GET /api/items/[id]/file?download=1`); the main area is a button that opens the item drawer while the download link sits outside it (so it downloads without opening the drawer), rows highlight on hover, and on mobile the name/meta stack and the Download label collapses to an icon; added `getFileVisual` (`src/lib/file-type-meta.ts`, + tests) mapping file extensions to a lucide icon and colours (PDF/TXT/MD → `FileText`, JSON → `FileJson`, YAML/YML/XML/TOML/INI → `FileCode`, CSV → `FileSpreadsheet`, fallback `File`) and exposed `fileSize` on `ItemSummary` in `src/lib/db/items.ts`; refactored layout selection into a registry — new `ItemCollection` (`src/components/dashboard/item-collection.tsx`) maps item type → layout (`FileListView`, `ImageGalleryView`, default `ItemGridView`) so `/items/[type]` just renders `<ItemCollection typeId={type} items={items} />` instead of nested layout ternaries; verified in the browser via Playwright (PDF icon, size/date, hover highlight, row click opens the drawer, download returns the correct filename without opening the drawer, mobile stacking) plus `npm run test` (103 passing) + `npm run lint` + `npm run build`; the spec is `context/features/file-display-spec.md`
