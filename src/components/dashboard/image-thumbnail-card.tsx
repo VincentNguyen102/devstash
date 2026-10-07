@@ -1,0 +1,102 @@
+"use client";
+
+import { Pin, Star } from "lucide-react";
+
+import { ItemCard } from "@/components/dashboard/item-card";
+import { useItemDrawer } from "@/components/dashboard/item-drawer";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import type { ItemSummary } from "@/lib/db/items";
+
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  timeZone: "UTC",
+});
+
+/**
+ * Gallery card for `image` items: a 16:9 thumbnail that zooms slightly on
+ * hover, with the usual title/description/tags/date metadata below. Images
+ * without a stored object fall back to the regular `ItemCard`.
+ */
+export function ImageThumbnailCard({ item }: { item: ItemSummary }) {
+  const { openItem } = useItemDrawer();
+
+  // No backing object means there is nothing to show; avoid a broken image.
+  if (!item.fileName) {
+    return <ItemCard item={item} />;
+  }
+
+  return (
+    <Card
+      role="button"
+      tabIndex={0}
+      aria-label={`Open ${item.title}`}
+      onClick={() => openItem(item.id)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openItem(item.id);
+        }
+      }}
+      className="group h-full cursor-pointer gap-4 pt-0 transition-shadow hover:ring-foreground/25 focus-visible:ring-2 focus-visible:ring-ring/50"
+    >
+      <div className="relative aspect-video overflow-hidden bg-muted">
+        {/* Proxied through the app so the private object key stays server-side. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`/api/items/${item.id}/file`}
+          alt={item.title}
+          loading="lazy"
+          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+        />
+
+        {item.isPinned || item.isFavorite ? (
+          <div className="absolute top-2 right-2 flex items-center gap-1 rounded-md bg-background/80 px-1.5 py-1 backdrop-blur-sm">
+            {item.isPinned ? (
+              <Pin aria-hidden className="size-3.5 text-muted-foreground" />
+            ) : null}
+            {item.isFavorite ? (
+              <Star
+                aria-hidden
+                className="size-3.5 fill-yellow-400 text-yellow-400"
+              />
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
+      <CardHeader>
+        <CardTitle className="truncate">{item.title}</CardTitle>
+        <CardDescription className="line-clamp-2">
+          {item.description}
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent className="flex flex-1 flex-col gap-4">
+        {item.tags.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {item.tags.map((tag) => (
+              <Badge key={tag} variant="secondary" className="rounded-md">
+                {tag}
+              </Badge>
+            ))}
+          </div>
+        ) : null}
+
+        <time
+          dateTime={item.updatedAt.toISOString()}
+          className="mt-auto text-xs text-muted-foreground"
+        >
+          {dateFormatter.format(item.updatedAt)}
+        </time>
+      </CardContent>
+    </Card>
+  );
+}
