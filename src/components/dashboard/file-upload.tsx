@@ -57,10 +57,8 @@ export function FileUpload({
   }, [previewUrl]);
 
   function resetPreview() {
-    setPreviewUrl((current) => {
-      if (current) URL.revokeObjectURL(current);
-      return null;
-    });
+    // The effect above revokes the previous URL when it changes/unmounts.
+    setPreviewUrl(null);
   }
 
   function upload(file: File) {
@@ -123,10 +121,8 @@ export function FileUpload({
     }
 
     if (kind === "image") {
-      setPreviewUrl((current) => {
-        if (current) URL.revokeObjectURL(current);
-        return URL.createObjectURL(file);
-      });
+      // The effect above revokes the previous URL when it changes/unmounts.
+      setPreviewUrl(URL.createObjectURL(file));
     }
 
     upload(file);

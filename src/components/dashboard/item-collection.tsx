@@ -27,8 +27,8 @@ function FileListView({ items }: { items: ItemSummary[] }) {
 function ImageGalleryView({ items }: { items: ItemSummary[] }) {
   return (
     <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-      {items.map((item) => (
-        <ImageThumbnailCard key={item.id} item={item} />
+      {items.map((item, index) => (
+        <ImageThumbnailCard key={item.id} item={item} eager={index === 0} />
       ))}
     </div>
   );

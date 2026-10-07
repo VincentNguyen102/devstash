@@ -32,6 +32,7 @@ import {
   uploadKindForTypeId,
 } from "@/lib/item-type-fields";
 import { CREATE_TYPE_LABELS, getTypeVisual } from "@/lib/item-type-meta";
+import { parseTags } from "@/lib/tags";
 import {
   CREATE_ITEM_TYPE_IDS,
   type CreateItemTypeId,
@@ -75,18 +76,6 @@ interface ItemCreateDialogProps {
   defaultTypeId?: CreateItemTypeId;
   /** Custom trigger element; defaults to the top-bar "New Item" button. */
   trigger?: ReactNode;
-}
-
-/** Splits the comma-separated tag input into a de-duplicated array. */
-function parseTags(value: string): string[] {
-  return [
-    ...new Set(
-      value
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean),
-    ),
-  ];
 }
 
 /**

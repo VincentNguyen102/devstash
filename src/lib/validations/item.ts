@@ -26,7 +26,7 @@ const nullableUrl = z
     const trimmed = value?.trim() ?? "";
     return trimmed === "" ? null : trimmed;
   })
-  .pipe(z.url("Enter a valid URL").nullable());
+  .pipe(z.httpUrl("Enter a valid URL").nullable());
 
 export const updateItemSchema = z.object({
   title: z.string().trim().min(1, "Title is required"),

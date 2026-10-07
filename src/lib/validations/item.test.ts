@@ -67,6 +67,18 @@ describe("updateItemSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("rejects non-http(s) URL schemes", () => {
+    for (const url of [
+      "javascript:alert(1)",
+      "data:text/html,<h1>x</h1>",
+      "ftp://example.com",
+    ]) {
+      expect(updateItemSchema.safeParse(buildInput({ url })).success).toBe(
+        false,
+      );
+    }
+  });
+
   it("trims tags and defaults to an empty array", () => {
     expect(
       updateItemSchema.parse(buildInput({ tags: [" react ", "hooks"] })).tags,

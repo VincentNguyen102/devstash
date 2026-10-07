@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -55,6 +56,7 @@ import {
   URL_TYPE_IDS,
 } from "@/lib/item-type-fields";
 import { getTypeVisual } from "@/lib/item-type-meta";
+import { parseTags } from "@/lib/tags";
 import { formatFileSize } from "@/lib/upload";
 import { cn } from "@/lib/utils";
 
@@ -250,18 +252,6 @@ function toEditForm(item: ItemDetail): EditFormState {
     language: item.language ?? "",
     tags: item.tags.join(", "),
   };
-}
-
-/** Splits the comma-separated tag input into a de-duplicated array. */
-function parseTags(value: string): string[] {
-  return [
-    ...new Set(
-      value
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean)
-    ),
-  ];
 }
 
 function ItemDetailView({
@@ -556,13 +546,21 @@ function ItemDetailView({
             title="Preview"
             icon={<ImageIcon aria-hidden className="size-3.5" />}
           >
-            {/* Proxied through the app so the private object key stays server-side. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`/api/items/${item.id}/file`}
-              alt={item.title}
-              className="max-h-80 w-full rounded-lg border border-border bg-muted/40 object-contain"
-            />
+            {/*
+              Proxied through the app so the private object key stays
+              server-side. `unoptimized` is required here: the image optimizer
+              does not forward the session cookie, and the proxy route is
+              owner-scoped.
+            */}
+            <div className="relative h-80 w-full overflow-hidden rounded-lg border border-border bg-muted/40">
+              <Image
+                src={`/api/items/${item.id}/file`}
+                alt={item.title}
+                fill
+                unoptimized
+                className="object-contain"
+              />
+            </div>
           </DetailSection>
         ) : null}
 
