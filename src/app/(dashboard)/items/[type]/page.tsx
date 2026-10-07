@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { ImageThumbnailCard } from "@/components/dashboard/image-thumbnail-card";
-import { ItemCard } from "@/components/dashboard/item-card";
+import { ItemCollection } from "@/components/dashboard/item-collection";
 import { ItemCreateDialog } from "@/components/dashboard/item-create-dialog";
 import { SectionHeading } from "@/components/dashboard/section-heading";
 import { Button } from "@/components/ui/button";
@@ -20,7 +19,6 @@ export default async function ItemTypePage(props: PageProps<"/items/[type]">) {
   if (!itemType) notFound();
 
   const canCreate = isCreateItemTypeId(type);
-  const isImageGallery = type === "image";
   const { Icon: CreateIcon, textClass: createTextClass } = getTypeVisual(type);
 
   return (
@@ -49,21 +47,7 @@ export default async function ItemTypePage(props: PageProps<"/items/[type]">) {
       <section className="space-y-4">
         <SectionHeading title={`All ${itemType.name}`} />
         {items.length > 0 ? (
-          <div
-            className={
-              isImageGallery
-                ? "grid grid-cols-2 gap-4 md:grid-cols-3"
-                : "grid gap-4 md:grid-cols-2 lg:grid-cols-3"
-            }
-          >
-            {items.map((item) =>
-              isImageGallery ? (
-                <ImageThumbnailCard key={item.id} item={item} />
-              ) : (
-                <ItemCard key={item.id} item={item} />
-              ),
-            )}
-          </div>
+          <ItemCollection typeId={type} items={items} />
         ) : (
           <p className="text-sm text-muted-foreground">
             No {itemType.name.toLowerCase()} yet.

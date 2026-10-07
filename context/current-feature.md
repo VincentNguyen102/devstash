@@ -1,18 +1,38 @@
-# Current Feature
+# Current Feature: File List View
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Show `/items/file` as a single-column list layout with rows (like Google Drive/Dropbox) instead of grid cards
+- Each row shows: file icon (by extension), file name, file size, upload date, download button
+- Row hover highlight
+- Click row opens `ItemDrawer`
+- Download button triggers a direct download (and stops propagation so it doesn't open the drawer)
+- Responsive: stack the row info vertically on mobile
+
 ## Notes
 
 <!-- Any extra notes -->
+
+Turn the file items list into a single-column, row-based list instead of the usual card grid.
+
+- The actual route is `/items/file` (singular type id `file`); the spec's
+  `/items/files` maps to it.
+- File sizes/dates come from `ItemSummary` (`fileName` is already exposed;
+  `fileSize` is not — will need adding, or read from the detail API).
+- The download button should reuse the existing proxy route
+  `GET /api/items/[id]/file?download=1` (forces `Content-Disposition: attachment`).
+- Rows should still open the shared item drawer on click/keyboard, like
+  `ItemCard`, with the download control stopping event propagation.
+- File icon can be derived from the extension (e.g. PDF, text, JSON, image…),
+  falling back to a generic file icon.
 
 ## History
 
