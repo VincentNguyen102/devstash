@@ -3,9 +3,12 @@ import { describe, expect, it } from "vitest";
 import {
   CODE_TYPE_IDS,
   CONTENT_TYPE_IDS,
+  IMAGE_TYPE_IDS,
   LANGUAGE_TYPE_IDS,
   MARKDOWN_TYPE_IDS,
   URL_TYPE_IDS,
+  UPLOAD_TYPE_IDS,
+  uploadKindForTypeId,
 } from "@/lib/item-type-fields";
 
 describe("item type field sets", () => {
@@ -34,5 +37,19 @@ describe("item type field sets", () => {
 
   it("only shows the url field for link items", () => {
     expect([...URL_TYPE_IDS]).toEqual(["url"]);
+  });
+
+  it("maps only file and image to an upload kind", () => {
+    expect(uploadKindForTypeId("file")).toBe("file");
+    expect(uploadKindForTypeId("image")).toBe("image");
+    expect(uploadKindForTypeId("snippet")).toBeNull();
+  });
+
+  it("keeps upload types separate from inline content types", () => {
+    for (const typeId of UPLOAD_TYPE_IDS) {
+      expect(CONTENT_TYPE_IDS.has(typeId)).toBe(false);
+    }
+
+    expect([...IMAGE_TYPE_IDS]).toEqual(["image"]);
   });
 });

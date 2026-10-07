@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   createItemRecord: vi.fn(),
   updateItemRecord: vi.fn(),
   deleteItemRecord: vi.fn(),
+  deleteObject: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
@@ -16,6 +17,8 @@ vi.mock("@/lib/db/items", () => ({
   updateItem: mocks.updateItemRecord,
   deleteItem: mocks.deleteItemRecord,
 }));
+
+vi.mock("@/lib/storage", () => ({ deleteObject: mocks.deleteObject }));
 
 import { createItem, deleteItem, updateItem } from "@/actions/items";
 
@@ -32,7 +35,8 @@ beforeEach(() => {
   mocks.auth.mockResolvedValue({ user: { id: "user-1" } });
   mocks.createItemRecord.mockResolvedValue({ id: "item-1", title: "My Snippet" });
   mocks.updateItemRecord.mockResolvedValue({ id: "item-1", title: "My Snippet" });
-  mocks.deleteItemRecord.mockResolvedValue(true);
+  mocks.deleteItemRecord.mockResolvedValue({ fileKey: null });
+  mocks.deleteObject.mockResolvedValue(true);
 });
 
 const validCreateInput = {
@@ -91,7 +95,47 @@ describe("createItem", () => {
       url: null,
       language: "ts",
       tags: ["react"],
+      fileKey: null,
+      fileName: null,
+      fileSize: null,
     });
+  });
+
+  it("rejects a file reference that belongs to another user", async () => {
+    const result = await createItem({
+      ...validCreateInput,
+      typeId: "file",
+      fileKey: "uploads/someone-else/abc.pdf",
+      fileName: "notes.pdf",
+      fileSize: 2048,
+    });
+
+    expect(result).toEqual({ success: false, error: "Invalid file reference." });
+    expect(mocks.createItemRecord).not.toHaveBeenCalled();
+  });
+
+  it("creates an upload-backed item for the signed-in user", async () => {
+    const item = { id: "item-2", title: "Notes" };
+    mocks.createItemRecord.mockResolvedValue(item);
+
+    const result = await createItem({
+      ...validCreateInput,
+      typeId: "image",
+      fileKey: "uploads/user-1/abc.png",
+      fileName: "pic.png",
+      fileSize: 1234,
+    });
+
+    expect(result).toEqual({ success: true, data: item });
+    expect(mocks.createItemRecord).toHaveBeenCalledWith(
+      "user-1",
+      expect.objectContaining({
+        typeId: "image",
+        fileKey: "uploads/user-1/abc.png",
+        fileName: "pic.png",
+        fileSize: 1234,
+      }),
+    );
   });
 
   it("returns a generic error when the query fails", async () => {
@@ -185,12 +229,13 @@ describe("deleteItem", () => {
   });
 
   it("returns an error when the item is not owned by the user", async () => {
-    mocks.deleteItemRecord.mockResolvedValue(false);
+    mocks.deleteItemRecord.mockResolvedValue(null);
 
     const result = await deleteItem("item-1");
 
     expect(result).toEqual({ success: false, error: "Item not found." });
     expect(mocks.deleteItemRecord).toHaveBeenCalledWith("item-1", "user-1");
+    expect(mocks.deleteObject).not.toHaveBeenCalled();
   });
 
   it("deletes the item owned by the signed-in user", async () => {
@@ -198,6 +243,18 @@ describe("deleteItem", () => {
 
     expect(result).toEqual({ success: true });
     expect(mocks.deleteItemRecord).toHaveBeenCalledWith("item-1", "user-1");
+    expect(mocks.deleteObject).not.toHaveBeenCalled();
+  });
+
+  it("removes the stored object when deleting a file item", async () => {
+    mocks.deleteItemRecord.mockResolvedValue({
+      fileKey: "uploads/user-1/abc.pdf",
+    });
+
+    const result = await deleteItem("item-1");
+
+    expect(result).toEqual({ success: true });
+    expect(mocks.deleteObject).toHaveBeenCalledWith("uploads/user-1/abc.pdf");
   });
 
   it("returns a generic error when the query fails", async () => {

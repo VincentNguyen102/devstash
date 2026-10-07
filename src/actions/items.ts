@@ -7,8 +7,11 @@ import {
   updateItem as updateItemRecord,
   type ItemDetail,
 } from "@/lib/db/items";
+import { deleteObject } from "@/lib/storage";
+import { isStorageKeyForUser } from "@/lib/upload";
 import {
   createItemSchema,
+  isUploadItemTypeId,
   updateItemSchema,
   type CreateItemInput,
   type UpdateItemInput,
@@ -41,6 +44,16 @@ export async function createItem(
       success: false,
       error: parsed.error.issues[0]?.message ?? "Invalid input.",
     };
+  }
+
+  // A file/image item may only reference an object this user uploaded, which
+  // stops a crafted payload from pointing at someone else's storage key.
+  if (
+    isUploadItemTypeId(parsed.data.typeId) &&
+    parsed.data.fileKey &&
+    !isStorageKeyForUser(parsed.data.fileKey, session.user.id)
+  ) {
+    return { success: false, error: "Invalid file reference." };
   }
 
   try {
@@ -131,6 +144,12 @@ export async function deleteItem(itemId: string): Promise<DeleteItemResult> {
 
     if (!deleted) {
       return { success: false, error: "Item not found." };
+    }
+
+    // Best effort: the item is already gone, so a storage failure must not
+    // turn a successful delete into an error for the user.
+    if (deleted.fileKey) {
+      await deleteObject(deleted.fileKey);
     }
 
     return { success: true };
