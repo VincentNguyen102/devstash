@@ -6,6 +6,10 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { createItem } from "@/actions/items";
+import {
+  FileUpload,
+  type UploadedFile,
+} from "@/components/dashboard/file-upload";
 import { Button } from "@/components/ui/button";
 import { CodeEditor } from "@/components/ui/code-editor";
 import {
@@ -25,6 +29,7 @@ import {
   CONTENT_TYPE_IDS,
   LANGUAGE_TYPE_IDS,
   MARKDOWN_TYPE_IDS,
+  uploadKindForTypeId,
 } from "@/lib/item-type-fields";
 import { CREATE_TYPE_LABELS, getTypeVisual } from "@/lib/item-type-meta";
 import {
@@ -47,6 +52,8 @@ interface CreateFormState {
   language: string;
   url: string;
   tags: string;
+  /** Set once a `file`/`image` upload completes. */
+  uploadedFile: UploadedFile | null;
 }
 
 /** A blank create form for the given item type. */
@@ -59,6 +66,7 @@ function createInitialForm(typeId: CreateItemTypeId): CreateFormState {
     language: "",
     url: "",
     tags: "",
+    uploadedFile: null,
   };
 }
 
@@ -102,6 +110,7 @@ export function ItemCreateDialog({
   );
   const [form, setForm] = useState<CreateFormState>(initialForm);
 
+  const uploadKind = uploadKindForTypeId(form.typeId);
   const showContent = CONTENT_TYPE_IDS.has(form.typeId);
   const showLanguage = LANGUAGE_TYPE_IDS.has(form.typeId);
   const showCodeEditor = CODE_TYPE_IDS.has(form.typeId);
@@ -109,13 +118,19 @@ export function ItemCreateDialog({
   const showUrl = form.typeId === "url";
   const canSubmit =
     form.title.trim().length > 0 &&
-    (form.typeId !== "url" || form.url.trim().length > 0);
+    (form.typeId !== "url" || form.url.trim().length > 0) &&
+    (uploadKind === null || form.uploadedFile !== null);
 
   function updateField<K extends keyof CreateFormState>(
     field: K,
     value: CreateFormState[K],
   ) {
     setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  /** Switching types drops any upload so a stale object can't be submitted. */
+  function handleTypeChange(typeId: CreateItemTypeId) {
+    setForm((current) => ({ ...current, typeId, uploadedFile: null }));
   }
 
   function handleOpenChange(next: boolean) {
@@ -142,6 +157,9 @@ export function ItemCreateDialog({
         language: showLanguage ? form.language : "",
         url: showUrl ? form.url : "",
         tags: parseTags(form.tags),
+        fileKey: form.uploadedFile?.key ?? null,
+        fileName: form.uploadedFile?.fileName ?? null,
+        fileSize: form.uploadedFile?.fileSize ?? null,
       });
 
       if (!result.success) {
@@ -178,7 +196,8 @@ export function ItemCreateDialog({
         <DialogHeader>
           <DialogTitle>New item</DialogTitle>
           <DialogDescription>
-            Add a snippet, prompt, command, note or link to your stash.
+            Add a snippet, prompt, command, note, file, image or link to your
+            stash.
           </DialogDescription>
         </DialogHeader>
 
@@ -188,7 +207,7 @@ export function ItemCreateDialog({
             <div
               role="group"
               aria-label="Item type"
-              className="grid grid-cols-5 gap-1.5"
+              className="grid grid-cols-4 gap-1.5"
             >
               {CREATE_TYPES.map(({ id, label }) => {
                 const { Icon, textClass } = getTypeVisual(id);
@@ -200,7 +219,7 @@ export function ItemCreateDialog({
                     type="button"
                     aria-pressed={isActive}
                     disabled={isSubmitting}
-                    onClick={() => updateField("typeId", id)}
+                    onClick={() => handleTypeChange(id)}
                     className={cn(
                       "flex flex-col items-center gap-1 rounded-lg border border-border p-2 text-xs text-muted-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50",
                       isActive && "border-foreground/30 bg-muted text-foreground"
@@ -240,6 +259,18 @@ export function ItemCreateDialog({
               disabled={isSubmitting}
             />
           </FormField>
+
+          {uploadKind ? (
+            <FormField label={uploadKind === "image" ? "Image" : "File"}>
+              <FileUpload
+                key={uploadKind}
+                kind={uploadKind}
+                value={form.uploadedFile}
+                onChange={(file) => updateField("uploadedFile", file)}
+                disabled={isSubmitting}
+              />
+            </FormField>
+          ) : null}
 
           {showContent ? (
             showCodeEditor ? (

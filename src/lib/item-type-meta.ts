@@ -71,6 +71,8 @@ export const CREATE_TYPE_LABELS: Record<CreateItemTypeId, string> = {
   prompt: "Prompt",
   command: "Command",
   note: "Note",
+  file: "File",
+  image: "Image",
   url: "Link",
 };
 

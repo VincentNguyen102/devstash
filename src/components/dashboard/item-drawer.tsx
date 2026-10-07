@@ -14,7 +14,9 @@ import { useRouter } from "next/navigation";
 import {
   Calendar,
   Copy,
+  Download,
   ExternalLink,
+  Image as ImageIcon,
   Layers,
   Pencil,
   Pin,
@@ -46,11 +48,14 @@ import type { ItemDetail } from "@/lib/db/items";
 import {
   CODE_TYPE_IDS,
   CONTENT_TYPE_IDS,
+  FILE_TYPE_IDS,
+  IMAGE_TYPE_IDS,
   LANGUAGE_TYPE_IDS,
   MARKDOWN_TYPE_IDS,
   URL_TYPE_IDS,
 } from "@/lib/item-type-fields";
 import { getTypeVisual } from "@/lib/item-type-meta";
+import { formatFileSize } from "@/lib/upload";
 import { cn } from "@/lib/utils";
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -546,6 +551,21 @@ function ItemDetailView({
           </>
         )}
 
+        {IMAGE_TYPE_IDS.has(item.typeId) && item.fileName ? (
+          <DetailSection
+            title="Preview"
+            icon={<ImageIcon aria-hidden className="size-3.5" />}
+          >
+            {/* Proxied through the app so the private object key stays server-side. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`/api/items/${item.id}/file`}
+              alt={item.title}
+              className="max-h-80 w-full rounded-lg border border-border bg-muted/40 object-contain"
+            />
+          </DetailSection>
+        ) : null}
+
         {item.fileName ? (
           <DetailSection title="File">
             <p className="text-sm text-muted-foreground">
@@ -676,6 +696,20 @@ function ActionBar({
         />
         Pin
       </Button>
+
+      {FILE_TYPE_IDS.has(item.typeId) ? (
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
+          className="gap-1.5 text-muted-foreground"
+        >
+          <a href={`/api/items/${item.id}/file?download=1`}>
+            <Download aria-hidden className="size-4" />
+            Download
+          </a>
+        </Button>
+      ) : null}
 
       <Button
         type="button"
@@ -818,12 +852,4 @@ function DrawerSkeleton() {
   );
 }
 
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
 
-  const kilobytes = bytes / 1024;
-
-  if (kilobytes < 1024) return `${kilobytes.toFixed(1)} KB`;
-
-  return `${(kilobytes / 1024).toFixed(1)} MB`;
-}

@@ -4,6 +4,7 @@ import {
   CREATE_ITEM_TYPE_IDS,
   createItemSchema,
   isCreateItemTypeId,
+  isUploadItemTypeId,
   updateItemSchema,
 } from "@/lib/validations/item";
 
@@ -120,13 +121,49 @@ describe("createItemSchema", () => {
       url: null,
       language: "ts",
       tags: ["react"],
+      fileKey: null,
+      fileName: null,
+      fileSize: null,
     });
   });
 
   it("rejects an unknown item type", () => {
     expect(
-      createItemSchema.safeParse(buildCreateInput({ typeId: "file" })).success,
+      createItemSchema.safeParse(buildCreateInput({ typeId: "custom" }))
+        .success,
     ).toBe(false);
+  });
+
+  it("requires an uploaded file for file and image items", () => {
+    for (const typeId of ["file", "image"]) {
+      const result = createItemSchema.safeParse(
+        buildCreateInput({ typeId }),
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0]?.message).toBe("Upload a file first");
+    }
+  });
+
+  it("accepts an upload-backed item with its stored metadata", () => {
+    const result = createItemSchema.parse(
+      buildCreateInput({
+        typeId: "file",
+        url: "",
+        content: "",
+        language: "",
+        fileKey: "uploads/user-1/abc.pdf",
+        fileName: "notes.pdf",
+        fileSize: 2048,
+      }),
+    );
+
+    expect(result).toMatchObject({
+      typeId: "file",
+      fileKey: "uploads/user-1/abc.pdf",
+      fileName: "notes.pdf",
+      fileSize: 2048,
+    });
   });
 
   it("requires a URL for url items", () => {
@@ -156,20 +193,27 @@ describe("createItemSchema", () => {
 });
 
 describe("isCreateItemTypeId", () => {
-  it("accepts every creatable type id", () => {
+  it("accepts every creatable type id, including file and image", () => {
     for (const id of CREATE_ITEM_TYPE_IDS) {
       expect(isCreateItemTypeId(id)).toBe(true);
     }
-  });
 
-  it("rejects non-creatable system types", () => {
-    expect(isCreateItemTypeId("file")).toBe(false);
-    expect(isCreateItemTypeId("image")).toBe(false);
+    expect(isCreateItemTypeId("file")).toBe(true);
+    expect(isCreateItemTypeId("image")).toBe(true);
   });
 
   it("rejects unknown or mis-cased values", () => {
     expect(isCreateItemTypeId("")).toBe(false);
     expect(isCreateItemTypeId("Snippet")).toBe(false);
     expect(isCreateItemTypeId("custom-type")).toBe(false);
+  });
+});
+
+describe("isUploadItemTypeId", () => {
+  it("only matches the upload-backed types", () => {
+    expect(isUploadItemTypeId("file")).toBe(true);
+    expect(isUploadItemTypeId("image")).toBe(true);
+    expect(isUploadItemTypeId("snippet")).toBe(false);
+    expect(isUploadItemTypeId("url")).toBe(false);
   });
 });

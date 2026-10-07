@@ -1,18 +1,61 @@
-# Current Feature
+# Current Feature: File Upload with Tigris
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Create upload API route for Tigris (file/image storage)
+- Stick to `lib/db/items.ts` for prisma/db functions
+- Create `FileUpload` component with drag-and-drop
+- Update create item modal to use `FileUpload` for file/image types
+- Delete files from Tigris when items are deleted
+- Create download proxy API route (avoids CORS issues)
+- Add download button in `ItemDrawer` for file types
+- Show upload progress indicator
+- Display image preview for images, file info for files
+
 ## Notes
 
 <!-- Any extra notes -->
+
+Storage: **Tigris** (S3-compatible object storage).
+
+### File Constraints
+
+| Type   | Max Size | Extensions                                                                             |
+| ------ | -------- | -------------------------------------------------------------------------------------- |
+| Images | 5 MB     | `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.svg`                                       |
+| Files  | 10 MB    | `.pdf`, `.txt`, `.md`, `.json`, `.yaml`, `.yml`, `.xml`, `.csv`, `.toml`, `.ini`       |
+
+### MIME Types
+
+**Images:**
+
+- `image/png`
+- `image/jpeg`
+- `image/gif`
+- `image/webp`
+- `image/svg+xml`
+
+**Files:**
+
+- `application/pdf`
+- `text/plain`
+- `text/markdown`
+- `application/json`
+- `application/x-yaml`, `text/yaml`
+- `application/xml`, `text/xml`
+- `text/csv`
+- `application/toml`
+- `text/plain` (for `.ini`)
+
+The `Item` model already has `contentType` (`text` | `file`), `fileUrl`, `fileName` and `fileSize` columns (no migration expected for the item fields).
 
 ## History
 

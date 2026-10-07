@@ -2,7 +2,11 @@ import { connection } from "next/server";
 
 import { systemTypeOrder } from "@/lib/item-type-meta";
 import { prisma } from "@/lib/prisma";
-import type { CreateItemData, UpdateItemData } from "@/lib/validations/item";
+import {
+  isUploadItemTypeId,
+  type CreateItemData,
+  type UpdateItemData,
+} from "@/lib/validations/item";
 
 // Auth is not wired up yet, so dashboard data is scoped to the seeded demo
 // user. Replace this with the signed-in user once NextAuth is in place.
@@ -250,28 +254,74 @@ export async function getItemDetail(
   };
 }
 
+/** The stored object backing a `file`/`image` item. */
+export interface ItemFile {
+  /** Tigris object key (stored in the legacy `fileUrl` column). */
+  fileUrl: string;
+  fileName: string | null;
+  fileSize: number | null;
+}
+
 /**
- * Deletes an item owned by `userId`, returning false when the item does not
- * exist or belongs to someone else. The item's tag links are removed by the
- * cascade rule in the Prisma schema.
+ * The storage object for a `file`/`image` item owned by `userId`, or null when
+ * the item does not exist, belongs to someone else, or has no stored object.
+ * Used by the download/preview proxy route.
+ */
+export async function getItemFile(
+  itemId: string,
+  userId: string,
+): Promise<ItemFile | null> {
+  await connection();
+
+  const item = await prisma.item.findFirst({
+    where: { id: itemId, userId },
+    select: { fileUrl: true, fileName: true, fileSize: true },
+  });
+
+  if (!item?.fileUrl) {
+    return null;
+  }
+
+  return {
+    fileUrl: item.fileUrl,
+    fileName: item.fileName,
+    fileSize: item.fileSize,
+  };
+}
+
+/**
+ * Deletes an item owned by `userId`, returning null when the item does not
+ * exist or belongs to someone else. The deleted item's storage key is returned
+ * so the caller can remove the backing Tigris object. The item's tag links are
+ * removed by the cascade rule in the Prisma schema.
  */
 export async function deleteItem(
   itemId: string,
   userId: string,
-): Promise<boolean> {
+): Promise<{ fileKey: string | null } | null> {
   await connection();
 
-  const { count } = await prisma.item.deleteMany({
-    where: { id: itemId, userId },
-  });
+  return prisma.$transaction(async (tx) => {
+    const item = await tx.item.findFirst({
+      where: { id: itemId, userId },
+      select: { fileUrl: true },
+    });
 
-  return count > 0;
+    if (!item) {
+      return null;
+    }
+
+    await tx.item.delete({ where: { id: itemId } });
+
+    return { fileKey: item.fileUrl };
+  });
 }
 
 /**
  * Creates an item owned by `userId`. Text types are stored as `text` content;
- * each supplied tag name is connected to the user's tag (created on demand).
- * Returns the refreshed detail, or null if the item cannot be read back.
+ * `file`/`image` types store the uploaded object's key, name and size. Each
+ * supplied tag name is connected to the user's tag (created on demand). Returns
+ * the refreshed detail, or null if the item cannot be read back.
  */
 export async function createItem(
   userId: string,
@@ -280,15 +330,19 @@ export async function createItem(
   await connection();
 
   const tagNames = [...new Set(data.tags)];
+  const isUpload = isUploadItemTypeId(data.typeId);
 
   const item = await prisma.item.create({
     data: {
       title: data.title,
-      contentType: "text",
+      contentType: isUpload ? "file" : "text",
       description: data.description,
-      content: data.content,
-      url: data.url,
-      language: data.language,
+      content: isUpload ? null : data.content,
+      url: isUpload ? null : data.url,
+      language: isUpload ? null : data.language,
+      fileUrl: isUpload ? data.fileKey : null,
+      fileName: isUpload ? data.fileName : null,
+      fileSize: isUpload ? data.fileSize : null,
       userId,
       typeId: data.typeId,
       tags: {

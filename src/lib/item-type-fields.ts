@@ -31,3 +31,17 @@ export const LANGUAGE_TYPE_IDS: ReadonlySet<string> = new Set([
 
 /** Types whose `url` field is shown and editable. */
 export const URL_TYPE_IDS: ReadonlySet<string> = new Set(["url"]);
+
+/** Types whose content lives in Tigris instead of the `content` column. */
+export const UPLOAD_TYPE_IDS: ReadonlySet<string> = new Set(["file", "image"]);
+
+/** Types that render an inline image preview from the stored object. */
+export const IMAGE_TYPE_IDS: ReadonlySet<string> = new Set(["image"]);
+
+/** Types that render file information and a download action. */
+export const FILE_TYPE_IDS: ReadonlySet<string> = new Set(["file"]);
+
+/** The upload kind for an item type id, or null when it is not an upload. */
+export function uploadKindForTypeId(typeId: string): "file" | "image" | null {
+  return typeId === "file" || typeId === "image" ? typeId : null;
+}
