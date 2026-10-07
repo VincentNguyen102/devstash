@@ -10,8 +10,8 @@ import {
   FileUpload,
   type UploadedFile,
 } from "@/components/dashboard/file-upload";
+import { ItemFormFields } from "@/components/dashboard/item-form-fields";
 import { Button } from "@/components/ui/button";
-import { CodeEditor } from "@/components/ui/code-editor";
 import {
   Dialog,
   DialogContent,
@@ -23,13 +23,9 @@ import {
 } from "@/components/ui/dialog";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
-import { MarkdownEditor } from "@/components/ui/markdown-editor";
-import { Textarea } from "@/components/ui/textarea";
 import {
-  CODE_TYPE_IDS,
   CONTENT_TYPE_IDS,
   LANGUAGE_TYPE_IDS,
-  MARKDOWN_TYPE_IDS,
   uploadKindForTypeId,
 } from "@/lib/item-type-fields";
 import { CREATE_TYPE_LABELS, getTypeVisual } from "@/lib/item-type-meta";
@@ -101,10 +97,10 @@ export function ItemCreateDialog({
   const [form, setForm] = useState<CreateFormState>(initialForm);
 
   const uploadKind = uploadKindForTypeId(form.typeId);
+  // Only send fields the selected type actually exposes, so switching types
+  // can't leak a stale value into the payload.
   const showContent = CONTENT_TYPE_IDS.has(form.typeId);
   const showLanguage = LANGUAGE_TYPE_IDS.has(form.typeId);
-  const showCodeEditor = CODE_TYPE_IDS.has(form.typeId);
-  const showMarkdownEditor = MARKDOWN_TYPE_IDS.has(form.typeId);
   const showUrl = form.typeId === "url";
   const canSubmit =
     form.title.trim().length > 0 &&
@@ -237,107 +233,26 @@ export function ItemCreateDialog({
             />
           </FormField>
 
-          <FormField label="Description" htmlFor="create-item-description">
-            <Textarea
-              id="create-item-description"
-              value={form.description}
-              onChange={(event) =>
-                updateField("description", event.target.value)
-              }
-              placeholder="Add a description"
-              rows={3}
-              disabled={isSubmitting}
-            />
-          </FormField>
-
-          {uploadKind ? (
-            <FormField label={uploadKind === "image" ? "Image" : "File"}>
-              <FileUpload
-                key={uploadKind}
-                kind={uploadKind}
-                value={form.uploadedFile}
-                onChange={(file) => updateField("uploadedFile", file)}
-                disabled={isSubmitting}
-              />
-            </FormField>
-          ) : null}
-
-          {showContent ? (
-            showCodeEditor ? (
-              <FormField label="Content">
-                <CodeEditor
-                  aria-label="Content"
-                  value={form.content}
-                  language={form.language}
-                  disabled={isSubmitting}
-                  onChange={(next) => updateField("content", next)}
-                />
-              </FormField>
-            ) : showMarkdownEditor ? (
-              <FormField label="Content">
-                <MarkdownEditor
-                  aria-label="Content"
-                  value={form.content}
-                  disabled={isSubmitting}
-                  onChange={(next) => updateField("content", next)}
-                />
-              </FormField>
-            ) : (
-              <FormField label="Content" htmlFor="create-item-content">
-                <Textarea
-                  id="create-item-content"
-                  value={form.content}
-                  onChange={(event) =>
-                    updateField("content", event.target.value)
-                  }
-                  placeholder="Add content"
-                  rows={6}
-                  disabled={isSubmitting}
-                  className="font-mono text-xs leading-relaxed"
-                />
-              </FormField>
-            )
-          ) : null}
-
-          {showLanguage ? (
-            <FormField label="Language" htmlFor="create-item-language">
-              <Input
-                id="create-item-language"
-                value={form.language}
-                onChange={(event) => updateField("language", event.target.value)}
-                placeholder="e.g. typescript"
-                disabled={isSubmitting}
-              />
-            </FormField>
-          ) : null}
-
-          {showUrl ? (
-            <FormField label="URL" htmlFor="create-item-url">
-              <Input
-                id="create-item-url"
-                type="url"
-                value={form.url}
-                onChange={(event) => updateField("url", event.target.value)}
-                placeholder="https://example.com"
-                disabled={isSubmitting}
-                required
-              />
-            </FormField>
-          ) : null}
-
-          <FormField
-            label="Tags"
-            htmlFor="create-item-tags"
-            hint="Separate tags with commas."
-          >
-            <Input
-              id="create-item-tags"
-              value={form.tags}
-              onChange={(event) => updateField("tags", event.target.value)}
-              placeholder="react, hooks, typescript"
-              disabled={isSubmitting}
-            />
-          </FormField>
+          <ItemFormFields
+            typeId={form.typeId}
+            values={form}
+            onChange={(field, value) => updateField(field, value)}
+            idPrefix="create-item"
+            disabled={isSubmitting}
+            afterDescription={
+              uploadKind ? (
+                <FormField label={uploadKind === "image" ? "Image" : "File"}>
+                  <FileUpload
+                    key={uploadKind}
+                    kind={uploadKind}
+                    value={form.uploadedFile}
+                    onChange={(file) => updateField("uploadedFile", file)}
+                    disabled={isSubmitting}
+                  />
+                </FormField>
+              ) : null
+            }
+          />
 
           <DialogFooter>
             <Button

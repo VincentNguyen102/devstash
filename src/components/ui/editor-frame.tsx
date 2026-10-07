@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { Check, Copy } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { useCopyFeedback } from "@/components/ui/use-copy-feedback";
+import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 import { cn } from "@/lib/utils";
 
 interface EditorFrameProps {

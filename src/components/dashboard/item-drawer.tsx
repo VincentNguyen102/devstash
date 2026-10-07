@@ -28,6 +28,7 @@ import {
 import { toast } from "sonner";
 
 import { deleteItem, updateItem } from "@/actions/items";
+import { ItemFormFields } from "@/components/dashboard/item-form-fields";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,23 +40,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { FormField } from "@/components/ui/form-field";
 import { CodeEditor } from "@/components/ui/code-editor";
 import { Input } from "@/components/ui/input";
 import { MarkdownEditor } from "@/components/ui/markdown-editor";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Textarea } from "@/components/ui/textarea";
-import { useCopyFeedback } from "@/components/ui/use-copy-feedback";
+import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 import { formatLongDate } from "@/lib/date";
 import type { ItemDetail } from "@/lib/db/items";
 import {
   CODE_TYPE_IDS,
-  CONTENT_TYPE_IDS,
   FILE_TYPE_IDS,
   IMAGE_TYPE_IDS,
-  LANGUAGE_TYPE_IDS,
   MARKDOWN_TYPE_IDS,
-  URL_TYPE_IDS,
 } from "@/lib/item-type-fields";
 import { getTypeVisual } from "@/lib/item-type-meta";
 import { parseTags } from "@/lib/tags";
@@ -264,9 +260,6 @@ function ItemDetailView({
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState<EditFormState>(() => toEditForm(item));
 
-  const showsContent = CONTENT_TYPE_IDS.has(item.typeId);
-  const showsLanguage = LANGUAGE_TYPE_IDS.has(item.typeId);
-  const showsUrl = URL_TYPE_IDS.has(item.typeId);
   const usesCodeEditor = CODE_TYPE_IDS.has(item.typeId);
   const usesMarkdownEditor = MARKDOWN_TYPE_IDS.has(item.typeId);
   const canSave = form.title.trim().length > 0;
@@ -387,91 +380,12 @@ function ItemDetailView({
 
       <div className="space-y-6 p-6">
         {isEditing ? (
-          <>
-            <FormField label="Description" htmlFor="item-description">
-              <Textarea
-                id="item-description"
-                value={form.description}
-                onChange={(event) =>
-                  updateField("description", event.target.value)
-                }
-                placeholder="Add a description"
-                rows={3}
-              />
-            </FormField>
-
-            {showsContent ? (
-              usesCodeEditor ? (
-                <FormField label="Content">
-                  <CodeEditor
-                    aria-label="Content"
-                    value={form.content}
-                    language={form.language}
-                    onChange={(next) => updateField("content", next)}
-                  />
-                </FormField>
-              ) : usesMarkdownEditor ? (
-                <FormField label="Content">
-                  <MarkdownEditor
-                    aria-label="Content"
-                    value={form.content}
-                    onChange={(next) => updateField("content", next)}
-                  />
-                </FormField>
-              ) : (
-                <FormField label="Content" htmlFor="item-content">
-                  <Textarea
-                    id="item-content"
-                    value={form.content}
-                    onChange={(event) =>
-                      updateField("content", event.target.value)
-                    }
-                    placeholder="Add content"
-                    rows={8}
-                    className="font-mono text-xs leading-relaxed"
-                  />
-                </FormField>
-              )
-            ) : null}
-
-            {showsLanguage ? (
-              <FormField label="Language" htmlFor="item-language">
-                <Input
-                  id="item-language"
-                  value={form.language}
-                  onChange={(event) =>
-                    updateField("language", event.target.value)
-                  }
-                  placeholder="e.g. typescript"
-                />
-              </FormField>
-            ) : null}
-
-            {showsUrl ? (
-              <FormField label="URL" htmlFor="item-url">
-                <Input
-                  id="item-url"
-                  type="url"
-                  value={form.url}
-                  onChange={(event) => updateField("url", event.target.value)}
-                  placeholder="https://example.com"
-                />
-              </FormField>
-            ) : null}
-
-            <FormField
-              label="Tags"
-              htmlFor="item-tags"
-              hint="Separate tags with commas."
-            >
-              <Input
-                id="item-tags"
-                value={form.tags}
-                onChange={(event) => updateField("tags", event.target.value)}
-                placeholder="react, hooks, typescript"
-              />
-            </FormField>
-          </>
+          <ItemFormFields
+            typeId={item.typeId}
+            values={form}
+            onChange={(field, value) => updateField(field, value)}
+            idPrefix="item"
+          />
         ) : (
           <>
             {item.description ? (

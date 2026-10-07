@@ -4,7 +4,7 @@ import type { MouseEvent } from "react";
 import { Check, Copy } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { useCopyFeedback } from "@/components/ui/use-copy-feedback";
+import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 import { getItemCopyText, type CopyableItem } from "@/lib/item-copy";
 import { cn } from "@/lib/utils";
 
