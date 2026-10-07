@@ -5,7 +5,7 @@ import { Pin, Star } from "lucide-react";
 
 import { ItemCard } from "@/components/dashboard/item-card";
 import { ItemCopyButton } from "@/components/dashboard/item-copy-button";
-import { useItemDrawer } from "@/components/dashboard/item-drawer";
+import { useItemOpenTarget } from "@/hooks/use-item-open-target";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -14,20 +14,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { formatShortDate } from "@/lib/date";
 import type { ItemSummary } from "@/lib/db/items";
-
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  timeZone: "UTC",
-});
 
 /**
  * Gallery card for `image` items: a 16:9 thumbnail that zooms slightly on
  * hover, with the usual title/description/tags/date metadata below. Images
  * without a stored object fall back to the regular `ItemCard`.
  *
- * `eager` marks the first thumbnail (the likely LCP image) so it loads
+ * `eager` marks above-the-fold thumbnails (the likely LCP images) so they load
  * immediately; the rest stay lazy.
  */
 export function ImageThumbnailCard({
@@ -37,7 +32,7 @@ export function ImageThumbnailCard({
   item: ItemSummary;
   eager?: boolean;
 }) {
-  const { openItem } = useItemDrawer();
+  const openTarget = useItemOpenTarget(item.id, item.title);
 
   // No backing object means there is nothing to show; avoid a broken image.
   if (!item.fileName) {
@@ -46,16 +41,7 @@ export function ImageThumbnailCard({
 
   return (
     <Card
-      role="button"
-      tabIndex={0}
-      aria-label={`Open ${item.title}`}
-      onClick={() => openItem(item.id)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          openItem(item.id);
-        }
-      }}
+      {...openTarget}
       className="group h-full cursor-pointer gap-4 pt-0 transition-shadow hover:ring-foreground/25 focus-visible:ring-2 focus-visible:ring-ring/50"
     >
       <div className="relative aspect-video overflow-hidden bg-muted">
@@ -113,7 +99,7 @@ export function ImageThumbnailCard({
           dateTime={item.updatedAt.toISOString()}
           className="mt-auto text-xs text-muted-foreground"
         >
-          {dateFormatter.format(item.updatedAt)}
+          {formatShortDate(item.updatedAt)}
         </time>
       </CardContent>
     </Card>

@@ -3,11 +3,7 @@ import { CalendarDays } from "lucide-react";
 import { UserAvatar } from "@/components/auth/user-avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  dateStyle: "long",
-  timeZone: "UTC",
-});
+import { formatLongDate } from "@/lib/date";
 
 interface ProfileCardProps {
   name: string | null;
@@ -53,7 +49,7 @@ export function ProfileCard({
               dateTime={createdAt.toISOString()}
               className="font-medium text-foreground"
             >
-              {dateFormatter.format(createdAt)}
+              {formatLongDate(createdAt)}
             </time>
           </span>
         </div>

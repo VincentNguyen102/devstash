@@ -13,15 +13,8 @@ import {
   validateUpload,
   type UploadKind,
 } from "@/lib/upload";
+import { uploadFile, type UploadedFile } from "@/lib/upload-client";
 import { cn } from "@/lib/utils";
-
-/** Metadata returned by the upload route for a stored object. */
-export interface UploadedFile {
-  key: string;
-  fileName: string;
-  fileSize: number;
-  contentType: string;
-}
 
 interface FileUploadProps {
   /** Whether a document or an image is being uploaded. */
@@ -61,50 +54,22 @@ export function FileUpload({
     setPreviewUrl(null);
   }
 
-  function upload(file: File) {
+  async function upload(file: File) {
     setIsUploading(true);
     setProgress(0);
 
-    const formData = new FormData();
-    formData.append("kind", kind);
-    formData.append("file", file);
+    const result = await uploadFile(file, kind, setProgress);
 
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", "/api/upload");
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable) {
-        setProgress(Math.round((event.loaded / event.total) * 100));
-      }
-    };
-    xhr.onload = () => {
-      setIsUploading(false);
+    setIsUploading(false);
 
-      try {
-        const body = JSON.parse(xhr.responseText) as {
-          success: boolean;
-          data?: UploadedFile;
-          error?: string;
-        };
+    if (result.ok) {
+      setProgress(100);
+      onChange(result.data);
+      return;
+    }
 
-        if (xhr.status >= 200 && xhr.status < 300 && body.success && body.data) {
-          setProgress(100);
-          onChange(body.data);
-          return;
-        }
-
-        resetPreview();
-        toast.error(body.error ?? "Upload failed.");
-      } catch {
-        resetPreview();
-        toast.error("Upload failed. Please try again.");
-      }
-    };
-    xhr.onerror = () => {
-      setIsUploading(false);
-      resetPreview();
-      toast.error("Upload failed. Please try again.");
-    };
-    xhr.send(formData);
+    resetPreview();
+    toast.error(result.error);
   }
 
   function handleFile(file: File | undefined) {
@@ -178,20 +143,7 @@ export function FileUpload({
                   : ""}
             </p>
 
-            {isUploading ? (
-              <div
-                role="progressbar"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={progress}
-                className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
-              >
-                <div
-                  className="h-full rounded-full bg-primary transition-all"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            ) : null}
+            {isUploading ? <UploadProgress progress={progress} /> : null}
           </div>
 
           <Button
@@ -248,6 +200,24 @@ export function FileUpload({
         accept={acceptAttribute(kind)}
         onChange={handleInputChange}
         disabled={disabled}
+      />
+    </div>
+  );
+}
+
+/** Thin progress bar shown while an upload is in flight. */
+function UploadProgress({ progress }: { progress: number }) {
+  return (
+    <div
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={progress}
+      className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
+    >
+      <div
+        className="h-full rounded-full bg-primary transition-all"
+        style={{ width: `${progress}%` }}
       />
     </div>
   );

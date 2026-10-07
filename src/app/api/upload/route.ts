@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { auth } from "@/auth";
+import { getSessionUserId, jsonError, unauthorized } from "@/lib/api";
 import { uploadObject } from "@/lib/storage";
 import {
   buildStorageKey,
@@ -16,13 +16,10 @@ export const runtime = "nodejs";
  * Returns the metadata the create form needs to persist the item.
  */
 export async function POST(request: Request) {
-  const session = await auth();
+  const userId = await getSessionUserId();
 
-  if (!session?.user?.id) {
-    return NextResponse.json(
-      { success: false, error: "You must be signed in to upload files." },
-      { status: 401 },
-    );
+  if (!userId) {
+    return unauthorized("You must be signed in to upload files.");
   }
 
   let formData: FormData;
@@ -30,41 +27,29 @@ export async function POST(request: Request) {
   try {
     formData = await request.formData();
   } catch {
-    return NextResponse.json(
-      { success: false, error: "Invalid upload." },
-      { status: 400 },
-    );
+    return jsonError("Invalid upload.", 400);
   }
 
   const kind = formData.get("kind");
 
   if (!isUploadKind(kind)) {
-    return NextResponse.json(
-      { success: false, error: "Unknown upload type." },
-      { status: 400 },
-    );
+    return jsonError("Unknown upload type.", 400);
   }
 
   const file = formData.get("file");
 
   if (!(file instanceof File)) {
-    return NextResponse.json(
-      { success: false, error: "No file provided." },
-      { status: 400 },
-    );
+    return jsonError("No file provided.", 400);
   }
 
   const validation = validateUpload({ name: file.name, size: file.size }, kind);
 
   if (!validation.ok) {
-    return NextResponse.json(
-      { success: false, error: validation.error },
-      { status: 400 },
-    );
+    return jsonError(validation.error, 400);
   }
 
   try {
-    const key = buildStorageKey(session.user.id, file.name);
+    const key = buildStorageKey(userId, file.name);
     const stored = await uploadObject({
       key,
       body: file,
@@ -72,10 +57,7 @@ export async function POST(request: Request) {
     });
 
     if (!stored) {
-      return NextResponse.json(
-        { success: false, error: "Upload failed. Please try again." },
-        { status: 502 },
-      );
+      return jsonError("Upload failed. Please try again.", 502);
     }
 
     return NextResponse.json({
@@ -90,9 +72,6 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Upload failed", error);
 
-    return NextResponse.json(
-      { success: false, error: "Upload failed. Please try again." },
-      { status: 500 },
-    );
+    return jsonError("Upload failed. Please try again.", 500);
   }
 }

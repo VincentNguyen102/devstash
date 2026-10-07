@@ -6,7 +6,7 @@ import {
   resendVerificationEmail,
   type ResendVerificationState,
 } from "@/actions/email-verification";
-import { useRateLimitToast } from "@/components/auth/use-rate-limit-toast";
+import { useRateLimitToast } from "@/hooks/use-rate-limit-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 

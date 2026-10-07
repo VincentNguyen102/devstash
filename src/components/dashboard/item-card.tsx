@@ -3,7 +3,7 @@
 import { Pin, Star } from "lucide-react";
 
 import { ItemCopyButton } from "@/components/dashboard/item-copy-button";
-import { useItemDrawer } from "@/components/dashboard/item-drawer";
+import { useItemOpenTarget } from "@/hooks/use-item-open-target";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -12,32 +12,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { formatShortDate } from "@/lib/date";
 import type { ItemSummary } from "@/lib/db/items";
 import { getTypeVisual } from "@/lib/item-type-meta";
 import { cn } from "@/lib/utils";
 
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  timeZone: "UTC",
-});
-
 export function ItemCard({ item }: { item: ItemSummary }) {
-  const { openItem } = useItemDrawer();
+  const openTarget = useItemOpenTarget(item.id, item.title);
   const { Icon, textClass, bgClass, accentClass } = getTypeVisual(item.typeId);
 
   return (
     <Card
-      role="button"
-      tabIndex={0}
-      aria-label={`Open ${item.title}`}
-      onClick={() => openItem(item.id)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          openItem(item.id);
-        }
-      }}
+      {...openTarget}
       className={cn(
         "h-full cursor-pointer border-l-4 transition-shadow hover:ring-foreground/25 focus-visible:ring-2 focus-visible:ring-ring/50",
         accentClass
@@ -88,7 +74,7 @@ export function ItemCard({ item }: { item: ItemSummary }) {
           dateTime={item.updatedAt.toISOString()}
           className="mt-auto text-xs text-muted-foreground"
         >
-          {dateFormatter.format(item.updatedAt)}
+          {formatShortDate(item.updatedAt)}
         </time>
       </CardContent>
     </Card>

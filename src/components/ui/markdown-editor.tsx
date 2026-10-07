@@ -1,27 +1,19 @@
 "use client";
 
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
-import { Check, Copy } from "lucide-react";
+import { useLayoutEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { copyToClipboard } from "@/lib/clipboard";
+import { EditorFrame } from "@/components/ui/editor-frame";
+import {
+  EDITOR_MAX_HEIGHT,
+  EDITOR_MIN_HEIGHT,
+  clampEditorHeight,
+} from "@/lib/editor";
 import { cn } from "@/lib/utils";
 
-/** Minimum editor height in pixels. */
-const MIN_HEIGHT = 96;
-
-/** Maximum editor height in pixels; longer content scrolls internally. */
-const MAX_HEIGHT = 400;
-
 type EditorMode = "write" | "preview";
-
-function clampHeight(height: number): number {
-  if (!Number.isFinite(height)) return MIN_HEIGHT;
-  return Math.min(Math.max(Math.round(height), MIN_HEIGHT), MAX_HEIGHT);
-}
 
 interface MarkdownEditorProps {
   /** Current markdown source. */
@@ -52,7 +44,6 @@ export function MarkdownEditor({
   className,
 }: MarkdownEditorProps) {
   const [mode, setMode] = useState<EditorMode>("write");
-  const [copied, setCopied] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Read-only views can only preview; ignore any stale tab state.
@@ -66,39 +57,19 @@ export function MarkdownEditor({
     if (!textarea) return;
 
     textarea.style.height = "auto";
-    textarea.style.height = `${clampHeight(textarea.scrollHeight)}px`;
+    textarea.style.height = `${clampEditorHeight(textarea.scrollHeight)}px`;
   }, [value, activeMode, readOnly]);
 
-  const handleCopy = useCallback(async () => {
-    const copiedToClipboard = await copyToClipboard(value);
-
-    if (!copiedToClipboard) {
-      toast.error("Couldn't copy to clipboard");
-      return;
-    }
-
-    setCopied(true);
-    toast.success("Copied to clipboard");
-    window.setTimeout(() => setCopied(false), 1500);
-  }, [value]);
-
   return (
-    <div
-      role="group"
+    <EditorFrame
       aria-label={ariaLabel}
-      className={cn(
-        "overflow-hidden rounded-lg border border-border bg-[#151515]",
-        className,
-      )}
-    >
-      <div className="flex items-center gap-2 border-b border-border bg-[#1c1c1c] px-3 py-2">
-        <div className="flex items-center gap-1.5" aria-hidden>
-          <span className="size-3 rounded-full bg-[#ff5f57]" />
-          <span className="size-3 rounded-full bg-[#febc2e]" />
-          <span className="size-3 rounded-full bg-[#28c840]" />
-        </div>
-
-        {!readOnly ? (
+      className={className}
+      label="Markdown"
+      copyValue={value}
+      copyLabel="Copy markdown"
+      disabled={disabled}
+      header={
+        !readOnly ? (
           <div
             role="tablist"
             aria-label="Markdown editor mode"
@@ -122,30 +93,9 @@ export function MarkdownEditor({
               </Button>
             ))}
           </div>
-        ) : null}
-
-        <div className="ml-auto flex items-center gap-1.5">
-          <span className="font-mono text-xs text-muted-foreground">
-            Markdown
-          </span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            className="text-muted-foreground hover:text-foreground"
-            aria-label="Copy markdown"
-            disabled={disabled}
-            onClick={handleCopy}
-          >
-            {copied ? (
-              <Check aria-hidden className="text-green-400" />
-            ) : (
-              <Copy aria-hidden />
-            )}
-          </Button>
-        </div>
-      </div>
-
+        ) : null
+      }
+    >
       {activeMode === "write" ? (
         <textarea
           ref={textareaRef}
@@ -155,11 +105,14 @@ export function MarkdownEditor({
           placeholder="Write some Markdown…"
           disabled={disabled}
           spellCheck={false}
-          style={{ height: MIN_HEIGHT }}
+          style={{ height: EDITOR_MIN_HEIGHT }}
           className="block w-full resize-none overflow-y-auto bg-transparent px-3 py-2.5 font-mono text-xs leading-relaxed text-[#c9d1d9] outline-none placeholder:text-muted-foreground/60 disabled:cursor-not-allowed disabled:opacity-50"
         />
       ) : (
-        <div className="max-h-[400px] min-h-24 overflow-y-auto px-3 py-2.5">
+        <div
+          className="overflow-y-auto px-3 py-2.5"
+          style={{ maxHeight: EDITOR_MAX_HEIGHT, minHeight: EDITOR_MIN_HEIGHT }}
+        >
           {value.trim() ? (
             <div className="markdown-preview">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -173,6 +126,6 @@ export function MarkdownEditor({
           )}
         </div>
       )}
-    </div>
+    </EditorFrame>
   );
 }

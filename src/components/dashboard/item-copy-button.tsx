@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, type MouseEvent } from "react";
+import type { MouseEvent } from "react";
 import { Check, Copy } from "lucide-react";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { copyToClipboard } from "@/lib/clipboard";
+import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 import { getItemCopyText, type CopyableItem } from "@/lib/item-copy";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +19,7 @@ interface ItemCopyButtonProps {
  * nothing to copy, and shows a brief check mark on success.
  */
 export function ItemCopyButton({ item, className }: ItemCopyButtonProps) {
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useCopyFeedback();
 
   // Resolve without an origin: a relative file link counts as copyable.
   if (!getItemCopyText(item)) {
@@ -40,16 +39,7 @@ export function ItemCopyButton({ item, className }: ItemCopyButtonProps) {
     const text = getItemCopyText(item, window.location.origin);
     if (!text) return;
 
-    const copiedToClipboard = await copyToClipboard(text);
-
-    if (!copiedToClipboard) {
-      toast.error("Couldn't copy to clipboard");
-      return;
-    }
-
-    setCopied(true);
-    toast.success("Copied to clipboard");
-    window.setTimeout(() => setCopied(false), 1500);
+    await copy(text);
   }
 
   return (

@@ -67,6 +67,53 @@ function SectionLabel({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * Renders a collection row for the sidebar. Favorite collections show a star
+ * and no count; the rest show the item count and a dot for their dominant type.
+ */
+function CollectionNavRow({
+  collection,
+  active,
+  favorite = false,
+  onNavigate,
+}: {
+  collection: CollectionSummary;
+  active: boolean;
+  favorite?: boolean;
+  onNavigate?: () => void;
+}) {
+  return (
+    <NavRow
+      href={`/collections/${collection.id}`}
+      onNavigate={onNavigate}
+      active={active}
+      label={collection.name}
+      count={favorite ? undefined : collection.itemCount}
+      icon={
+        favorite || !collection.dominantTypeId ? (
+          <Layers className="size-4 shrink-0 text-muted-foreground" />
+        ) : (
+          <span
+            aria-hidden
+            className={cn(
+              "size-2.5 shrink-0 rounded-full bg-current",
+              getTypeVisual(collection.dominantTypeId).textClass,
+            )}
+          />
+        )
+      }
+      trailing={
+        favorite ? (
+          <Star
+            aria-hidden
+            className="size-3.5 fill-yellow-400 text-yellow-400"
+          />
+        ) : undefined
+      }
+    />
+  );
+}
+
 function SidebarSection({
   title,
   children,
@@ -165,46 +212,22 @@ export function SidebarContent({
         <SidebarSection title="Collections">
           <SectionLabel>Favorites</SectionLabel>
           {favoriteCollections.map((collection) => (
-            <NavRow
+            <CollectionNavRow
               key={collection.id}
-              href={`/collections/${collection.id}`}
+              collection={collection}
               onNavigate={onNavigate}
               active={pathname === `/collections/${collection.id}`}
-              label={collection.name}
-              icon={
-                <Layers className="size-4 shrink-0 text-muted-foreground" />
-              }
-              trailing={
-                <Star
-                  aria-hidden
-                  className="size-3.5 fill-yellow-400 text-yellow-400"
-                />
-              }
+              favorite
             />
           ))}
 
-          <SectionLabel>All Collections</SectionLabel>
+          <SectionLabel>Recent</SectionLabel>
           {recentCollections.map((collection) => (
-            <NavRow
+            <CollectionNavRow
               key={collection.id}
-              href={`/collections/${collection.id}`}
+              collection={collection}
               onNavigate={onNavigate}
               active={pathname === `/collections/${collection.id}`}
-              label={collection.name}
-              count={collection.itemCount}
-              icon={
-                collection.dominantTypeId ? (
-                  <span
-                    aria-hidden
-                    className={cn(
-                      "size-2.5 shrink-0 rounded-full bg-current",
-                      getTypeVisual(collection.dominantTypeId).textClass
-                    )}
-                  />
-                ) : (
-                  <Layers className="size-4 shrink-0 text-muted-foreground" />
-                )
-              }
             />
           ))}
 

@@ -54,6 +54,7 @@ Example v4 configuration:
 - Pages: `src/app/[route]/page.tsx`
 - Server Actions: `src/actions/[feature].ts`
 - Types: `src/types/[feature].ts`
+- Hooks: `src/hooks/use-[name].ts` (all custom `use-*` hooks live here, not in `components/`)
 - Lib/Utils: `src/lib/[utility].ts`
 
 ## Naming
