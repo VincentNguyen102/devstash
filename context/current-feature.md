@@ -1,61 +1,18 @@
-# Current Feature: File Upload with Tigris
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-In Progress
+Not Started
 
 ## Goals
 
 <!-- Goals & requirements -->
 
-- Create upload API route for Tigris (file/image storage)
-- Stick to `lib/db/items.ts` for prisma/db functions
-- Create `FileUpload` component with drag-and-drop
-- Update create item modal to use `FileUpload` for file/image types
-- Delete files from Tigris when items are deleted
-- Create download proxy API route (avoids CORS issues)
-- Add download button in `ItemDrawer` for file types
-- Show upload progress indicator
-- Display image preview for images, file info for files
-
 ## Notes
 
 <!-- Any extra notes -->
-
-Storage: **Tigris** (S3-compatible object storage).
-
-### File Constraints
-
-| Type   | Max Size | Extensions                                                                             |
-| ------ | -------- | -------------------------------------------------------------------------------------- |
-| Images | 5 MB     | `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.svg`                                       |
-| Files  | 10 MB    | `.pdf`, `.txt`, `.md`, `.json`, `.yaml`, `.yml`, `.xml`, `.csv`, `.toml`, `.ini`       |
-
-### MIME Types
-
-**Images:**
-
-- `image/png`
-- `image/jpeg`
-- `image/gif`
-- `image/webp`
-- `image/svg+xml`
-
-**Files:**
-
-- `application/pdf`
-- `text/plain`
-- `text/markdown`
-- `application/json`
-- `application/x-yaml`, `text/yaml`
-- `application/xml`, `text/xml`
-- `text/csv`
-- `application/toml`
-- `text/plain` (for `.ini`)
-
-The `Item` model already has `contentType` (`text` | `file`), `fileUrl`, `fileName` and `fileSize` columns (no migration expected for the item fields).
 
 ## History
 
@@ -90,3 +47,4 @@ The `Item` model already has `contentType` (`text` | `file`), `fileUrl`, `fileNa
 - Monaco Code Editor completed — snippets and commands now use a new `CodeEditor` component (`src/components/ui/code-editor.tsx`) instead of a `Textarea` in both the item drawer (display + edit modes) and the New Item dialog, while notes, prompts and links keep the textarea; the component uses `@monaco-editor/react` (Monaco loaded lazily on the client via `next/dynamic`, runtime from the jsDelivr CDN) with a custom `devstash-dark` theme, macOS window dots, a language label, a copy button (check feedback + toast), read-only and editable modes, and a fluid height clamped between 96 and 400px with a theme-matching scrollbar; extracted the shared clipboard helper to `src/lib/clipboard.ts`, added `src/lib/monaco-language.ts` (stored-language → Monaco language id aliases) and centralized the per-type form field sets in `src/lib/item-type-fields.ts` (deduping `item-drawer.tsx`/`item-create-dialog.tsx`); suppressed the known benign Monaco `Canceled` disposal rejection; added 8 unit tests (`clipboard`, `monaco-language`, 64 passing) and verified in the browser via Playwright (read-only display, inline edit, live language header, save persisted after reload, copy toast + check icon, snippet uses the editor while prompt keeps the textarea, no console errors) plus `npm run test` + `npm run lint` + `npm run build`; the modified seed item was restored with `npm run db:seed`; the spec is `context/features/code-editor-spec.md`
 - Type-Specific Add Button completed — each creatable item type page (`/items/[type]` for snippet/prompt/command/note/url) now renders its own add button in the header (e.g. "New Command", "New Link") with the type's icon/colour, opening the New Item dialog with that type preselected; `ItemCreateDialog` gained `defaultTypeId` (defaults to the first creatable type) and an optional `trigger` element, and its selector options/labels are derived from `CREATE_ITEM_TYPE_IDS` instead of a hardcoded list; added the `isCreateItemTypeId` guard to `src/lib/validations/item.ts` and `CREATE_TYPE_LABELS` to `src/lib/item-type-meta.ts` (3 unit tests, 67 passing); the top-bar "New Item" button keeps working with the default (Snippet) and `file`/`image` pages are intentionally left without a create button for a later request; verified in the browser via Playwright (`New Command`/`New Link` present, type preselected, `file` page has no button, top-bar defaults to Snippet, created a command from the page → toast + list 5→6 then deleted it to restore the data, no console errors) plus `npm run test` + `npm run lint` + `npm run build`
 - Markdown Editor completed — notes and prompts now use a new `MarkdownEditor` component (`src/components/ui/markdown-editor.tsx`) in the item drawer (view + edit modes) and the New Item dialog, replacing the plain textarea while snippets/commands keep `CodeEditor` and links/others keep the textarea; the component has Write/Preview tabs (Write default in edit mode, Preview only when read-only), a macOS window frame, a "Markdown" label and a copy button matching `CodeEditor` (`bg-[#151515]` container, `bg-[#1c1c1c]` header), a `react-markdown` + `remark-gfm` preview, and an auto-growing write textarea plus a scrollable preview both clamped between 96 and 400px; dark markdown styling lives in a new `.markdown-preview` component layer in `src/app/globals.css` (distinct headings, code blocks, inline code highlight, list markers, blockquote accent, blue links with hover, bordered tables with header background, images, hr); added `MARKDOWN_TYPE_IDS` (`note`, `prompt`) to `src/lib/item-type-fields.ts` and made the New Item dialog scrollable (`max-h-[calc(100dvh-2rem)] overflow-y-auto`) so a tall preview can't push the Create button off-screen; added `react-markdown@^10`/`remark-gfm@^4` and 5 unit tests for the field sets (`src/lib/item-type-fields.test.ts`, 72 passing) — note the spec's requested colours (`#1e1e1e`/`#2d2d2d`) were overridden to match the actual `CodeEditor` (`#151515`/`#1c1c1c`) for visual consistency; verified in the browser via Playwright (created a note with headings/bold/link/lists/blockquote/code/GFM table → all rendered, copy toast + check icon, read-only drawer shows Preview only with no tabs, edit defaults to Write with Preview available, snippet edit still uses `CodeEditor`, prompt view renders markdown, no console errors) then deleted the test note to restore the seed data; `npm run test` + `npm run lint` + `npm run build` all pass; the spec is `context/features/markdown-editor-spec.md`
+- File Upload with Tigris completed — added file/image uploads backed by Tigris object storage: created the `devstash` bucket and documented `TIGRIS_STORAGE_ACCESS_KEY_ID`/`TIGRIS_STORAGE_SECRET_ACCESS_KEY`/`TIGRIS_STORAGE_BUCKET`/`TIGRIS_STORAGE_ENDPOINT` in `.env.example`; added `src/lib/upload.ts` (pure size/extension/MIME allow-lists, `validateUpload`, user-namespaced `buildStorageKey`, `isStorageKeyForUser`, `formatFileSize`), `src/lib/storage.ts` (server-only `put`/`get`/`remove` wrapper) and `POST /api/upload` (auth-checked, validates kind + file, stores in Tigris, returns key/name/size/contentType) plus `GET /api/items/[id]/file` (ownership-checked streaming proxy with `?download=1` attachment and UTF-8 `Content-Disposition`, `X-Content-Type-Options: nosniff`); `src/lib/db/items.ts` gained `getItemFile` and now persists `contentType`/`fileUrl`/`fileName`/`fileSize` on create and returns the storage key from a transactional `deleteItem`, which the `deleteItem` action best-effort deletes from Tigris; extended `createItemSchema`/`CREATE_ITEM_TYPE_IDS` to include `file`/`image` (requiring an uploaded `fileKey` and enforcing the key belongs to the signed-in user), added a drag-and-drop `FileUpload` component (client validation, XHR upload progress bar, image preview/file info, remove) used by the New Item dialog (now 7 types, so `/items/file` and `/items/image` also get "New File"/"New Image" buttons) and an `ItemDrawer` image preview plus a Download button for file types; added tests for the upload helpers, schemas and actions (98 passing) and verified in the browser via Playwright (uploaded a PDF and a PNG, drawer download returned `application/pdf`/attachment, image proxy returned `image/png`/inline and rendered, deleting both emptied the bucket, bad extension/oversize/bad-kind/unauthenticated all rejected, no console errors) plus `npm run test` + `npm run lint` + `npm run build`; the spec is `context/features/file-image-spec.md`
