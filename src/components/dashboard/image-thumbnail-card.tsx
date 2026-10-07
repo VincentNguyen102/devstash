@@ -3,6 +3,7 @@
 import { Pin, Star } from "lucide-react";
 
 import { ItemCard } from "@/components/dashboard/item-card";
+import { ItemCopyButton } from "@/components/dashboard/item-copy-button";
 import { useItemDrawer } from "@/components/dashboard/item-drawer";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -73,7 +74,10 @@ export function ImageThumbnailCard({ item }: { item: ItemSummary }) {
       </div>
 
       <CardHeader>
-        <CardTitle className="truncate">{item.title}</CardTitle>
+        <CardTitle className="flex items-start gap-2">
+          <span className="min-w-0 flex-1 truncate">{item.title}</span>
+          <ItemCopyButton item={item} className="-mt-0.5 -mr-1" />
+        </CardTitle>
         <CardDescription className="line-clamp-2">
           {item.description}
         </CardDescription>

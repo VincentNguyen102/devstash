@@ -2,6 +2,7 @@
 
 import { Pin, Star } from "lucide-react";
 
+import { ItemCopyButton } from "@/components/dashboard/item-copy-button";
 import { useItemDrawer } from "@/components/dashboard/item-drawer";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -65,6 +66,7 @@ export function ItemCard({ item }: { item: ItemSummary }) {
               className="mt-0.5 size-3.5 shrink-0 fill-yellow-400 text-yellow-400"
             />
           ) : null}
+          <ItemCopyButton item={item} className="-mt-0.5 -mr-1" />
         </CardTitle>
         <CardDescription className="line-clamp-2">
           {item.description}
