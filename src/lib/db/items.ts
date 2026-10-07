@@ -22,6 +22,8 @@ export interface ItemSummary {
   tags: string[];
   /** Stored object name, set for `file`/`image` items. */
   fileName: string | null;
+  /** Stored object size in bytes, set for `file`/`image` items. */
+  fileSize: number | null;
   updatedAt: Date;
 }
 
@@ -77,6 +79,7 @@ async function findItemSummaries(
       isFavorite: true,
       isPinned: true,
       fileName: true,
+      fileSize: true,
       updatedAt: true,
       tags: { select: { tag: { select: { name: true } } } },
     },
@@ -91,6 +94,7 @@ async function findItemSummaries(
     isPinned: item.isPinned,
     tags: item.tags.map(({ tag }) => tag.name),
     fileName: item.fileName,
+    fileSize: item.fileSize,
     updatedAt: item.updatedAt,
   }));
 }
