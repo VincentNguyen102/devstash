@@ -28,7 +28,8 @@ function ImageGalleryView({ items }: { items: ItemSummary[] }) {
   return (
     <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
       {items.map((item, index) => (
-        <ImageThumbnailCard key={item.id} item={item} eager={index === 0} />
+        // The first row is above the fold, so load it eagerly for LCP.
+        <ImageThumbnailCard key={item.id} item={item} eager={index < 3} />
       ))}
     </div>
   );

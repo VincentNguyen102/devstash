@@ -22,7 +22,7 @@ import type { ItemSummary } from "@/lib/db/items";
  * hover, with the usual title/description/tags/date metadata below. Images
  * without a stored object fall back to the regular `ItemCard`.
  *
- * `eager` marks the first thumbnail (the likely LCP image) so it loads
+ * `eager` marks above-the-fold thumbnails (the likely LCP images) so they load
  * immediately; the rest stay lazy.
  */
 export function ImageThumbnailCard({

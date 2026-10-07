@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { auth } from "@/auth";
+import { getSessionUserId, jsonError, unauthorized } from "@/lib/api";
 import { getItemDetail } from "@/lib/db/items";
 
 /**
@@ -11,33 +11,24 @@ export async function GET(
   _request: Request,
   { params }: RouteContext<"/api/items/[id]">,
 ) {
-  const session = await auth();
+  const userId = await getSessionUserId();
 
-  if (!session?.user?.id) {
-    return NextResponse.json(
-      { success: false, error: "You must be signed in to view this item." },
-      { status: 401 },
-    );
+  if (!userId) {
+    return unauthorized("You must be signed in to view this item.");
   }
 
   try {
     const { id } = await params;
-    const item = await getItemDetail(id, session.user.id);
+    const item = await getItemDetail(id, userId);
 
     if (!item) {
-      return NextResponse.json(
-        { success: false, error: "Item not found." },
-        { status: 404 },
-      );
+      return jsonError("Item not found.", 404);
     }
 
     return NextResponse.json({ success: true, data: item });
   } catch (error) {
     console.error("Failed to load item", error);
 
-    return NextResponse.json(
-      { success: false, error: "Something went wrong. Please try again." },
-      { status: 500 },
-    );
+    return jsonError("Something went wrong. Please try again.", 500);
   }
 }

@@ -1,6 +1,4 @@
-import { NextResponse } from "next/server";
-
-import { auth } from "@/auth";
+import { getSessionUserId, jsonError, unauthorized } from "@/lib/api";
 import { getItemFile } from "@/lib/db/items";
 import { getObjectStream } from "@/lib/storage";
 
@@ -15,23 +13,17 @@ export async function GET(
   request: Request,
   ctx: RouteContext<"/api/items/[id]/file">,
 ) {
-  const session = await auth();
+  const userId = await getSessionUserId();
 
-  if (!session?.user?.id) {
-    return NextResponse.json(
-      { success: false, error: "You must be signed in to view this file." },
-      { status: 401 },
-    );
+  if (!userId) {
+    return unauthorized("You must be signed in to view this file.");
   }
 
   const { id } = await ctx.params;
-  const item = await getItemFile(id, session.user.id);
+  const item = await getItemFile(id, userId);
 
   if (!item) {
-    return NextResponse.json(
-      { success: false, error: "File not found." },
-      { status: 404 },
-    );
+    return jsonError("File not found.", 404);
   }
 
   const download = new URL(request.url).searchParams.get("download") === "1";
@@ -43,10 +35,7 @@ export async function GET(
     );
 
     if (!object) {
-      return NextResponse.json(
-        { success: false, error: "File not found." },
-        { status: 404 },
-      );
+      return jsonError("File not found.", 404);
     }
 
     const fileName = item.fileName ?? "download";
@@ -63,10 +52,7 @@ export async function GET(
   } catch (error) {
     console.error("File download failed", error);
 
-    return NextResponse.json(
-      { success: false, error: "Something went wrong. Please try again." },
-      { status: 500 },
-    );
+    return jsonError("Something went wrong. Please try again.", 500);
   }
 }
 

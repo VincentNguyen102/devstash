@@ -2,6 +2,7 @@ import { hash } from "bcryptjs";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { jsonError, tooManyRequests } from "@/lib/api";
 import { sendVerificationEmail } from "@/lib/email";
 import {
   buildVerificationUrl,
@@ -13,7 +14,6 @@ import {
   checkRateLimit,
   getClientIpFrom,
   rateLimitKey,
-  rateLimitMessage,
 } from "@/lib/rate-limit";
 import {
   passwordField,
@@ -29,6 +29,46 @@ const registerSchema = withPasswordConfirmation(
   "password",
 );
 
+/**
+ * Creates the account, hashing the password and marking the email verified up
+ * front when the verification flow is disabled.
+ */
+async function createUser(input: {
+  name: string;
+  email: string;
+  password: string;
+  verificationEnabled: boolean;
+}) {
+  return prisma.user.create({
+    data: {
+      name: input.name,
+      email: input.email,
+      password: await hash(input.password, 12),
+      emailVerified: input.verificationEnabled ? null : new Date(),
+    },
+  });
+}
+
+/**
+ * Sends the verification email best-effort: a delivery failure must not roll
+ * back the account (the user can request a new link from `/check-email`).
+ */
+async function sendVerification(
+  user: { name: string | null },
+  email: string,
+): Promise<void> {
+  try {
+    const token = await createEmailVerificationToken(email);
+    await sendVerificationEmail({
+      to: email,
+      name: user.name,
+      url: buildVerificationUrl(token),
+    });
+  } catch (error) {
+    console.error("Failed to send verification email", error);
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const limit = await checkRateLimit(
@@ -37,25 +77,15 @@ export async function POST(request: Request) {
     );
 
     if (!limit.success) {
-      return NextResponse.json(
-        { success: false, error: rateLimitMessage(limit.retryAfterSeconds) },
-        {
-          status: 429,
-          headers: { "Retry-After": String(limit.retryAfterSeconds) },
-        },
-      );
+      return tooManyRequests(limit.retryAfterSeconds);
     }
 
-    const body = await request.json();
-    const parsed = registerSchema.safeParse(body);
+    const parsed = registerSchema.safeParse(await request.json());
 
     if (!parsed.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: parsed.error.issues[0]?.message ?? "Invalid input",
-        },
-        { status: 400 },
+      return jsonError(
+        parsed.error.issues[0]?.message ?? "Invalid input",
+        400,
       );
     }
 
@@ -65,39 +95,19 @@ export async function POST(request: Request) {
     const existingUser = await prisma.user.findUnique({ where: { email } });
 
     if (existingUser) {
-      return NextResponse.json(
-        { success: false, error: "An account with this email already exists" },
-        { status: 409 },
-      );
+      return jsonError("An account with this email already exists", 409);
     }
 
-    const hashedPassword = await hash(password, 12);
     const verificationEnabled = isEmailVerificationEnabled();
-
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        // When verification is disabled the account is immediately usable. It
-        // stays consistent if verification is re-enabled later.
-        emailVerified: verificationEnabled ? null : new Date(),
-      },
+    const user = await createUser({
+      name,
+      email,
+      password,
+      verificationEnabled,
     });
 
     if (verificationEnabled) {
-      // Send the verification email. A delivery failure should not roll back
-      // the account — the user can request a new link from the check-email page.
-      try {
-        const token = await createEmailVerificationToken(email);
-        await sendVerificationEmail({
-          to: email,
-          name: user.name,
-          url: buildVerificationUrl(token),
-        });
-      } catch (error) {
-        console.error("Failed to send verification email", error);
-      }
+      await sendVerification(user, email);
     }
 
     return NextResponse.json(
@@ -110,9 +120,6 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Registration failed", error);
 
-    return NextResponse.json(
-      { success: false, error: "Something went wrong. Please try again." },
-      { status: 500 },
-    );
+    return jsonError("Something went wrong. Please try again.", 500);
   }
 }

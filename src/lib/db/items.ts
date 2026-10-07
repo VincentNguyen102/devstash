@@ -212,6 +212,50 @@ export async function getItemTypeById(
   };
 }
 
+/** Selected item row for `ItemDetail`; keeps the mapper decoupled from Prisma. */
+interface ItemDetailRow {
+  id: string;
+  title: string;
+  description: string | null;
+  typeId: string;
+  content: string | null;
+  url: string | null;
+  fileName: string | null;
+  fileSize: number | null;
+  language: string | null;
+  isFavorite: boolean;
+  isPinned: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  type: { name: string; icon: string | null };
+  collection: { id: string; name: string } | null;
+  tags: { tag: { name: string } }[];
+}
+
+/** Maps a selected item row to the drawer's `ItemDetail` shape. */
+function mapItemDetail(item: ItemDetailRow): ItemDetail {
+  return {
+    id: item.id,
+    title: item.title,
+    description: item.description ?? "",
+    typeId: item.typeId,
+    typeName: item.type.name,
+    typeIcon: item.type.icon,
+    content: item.content,
+    url: item.url,
+    fileName: item.fileName,
+    fileSize: item.fileSize,
+    language: item.language,
+    isFavorite: item.isFavorite,
+    isPinned: item.isPinned,
+    tags: item.tags.map(({ tag }) => tag.name),
+    collectionId: item.collection?.id ?? null,
+    collectionName: item.collection?.name ?? null,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  };
+}
+
 /**
  * A single item's full detail for the signed-in user, or null when the item
  * does not exist or belongs to someone else. Used by `GET /api/items/[id]`.
@@ -248,26 +292,7 @@ export async function getItemDetail(
     return null;
   }
 
-  return {
-    id: item.id,
-    title: item.title,
-    description: item.description ?? "",
-    typeId: item.typeId,
-    typeName: item.type.name,
-    typeIcon: item.type.icon,
-    content: item.content,
-    url: item.url,
-    fileName: item.fileName,
-    fileSize: item.fileSize,
-    language: item.language,
-    isFavorite: item.isFavorite,
-    isPinned: item.isPinned,
-    tags: item.tags.map(({ tag }) => tag.name),
-    collectionId: item.collection?.id ?? null,
-    collectionName: item.collection?.name ?? null,
-    createdAt: item.createdAt,
-    updatedAt: item.updatedAt,
-  };
+  return mapItemDetail(item);
 }
 
 /** The stored object backing a `file`/`image` item. */
@@ -334,6 +359,21 @@ export async function deleteItem(
 }
 
 /**
+ * Nested Prisma payload that connects each tag to an item, creating any missing
+ * tag for the user. De-duplicates names; shared by create and update.
+ */
+function tagConnections(userId: string, tags: string[]) {
+  return [...new Set(tags)].map((name) => ({
+    tag: {
+      connectOrCreate: {
+        where: { userId_name: { userId, name } },
+        create: { name, userId },
+      },
+    },
+  }));
+}
+
+/**
  * Creates an item owned by `userId`. Text types are stored as `text` content;
  * `file`/`image` types store the uploaded object's key, name and size. Each
  * supplied tag name is connected to the user's tag (created on demand). Returns
@@ -345,7 +385,6 @@ export async function createItem(
 ): Promise<ItemDetail | null> {
   await connection();
 
-  const tagNames = [...new Set(data.tags)];
   const isUpload = isUploadItemTypeId(data.typeId);
 
   const item = await prisma.item.create({
@@ -361,16 +400,7 @@ export async function createItem(
       fileSize: isUpload ? data.fileSize : null,
       userId,
       typeId: data.typeId,
-      tags: {
-        create: tagNames.map((name) => ({
-          tag: {
-            connectOrCreate: {
-              where: { userId_name: { userId, name } },
-              create: { name, userId },
-            },
-          },
-        })),
-      },
+      tags: { create: tagConnections(userId, data.tags) },
     },
     select: { id: true },
   });
@@ -401,22 +431,7 @@ export async function updateItem(
     return null;
   }
 
-  const tagNames = [...new Set(data.tags)];
-
   await prisma.$transaction(async (tx) => {
-    const tagIds: string[] = [];
-
-    for (const name of tagNames) {
-      const tag = await tx.tag.upsert({
-        where: { userId_name: { userId, name } },
-        create: { userId, name },
-        update: {},
-        select: { id: true },
-      });
-
-      tagIds.push(tag.id);
-    }
-
     await tx.item.update({
       where: { id: itemId },
       data: {
@@ -427,7 +442,7 @@ export async function updateItem(
         language: data.language,
         tags: {
           deleteMany: {},
-          create: tagIds.map((tagId) => ({ tagId })),
+          create: tagConnections(userId, data.tags),
         },
       },
     });
