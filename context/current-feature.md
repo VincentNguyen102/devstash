@@ -1,18 +1,32 @@
-# Current Feature
+# Current Feature: Image Gallery View
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Create an image thumbnail card to replace the current item card
+- Show an image grid/gallery with 3 columns
+- Displays image thumbnail with 16:9 aspect ratio (`aspect-video`)
+- Uses `object-cover` to fill the card (may crop edges)
+- Subtle hover zoom effect (5% scale with 300ms transition)
+
 ## Notes
 
 <!-- Any extra notes -->
+
+Add an image grid/gallery with thumbnail cards instead of the regular item card.
+
+- Applies to the image item list view (`/items/image`).
+- Thumbnail cards render the stored image through the existing proxy route
+  (`GET /api/items/[id]/file`), which serves `image` items inline.
+- Images with no stored file should fall back gracefully (e.g. the normal
+  `ItemCard`) rather than show a broken thumbnail.
 
 ## History
 

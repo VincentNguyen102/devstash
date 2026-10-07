@@ -20,6 +20,8 @@ export interface ItemSummary {
   isFavorite: boolean;
   isPinned: boolean;
   tags: string[];
+  /** Stored object name, set for `file`/`image` items. */
+  fileName: string | null;
   updatedAt: Date;
 }
 
@@ -74,6 +76,7 @@ async function findItemSummaries(
       typeId: true,
       isFavorite: true,
       isPinned: true,
+      fileName: true,
       updatedAt: true,
       tags: { select: { tag: { select: { name: true } } } },
     },
@@ -87,6 +90,7 @@ async function findItemSummaries(
     isFavorite: item.isFavorite,
     isPinned: item.isPinned,
     tags: item.tags.map(({ tag }) => tag.name),
+    fileName: item.fileName,
     updatedAt: item.updatedAt,
   }));
 }
