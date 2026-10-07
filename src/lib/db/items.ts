@@ -20,6 +20,10 @@ export interface ItemSummary {
   isFavorite: boolean;
   isPinned: boolean;
   tags: string[];
+  /** Text content for snippet/prompt/command/note items. */
+  content: string | null;
+  /** Link for `url` items. */
+  url: string | null;
   /** Stored object name, set for `file`/`image` items. */
   fileName: string | null;
   /** Stored object size in bytes, set for `file`/`image` items. */
@@ -78,6 +82,8 @@ async function findItemSummaries(
       typeId: true,
       isFavorite: true,
       isPinned: true,
+      content: true,
+      url: true,
       fileName: true,
       fileSize: true,
       updatedAt: true,
@@ -93,6 +99,8 @@ async function findItemSummaries(
     isFavorite: item.isFavorite,
     isPinned: item.isPinned,
     tags: item.tags.map(({ tag }) => tag.name),
+    content: item.content,
+    url: item.url,
     fileName: item.fileName,
     fileSize: item.fileSize,
     updatedAt: item.updatedAt,

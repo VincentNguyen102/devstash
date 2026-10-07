@@ -1,18 +1,29 @@
-# Current Feature
+# Current Feature: Quick Copy on Item Cards
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+Complete
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Add a small, quick copy icon button to the item grid cards (`ItemCard`) and the image gallery cards (`ImageThumbnailCard`).
+- Clicking the icon copies the item's text content (snippet/prompt/command/note), falling back to the item's URL for link items, and to a link to the stored file for image items.
+- The icon must not open the item drawer (stop propagation) and must show a success (`Check`) state plus a toast, matching the drawer/editor copy behaviour.
+- Hide the icon when the item has nothing copyable.
+- Expose `content` and `url` on `ItemSummary` in `src/lib/db/items.ts` so summaries carry what's needed to copy.
+- Extract the copy-source resolution into a pure utility with unit tests.
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- Scope agreed with the user: grid + image cards only (file rows and collection cards untouched).
+- Copy source agreed: content, else URL. For image items (no content/URL) the actionable fallback is an absolute link to the proxied file (`/api/items/[id]/file`).
+- Reuse `copyToClipboard` from `src/lib/clipboard.ts`; follow the existing copy UX in `CodeEditor` (Check for ~1.5s, sonner toast).
 
 ## History
 
@@ -50,3 +61,4 @@ Not Started
 - File Upload with Tigris completed — added file/image uploads backed by Tigris object storage: created the `devstash` bucket and documented `TIGRIS_STORAGE_ACCESS_KEY_ID`/`TIGRIS_STORAGE_SECRET_ACCESS_KEY`/`TIGRIS_STORAGE_BUCKET`/`TIGRIS_STORAGE_ENDPOINT` in `.env.example`; added `src/lib/upload.ts` (pure size/extension/MIME allow-lists, `validateUpload`, user-namespaced `buildStorageKey`, `isStorageKeyForUser`, `formatFileSize`), `src/lib/storage.ts` (server-only `put`/`get`/`remove` wrapper) and `POST /api/upload` (auth-checked, validates kind + file, stores in Tigris, returns key/name/size/contentType) plus `GET /api/items/[id]/file` (ownership-checked streaming proxy with `?download=1` attachment and UTF-8 `Content-Disposition`, `X-Content-Type-Options: nosniff`); `src/lib/db/items.ts` gained `getItemFile` and now persists `contentType`/`fileUrl`/`fileName`/`fileSize` on create and returns the storage key from a transactional `deleteItem`, which the `deleteItem` action best-effort deletes from Tigris; extended `createItemSchema`/`CREATE_ITEM_TYPE_IDS` to include `file`/`image` (requiring an uploaded `fileKey` and enforcing the key belongs to the signed-in user), added a drag-and-drop `FileUpload` component (client validation, XHR upload progress bar, image preview/file info, remove) used by the New Item dialog (now 7 types, so `/items/file` and `/items/image` also get "New File"/"New Image" buttons) and an `ItemDrawer` image preview plus a Download button for file types; added tests for the upload helpers, schemas and actions (98 passing) and verified in the browser via Playwright (uploaded a PDF and a PNG, drawer download returned `application/pdf`/attachment, image proxy returned `image/png`/inline and rendered, deleting both emptied the bucket, bad extension/oversize/bad-kind/unauthenticated all rejected, no console errors) plus `npm run test` + `npm run lint` + `npm run build`; the spec is `context/features/file-image-spec.md`
 - Image Gallery View completed — the `/items/image` list now renders a 3-column gallery (`grid-cols-2 md:grid-cols-3`) of new `ImageThumbnailCard`s instead of the regular `ItemCard`, while every other item type keeps the existing card grid; the card shows the stored image through the existing proxy (`GET /api/items/[id]/file`) in an `aspect-video` (16:9) frame with `object-cover`, a subtle `group-hover:scale-105`/`duration-300` zoom, pinned/favorite badges overlaid on the thumbnail, and the usual title/description/tags/date below; images with no stored object fall back to `ItemCard` so no broken thumbnail is shown, and clicking the card still opens the item drawer; exposed `fileName` on `ItemSummary` in `src/lib/db/items.ts` (added to the `findItemSummaries` select) so the gallery can detect upload-backed images; presentational-only change (no server actions/utilities), so no new unit tests; verified in the browser via Playwright using an existing image item (3 columns ~314px each, computed `aspect-ratio: 16/9`, `object-cover`, hover scale 1 → 1.05 over 0.3s, card click opens the drawer with the image Preview) plus `npm run test` (98 passing) + `npm run lint` + `npm run build`; the spec is `context/features/image-display-spec.md`
 - File List View completed — `/items/file` now renders a single-column row list (`flex flex-col gap-2`) instead of grid cards: the new `FileListItem` (`src/components/dashboard/file-list-item.tsx`) shows an extension-based icon, the file name, size, upload date and a Download link (`GET /api/items/[id]/file?download=1`); the main area is a button that opens the item drawer while the download link sits outside it (so it downloads without opening the drawer), rows highlight on hover, and on mobile the name/meta stack and the Download label collapses to an icon; added `getFileVisual` (`src/lib/file-type-meta.ts`, + tests) mapping file extensions to a lucide icon and colours (PDF/TXT/MD → `FileText`, JSON → `FileJson`, YAML/YML/XML/TOML/INI → `FileCode`, CSV → `FileSpreadsheet`, fallback `File`) and exposed `fileSize` on `ItemSummary` in `src/lib/db/items.ts`; refactored layout selection into a registry — new `ItemCollection` (`src/components/dashboard/item-collection.tsx`) maps item type → layout (`FileListView`, `ImageGalleryView`, default `ItemGridView`) so `/items/[type]` just renders `<ItemCollection typeId={type} items={items} />` instead of nested layout ternaries; verified in the browser via Playwright (PDF icon, size/date, hover highlight, row click opens the drawer, download returns the correct filename without opening the drawer, mobile stacking) plus `npm run test` (103 passing) + `npm run lint` + `npm run build`; the spec is `context/features/file-display-spec.md`
+- Quick Copy on Item Cards completed — the item grid cards (`ItemCard`) and image gallery cards (`ImageThumbnailCard`) now show a small ghost copy icon that copies the item's content (snippet/prompt/command/note), the URL for link items, or an absolute link to the proxied file for image items, without opening the drawer; added `src/lib/item-copy.ts` (`getItemCopyText`, returns null when nothing is copyable and prefixes `origin` for file links) with 6 unit tests and a shared `src/components/dashboard/item-copy-button.tsx` (reuses `copyToClipboard`, shows a green `Check` for 1.5s plus a sonner toast, `stopPropagation` on click/keydown, aria-label derived from the copy source); exposed `content`/`url` on `ItemSummary` in `src/lib/db/items.ts`; scope is grid + image cards only (file rows and collection cards untouched) per the agreed requirements; verified in the browser via Playwright (clipboard matched the Dockerfile content, a link card copied `https://lucide.dev/`, an image card copied the absolute `/api/items/{id}/file` link, no drawer opened, toast + check shown, no console errors) plus `npm run test` (109 passing) + `npm run lint` + `npm run build`
