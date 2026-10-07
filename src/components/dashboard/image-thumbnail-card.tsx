@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Pin, Star } from "lucide-react";
 
 import { ItemCard } from "@/components/dashboard/item-card";
@@ -25,8 +26,17 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
  * Gallery card for `image` items: a 16:9 thumbnail that zooms slightly on
  * hover, with the usual title/description/tags/date metadata below. Images
  * without a stored object fall back to the regular `ItemCard`.
+ *
+ * `eager` marks the first thumbnail (the likely LCP image) so it loads
+ * immediately; the rest stay lazy.
  */
-export function ImageThumbnailCard({ item }: { item: ItemSummary }) {
+export function ImageThumbnailCard({
+  item,
+  eager = false,
+}: {
+  item: ItemSummary;
+  eager?: boolean;
+}) {
   const { openItem } = useItemDrawer();
 
   // No backing object means there is nothing to show; avoid a broken image.
@@ -49,13 +59,18 @@ export function ImageThumbnailCard({ item }: { item: ItemSummary }) {
       className="group h-full cursor-pointer gap-4 pt-0 transition-shadow hover:ring-foreground/25 focus-visible:ring-2 focus-visible:ring-ring/50"
     >
       <div className="relative aspect-video overflow-hidden bg-muted">
-        {/* Proxied through the app so the private object key stays server-side. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        {/*
+          Proxied through the app so the private object key stays server-side.
+          `unoptimized` is required here: the image optimizer does not forward
+          the session cookie, and the proxy route is owner-scoped.
+        */}
+        <Image
           src={`/api/items/${item.id}/file`}
           alt={item.title}
-          loading="lazy"
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          fill
+          unoptimized
+          loading={eager ? "eager" : "lazy"}
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
 
         {item.isPinned || item.isFavorite ? (

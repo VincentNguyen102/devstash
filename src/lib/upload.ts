@@ -76,11 +76,6 @@ const MIME_BY_EXTENSION: Record<string, string> = {
   ini: "text/plain",
 };
 
-/** Every MIME type the app stores. */
-export const UPLOAD_MIME_TYPES: readonly string[] = [
-  ...new Set(Object.values(MIME_BY_EXTENSION)),
-];
-
 /** The lowercase extension of a filename, without the dot ("" when none). */
 export function extensionOf(fileName: string): string {
   const dot = fileName.lastIndexOf(".");
