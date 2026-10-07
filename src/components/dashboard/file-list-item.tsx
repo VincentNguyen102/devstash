@@ -2,7 +2,7 @@
 
 import { Download } from "lucide-react";
 
-import { useItemDrawer } from "@/components/dashboard/item-drawer";
+import { useItemDrawer } from "@/hooks/use-item-drawer";
 import { Button } from "@/components/ui/button";
 import { formatMediumDate } from "@/lib/date";
 import type { ItemSummary } from "@/lib/db/items";

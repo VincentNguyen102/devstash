@@ -2,7 +2,7 @@
 
 import type { KeyboardEvent } from "react";
 
-import { useItemDrawer } from "@/components/dashboard/item-drawer";
+import { useItemDrawer } from "@/hooks/use-item-drawer";
 
 /**
  * Spreadable props that make a card or row open the item drawer on click and on

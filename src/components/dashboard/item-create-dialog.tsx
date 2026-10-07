@@ -6,10 +6,7 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { createItem } from "@/actions/items";
-import {
-  FileUpload,
-  type UploadedFile,
-} from "@/components/dashboard/file-upload";
+import { FileUpload } from "@/components/dashboard/file-upload";
 import { ItemFormFields } from "@/components/dashboard/item-form-fields";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +27,7 @@ import {
 } from "@/lib/item-type-fields";
 import { CREATE_TYPE_LABELS, getTypeVisual } from "@/lib/item-type-meta";
 import { parseTags } from "@/lib/tags";
+import type { UploadedFile } from "@/lib/upload-client";
 import {
   CREATE_ITEM_TYPE_IDS,
   type CreateItemTypeId,
