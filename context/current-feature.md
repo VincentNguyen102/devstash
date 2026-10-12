@@ -1,33 +1,18 @@
-# Current Feature: Collection Create
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-In Progress
+Not Started
 
 ## Goals
 
 <!-- Goals & requirements -->
 
-- The top-bar "New Collection" button (currently a non-functional placeholder) opens a create modal.
-- Modal uses the shadcn `Dialog` (same as `ItemCreateDialog`) with a **Name** (required) and **Description** (optional) field; Create is disabled until the name is filled and the dialog locks while pending.
-- Add a `createCollection` server action (`src/actions/collections.ts`) following the items pattern: `auth()` session check, Zod validation, `{ success, data, error }` result.
-- Add a `createCollection(userId, data)` query function in `src/lib/db/collections.ts` that creates a `Collection` owned by the signed-in user and returns the new summary.
-- Make collections **user-scoped**: `src/lib/db/collections.ts` queries by the signed-in user's id instead of the hardcoded demo user; server components (dashboard layout, `/collections`, dashboard) pass `session.user.id`.
-- Data fetching follows the project split: server components fetch via `lib/db` functions; **API routes** handle any client-side calls (e.g. a user-scoped `GET /api/collections`).
-- Toast on success ("Collection created") and on failure; on success reset + close the modal and call `router.refresh()` so the sidebar, `/collections` grid and dashboard collection counts/grid all update.
-- Add the Zod schema in `src/lib/validations/collection.ts` plus Vitest unit tests for the schema and the action.
-
 ## Notes
 
 <!-- Any extra notes -->
-
-- Mirror the existing item flow: `src/components/dashboard/item-create-dialog.tsx` + `src/actions/items.ts` + `createItem` in `src/lib/db/items.ts`.
-- New component suggestion: `src/components/dashboard/collection-create-dialog.tsx` with an optional `trigger` prop (save a slot for a future type-specific/collection-page trigger).
-- Creating collections is a server action (not an API route) per `context/coding-standards.md`; API routes are only for client-side fetches.
-- User-scoping implication to confirm: reads switching from the demo user to `session.user.id` means a non-demo account won't see the seeded demo collections. Sign in as `demo@devstash.io` to exercise the seeded data.
-- No Prisma migration expected — the `Collection` model already exists (name, description, isFavorite, userId).
 
 ## History
 
@@ -66,3 +51,4 @@ In Progress
 - Image Gallery View completed — the `/items/image` list now renders a 3-column gallery (`grid-cols-2 md:grid-cols-3`) of new `ImageThumbnailCard`s instead of the regular `ItemCard`, while every other item type keeps the existing card grid; the card shows the stored image through the existing proxy (`GET /api/items/[id]/file`) in an `aspect-video` (16:9) frame with `object-cover`, a subtle `group-hover:scale-105`/`duration-300` zoom, pinned/favorite badges overlaid on the thumbnail, and the usual title/description/tags/date below; images with no stored object fall back to `ItemCard` so no broken thumbnail is shown, and clicking the card still opens the item drawer; exposed `fileName` on `ItemSummary` in `src/lib/db/items.ts` (added to the `findItemSummaries` select) so the gallery can detect upload-backed images; presentational-only change (no server actions/utilities), so no new unit tests; verified in the browser via Playwright using an existing image item (3 columns ~314px each, computed `aspect-ratio: 16/9`, `object-cover`, hover scale 1 → 1.05 over 0.3s, card click opens the drawer with the image Preview) plus `npm run test` (98 passing) + `npm run lint` + `npm run build`; the spec is `context/features/image-display-spec.md`
 - File List View completed — `/items/file` now renders a single-column row list (`flex flex-col gap-2`) instead of grid cards: the new `FileListItem` (`src/components/dashboard/file-list-item.tsx`) shows an extension-based icon, the file name, size, upload date and a Download link (`GET /api/items/[id]/file?download=1`); the main area is a button that opens the item drawer while the download link sits outside it (so it downloads without opening the drawer), rows highlight on hover, and on mobile the name/meta stack and the Download label collapses to an icon; added `getFileVisual` (`src/lib/file-type-meta.ts`, + tests) mapping file extensions to a lucide icon and colours (PDF/TXT/MD → `FileText`, JSON → `FileJson`, YAML/YML/XML/TOML/INI → `FileCode`, CSV → `FileSpreadsheet`, fallback `File`) and exposed `fileSize` on `ItemSummary` in `src/lib/db/items.ts`; refactored layout selection into a registry — new `ItemCollection` (`src/components/dashboard/item-collection.tsx`) maps item type → layout (`FileListView`, `ImageGalleryView`, default `ItemGridView`) so `/items/[type]` just renders `<ItemCollection typeId={type} items={items} />` instead of nested layout ternaries; verified in the browser via Playwright (PDF icon, size/date, hover highlight, row click opens the drawer, download returns the correct filename without opening the drawer, mobile stacking) plus `npm run test` (103 passing) + `npm run lint` + `npm run build`; the spec is `context/features/file-display-spec.md`
 - Quick Copy on Item Cards completed — the item grid cards (`ItemCard`) and image gallery cards (`ImageThumbnailCard`) now show a small ghost copy icon that copies the item's content (snippet/prompt/command/note), the URL for link items, or an absolute link to the proxied file for image items, without opening the drawer; added `src/lib/item-copy.ts` (`getItemCopyText`, returns null when nothing is copyable and prefixes `origin` for file links) with 6 unit tests and a shared `src/components/dashboard/item-copy-button.tsx` (reuses `copyToClipboard`, shows a green `Check` for 1.5s plus a sonner toast, `stopPropagation` on click/keydown, aria-label derived from the copy source); exposed `content`/`url` on `ItemSummary` in `src/lib/db/items.ts`; scope is grid + image cards only (file rows and collection cards untouched) per the agreed requirements; verified in the browser via Playwright (clipboard matched the Dockerfile content, a link card copied `https://lucide.dev/`, an image card copied the absolute `/api/items/{id}/file` link, no drawer opened, toast + check shown, no console errors) plus `npm run test` (109 passing) + `npm run lint` + `npm run build`
+- Collection Create completed — the top-bar "New Collection" button (previously a non-functional placeholder) now opens a shadcn `Dialog` (`src/components/dashboard/collection-create-dialog.tsx`, wired into `top-bar.tsx`) with a required **Name** and optional **Description**; Create is disabled until the name is filled and the dialog locks while pending; added a `createCollection` server action (`src/actions/collections.ts`: `auth()` session check, Zod validation, `{ success, data, error }`) backed by `createCollection(userId, data)` in `src/lib/db/collections.ts`, which creates the collection owned by the signed-in user and returns its summary; collections are now fully **user-scoped** — `getCollections`/`getRecentCollections`/`getCollectionStats` take a `userId` (replacing the hardcoded `DEMO_USER_EMAIL`) and the `(dashboard)` layout, `/collections` and dashboard server components resolve `session.user.id` via `auth()`; added a user-scoped `GET /api/collections` route for client-side callers (mirroring the items API) and `src/lib/validations/collection.ts`; on success it toasts "Collection created", resets and closes the modal and calls `router.refresh()` so the sidebar, `/collections` listing and dashboard counts/grid all update; added unit tests for the schema and action (18 new, 127 passing) and verified in the browser via the browser MCP with the demo account (field sets, disabled Create on empty name, success toast, sidebar Recent + `/collections` card + dashboard Collections stat 5→6, and `GET /api/collections` returning the user-scoped JSON) plus `npm run test` + `npm run lint` + `npm run build`; the temporary browser test collection was removed with a user-guarded Prisma delete on the development branch only
