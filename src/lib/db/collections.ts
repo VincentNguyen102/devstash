@@ -1,10 +1,7 @@
 import { connection } from "next/server";
 
 import { prisma } from "@/lib/prisma";
-
-// Auth is not wired up yet, so dashboard data is scoped to the seeded demo
-// user. Replace this with the signed-in user once NextAuth is in place.
-const DEMO_USER_EMAIL = "demo@devstash.io";
+import type { CreateCollectionData } from "@/lib/validations/collection";
 
 export interface CollectionSummary {
   id: string;
@@ -24,16 +21,19 @@ export interface CollectionStats {
 }
 
 /**
- * Query the demo user's collections, most recently updated first, including the
- * item type breakdown used to render the type icons and border colours.
+ * Query `userId`'s collections, most recently updated first, including the item
+ * type breakdown used to render the type icons and border colours.
  */
-async function findCollections(limit?: number): Promise<CollectionSummary[]> {
+async function findCollections(
+  userId: string,
+  limit?: number,
+): Promise<CollectionSummary[]> {
   // Prisma queries are not tied to a request-time API, so opt into dynamic
   // rendering explicitly instead of baking the result into a static shell.
   await connection();
 
   const collections = await prisma.collection.findMany({
-    where: { user: { email: DEMO_USER_EMAIL } },
+    where: { userId },
     orderBy: { updatedAt: "desc" },
     take: limit,
     select: {
@@ -68,28 +68,66 @@ async function findCollections(limit?: number): Promise<CollectionSummary[]> {
   });
 }
 
-/** Most recent collections for the dashboard grid. */
+/** `userId`'s most recent collections for the dashboard grid. */
 export async function getRecentCollections(
+  userId: string,
   limit = 6,
 ): Promise<CollectionSummary[]> {
-  return findCollections(limit);
+  return findCollections(userId, limit);
 }
 
-/** All of the demo user's collections, for the sidebar. */
-export async function getCollections(): Promise<CollectionSummary[]> {
-  return findCollections();
+/** All of `userId`'s collections, for the sidebar and listing page. */
+export async function getCollections(
+  userId: string,
+): Promise<CollectionSummary[]> {
+  return findCollections(userId);
 }
 
 /** Aggregate collection counts for the dashboard stat cards. */
-export async function getCollectionStats(): Promise<CollectionStats> {
+export async function getCollectionStats(
+  userId: string,
+): Promise<CollectionStats> {
   await connection();
 
   const [total, favorites] = await Promise.all([
-    prisma.collection.count({ where: { user: { email: DEMO_USER_EMAIL } } }),
-    prisma.collection.count({
-      where: { user: { email: DEMO_USER_EMAIL }, isFavorite: true },
-    }),
+    prisma.collection.count({ where: { userId } }),
+    prisma.collection.count({ where: { userId, isFavorite: true } }),
   ]);
 
   return { total, favorites };
+}
+
+/**
+ * Creates a collection owned by `userId`. A new collection has no items yet, so
+ * its summary is returned with zero counts and no type breakdown.
+ */
+export async function createCollection(
+  userId: string,
+  data: CreateCollectionData,
+): Promise<CollectionSummary> {
+  await connection();
+
+  const collection = await prisma.collection.create({
+    data: {
+      name: data.name,
+      description: data.description,
+      userId,
+    },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      isFavorite: true,
+    },
+  });
+
+  return {
+    id: collection.id,
+    name: collection.name,
+    description: collection.description ?? "",
+    isFavorite: collection.isFavorite,
+    itemCount: 0,
+    typeIds: [],
+    dominantTypeId: null,
+  };
 }

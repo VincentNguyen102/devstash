@@ -1,18 +1,33 @@
-# Current Feature
+# Current Feature: Collection Create
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- The top-bar "New Collection" button (currently a non-functional placeholder) opens a create modal.
+- Modal uses the shadcn `Dialog` (same as `ItemCreateDialog`) with a **Name** (required) and **Description** (optional) field; Create is disabled until the name is filled and the dialog locks while pending.
+- Add a `createCollection` server action (`src/actions/collections.ts`) following the items pattern: `auth()` session check, Zod validation, `{ success, data, error }` result.
+- Add a `createCollection(userId, data)` query function in `src/lib/db/collections.ts` that creates a `Collection` owned by the signed-in user and returns the new summary.
+- Make collections **user-scoped**: `src/lib/db/collections.ts` queries by the signed-in user's id instead of the hardcoded demo user; server components (dashboard layout, `/collections`, dashboard) pass `session.user.id`.
+- Data fetching follows the project split: server components fetch via `lib/db` functions; **API routes** handle any client-side calls (e.g. a user-scoped `GET /api/collections`).
+- Toast on success ("Collection created") and on failure; on success reset + close the modal and call `router.refresh()` so the sidebar, `/collections` grid and dashboard collection counts/grid all update.
+- Add the Zod schema in `src/lib/validations/collection.ts` plus Vitest unit tests for the schema and the action.
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- Mirror the existing item flow: `src/components/dashboard/item-create-dialog.tsx` + `src/actions/items.ts` + `createItem` in `src/lib/db/items.ts`.
+- New component suggestion: `src/components/dashboard/collection-create-dialog.tsx` with an optional `trigger` prop (save a slot for a future type-specific/collection-page trigger).
+- Creating collections is a server action (not an API route) per `context/coding-standards.md`; API routes are only for client-side fetches.
+- User-scoping implication to confirm: reads switching from the demo user to `session.user.id` means a non-demo account won't see the seeded demo collections. Sign in as `demo@devstash.io` to exercise the seeded data.
+- No Prisma migration expected — the `Collection` model already exists (name, description, isFavorite, userId).
 
 ## History
 
