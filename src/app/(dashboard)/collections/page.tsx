@@ -1,9 +1,18 @@
+import { redirect } from "next/navigation";
+
+import { auth } from "@/auth";
 import { CollectionCard } from "@/components/dashboard/collection-card";
 import { SectionHeading } from "@/components/dashboard/section-heading";
 import { getCollections } from "@/lib/db/collections";
 
 export default async function CollectionsPage() {
-  const collections = await getCollections();
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    redirect("/sign-in");
+  }
+
+  const collections = await getCollections(session.user.id);
 
   return (
     <div className="space-y-6">

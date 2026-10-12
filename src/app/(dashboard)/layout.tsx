@@ -15,7 +15,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   const [types, collections] = await Promise.all([
     getItemTypes(),
-    getCollections(),
+    getCollections(session.user.id),
   ]);
 
   return (

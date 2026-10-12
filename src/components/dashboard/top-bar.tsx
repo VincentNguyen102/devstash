@@ -1,5 +1,6 @@
 import { FolderPlus, PanelLeft, Search } from "lucide-react";
 
+import { CollectionCreateDialog } from "@/components/dashboard/collection-create-dialog";
 import { ItemCreateDialog } from "@/components/dashboard/item-create-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,10 +34,14 @@ export function TopBar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        <Button variant="outline" size="lg" className="hidden sm:inline-flex">
-          <FolderPlus aria-hidden />
-          New Collection
-        </Button>
+        <CollectionCreateDialog
+          trigger={
+            <Button variant="outline" size="lg" className="hidden sm:inline-flex">
+              <FolderPlus aria-hidden />
+              New Collection
+            </Button>
+          }
+        />
         <ItemCreateDialog />
       </div>
     </header>
