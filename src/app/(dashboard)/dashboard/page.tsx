@@ -12,8 +12,6 @@ import {
 } from "@/lib/db/collections";
 import { getItemStats, getPinnedItems, getRecentItems } from "@/lib/db/items";
 
-const RECENT_ITEM_LIMIT = 10;
-
 export default async function DashboardPage() {
   const session = await auth();
 
@@ -32,7 +30,7 @@ export default async function DashboardPage() {
     getCollectionStats(session.user.id),
     getItemStats(),
     getPinnedItems(),
-    getRecentItems(RECENT_ITEM_LIMIT),
+    getRecentItems(),
   ]);
 
   return (

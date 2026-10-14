@@ -1,18 +1,33 @@
-# Current Feature
+# Current Feature: Pagination
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Add pagination to the `/items/[type]` listing page
+- Add pagination to the `/collections/[id]` page
+- Render pagination controls at the bottom of the listing, with numbered page links plus prev/next links
+- Disable (grey out) prev/next when there is no previous/next page
+- Page size is driven by shared constants: `ITEMS_PER_PAGE = 21`, `COLLECTIONS_PER_PAGE = 21`
+- Dashboard query limits use shared constants: `DASHBOARD_COLLECTIONS_LIMIT = 6`, `DASHBOARD_RECENT_ITEMS_LIMIT = 10`
+- Do not fetch all resources at once — each page must only fetch the rows it needs (DB-level `skip`/`take` + a count for the page count)
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- Spec: `@context/features/pagination-spec.md`
+- Overview: add pagination to items and collections listings with numbered page links.
+- Constants live in `src/lib/constants.ts`: `ITEMS_PER_PAGE = 21`, `COLLECTIONS_PER_PAGE = 21`, `DASHBOARD_COLLECTIONS_LIMIT = 6`, `DASHBOARD_RECENT_ITEMS_LIMIT = 10`. The dashboard DB helpers use the two dashboard limits as their defaults.
+- Listing helpers now paginate at the DB level (`src/lib/db/items.ts`): a `count` drives the page links and only the current page's rows are fetched with `skip`/`take` (new `findItemPage` + shared `ITEM_SUMMARY_SELECT`/`toItemSummary`). An out-of-range `?page=` is clamped to the last page.
+- Shared pure helpers in `src/lib/pagination.ts` (`parsePage`, `getPageCount`, `clampPage`, `getPageSkip`, `getVisiblePages`, `Paginated<T>`) with unit tests; UI in `src/components/dashboard/pagination.tsx` (numbered links + prev/next, disabled at the ends, `?page=N` search param, page 1 stays clean).
+- Interpretation: requirement 1 names `/items/[type]` and `/collections/[id]`, so `/items/[type]` uses `ITEMS_PER_PAGE` and `/collections/[id]` uses `COLLECTIONS_PER_PAGE` (both 21). The `/collections` listing and the sidebar still load all collections (navigation needs the full list) and were left unchanged.
 
 ## History
 

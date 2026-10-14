@@ -1,7 +1,17 @@
 import { connection } from "next/server";
 
 import { Prisma } from "@/generated/prisma/client";
+import {
+  DASHBOARD_RECENT_ITEMS_LIMIT,
+  ITEMS_PER_PAGE,
+} from "@/lib/constants";
 import { systemTypeOrder } from "@/lib/item-type-meta";
+import {
+  clampPage,
+  getPageCount,
+  getPageSkip,
+  type Paginated,
+} from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
 import { buildItemPreview, type SearchItem } from "@/lib/search";
 import {
@@ -67,32 +77,29 @@ export interface ItemDetail {
   updatedAt: Date;
 }
 
-/** Query items matching `where`, newest first, mapped to the row shape. */
-async function findItemSummaries(
-  where: Prisma.ItemWhereInput,
-  limit?: number,
-): Promise<ItemSummary[]> {
-  const items = await prisma.item.findMany({
-    where,
-    orderBy: { updatedAt: "desc" },
-    take: limit,
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      typeId: true,
-      isFavorite: true,
-      isPinned: true,
-      content: true,
-      url: true,
-      fileName: true,
-      fileSize: true,
-      updatedAt: true,
-      tags: { select: { tag: { select: { name: true } } } },
-    },
-  });
+/** Columns selected for a row in an item listing. */
+const ITEM_SUMMARY_SELECT = {
+  id: true,
+  title: true,
+  description: true,
+  typeId: true,
+  isFavorite: true,
+  isPinned: true,
+  content: true,
+  url: true,
+  fileName: true,
+  fileSize: true,
+  updatedAt: true,
+  tags: { select: { tag: { select: { name: true } } } },
+} satisfies Prisma.ItemSelect;
 
-  return items.map((item) => ({
+type ItemSummaryRow = Prisma.ItemGetPayload<{
+  select: typeof ITEM_SUMMARY_SELECT;
+}>;
+
+/** Map a selected item row to the shared summary shape. */
+function toItemSummary(item: ItemSummaryRow): ItemSummary {
+  return {
     id: item.id,
     title: item.title,
     description: item.description ?? "",
@@ -105,7 +112,53 @@ async function findItemSummaries(
     fileName: item.fileName,
     fileSize: item.fileSize,
     updatedAt: item.updatedAt,
-  }));
+  };
+}
+
+/** Query items matching `where`, newest first, mapped to the row shape. */
+async function findItemSummaries(
+  where: Prisma.ItemWhereInput,
+  limit?: number,
+): Promise<ItemSummary[]> {
+  const items = await prisma.item.findMany({
+    where,
+    orderBy: { updatedAt: "desc" },
+    take: limit,
+    select: ITEM_SUMMARY_SELECT,
+  });
+
+  return items.map(toItemSummary);
+}
+
+/**
+ * A single page of `where`-matching items, newest first, plus the totals the
+ * pagination control needs. Only the current page's rows are fetched — the
+ * count query drives the page links. An out-of-range page is clamped so a
+ * hand-typed `?page=` still returns the last page instead of an empty list.
+ */
+async function findItemPage(
+  where: Prisma.ItemWhereInput,
+  page: number,
+  perPage: number,
+): Promise<Paginated<ItemSummary>> {
+  const total = await prisma.item.count({ where });
+  const pageCount = getPageCount(total, perPage);
+  const currentPage = clampPage(page, pageCount);
+
+  const items = await prisma.item.findMany({
+    where,
+    orderBy: { updatedAt: "desc" },
+    skip: getPageSkip(currentPage, perPage),
+    take: perPage,
+    select: ITEM_SUMMARY_SELECT,
+  });
+
+  return {
+    items: items.map(toItemSummary),
+    total,
+    page: currentPage,
+    pageCount,
+  };
 }
 
 /** The demo user's pinned items, most recently updated first. */
@@ -121,17 +174,27 @@ export async function getPinnedItems(): Promise<ItemSummary[]> {
 }
 
 /** The demo user's most recently updated items. */
-export async function getRecentItems(limit = 10): Promise<ItemSummary[]> {
+export async function getRecentItems(
+  limit = DASHBOARD_RECENT_ITEMS_LIMIT,
+): Promise<ItemSummary[]> {
   await connection();
 
   return findItemSummaries({ user: { email: DEMO_USER_EMAIL } }, limit);
 }
 
-/** The demo user's items of a single item type, most recently updated first. */
-export async function getItemsByType(typeId: string): Promise<ItemSummary[]> {
+/**
+ * The demo user's items of a single item type, newest first, as one page.
+ * `total` is the full count for the type so the header and page links stay
+ * correct while only `perPage` rows are fetched.
+ */
+export async function getItemsByType(
+  typeId: string,
+  page = 1,
+  perPage = ITEMS_PER_PAGE,
+): Promise<Paginated<ItemSummary>> {
   await connection();
 
-  return findItemSummaries({ user: { email: DEMO_USER_EMAIL }, typeId });
+  return findItemPage({ user: { email: DEMO_USER_EMAIL }, typeId }, page, perPage);
 }
 
 /**
@@ -170,20 +233,23 @@ export async function getSearchItems(userId: string): Promise<SearchItem[]> {
 }
 
 /**
- * The items `userId` has placed in `collectionId`, most recently updated first.
- * Scoped to the signed-in user so a collection page can never list items from
- * someone else's account.
+ * A single page of the items `userId` has placed in `collectionId`, newest
+ * first. Scoped to the signed-in user so a collection page can never list items
+ * from someone else's account. Only the current page's rows are fetched.
  */
 export async function getItemsByCollection(
   userId: string,
   collectionId: string,
-): Promise<ItemSummary[]> {
+  page = 1,
+  perPage = ITEMS_PER_PAGE,
+): Promise<Paginated<ItemSummary>> {
   await connection();
 
-  return findItemSummaries({
-    userId,
-    collections: { some: { collectionId } },
-  });
+  return findItemPage(
+    { userId, collections: { some: { collectionId } } },
+    page,
+    perPage,
+  );
 }
 
 /** Aggregate item counts for the dashboard stat cards. */
