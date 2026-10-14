@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { AccountActions } from "@/components/profile/account-actions";
+import { EditorPreferencesCard } from "@/components/settings/editor-preferences-card";
 import { getAccountSettings } from "@/lib/db/settings";
 
 export const metadata = {
@@ -26,8 +27,12 @@ export default async function SettingsPage() {
     <div className="space-y-6">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold">Settings</h1>
-        <p className="text-muted-foreground">Manage your account</p>
+        <p className="text-muted-foreground">
+          Manage your account and editor preferences
+        </p>
       </header>
+
+      <EditorPreferencesCard />
 
       <AccountActions hasPassword={settings.hasPassword} />
     </div>
