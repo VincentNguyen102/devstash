@@ -6,7 +6,8 @@ import { ItemCard } from "@/components/dashboard/item-card";
 import type { ItemSummary } from "@/lib/db/items";
 
 interface ItemCollectionProps {
-  typeId: string;
+  /** Item type whose layout to use. Omit for mixed-type lists (e.g. a collection). */
+  typeId?: string;
   items: ItemSummary[];
 }
 
@@ -58,10 +59,11 @@ const LAYOUTS: Record<string, ItemLayout> = {
 /**
  * Renders the items using the layout registered for their type (file list,
  * image gallery, or the default card grid). Keeping the dispatch here means
- * pages only render `<ItemCollection typeId={type} items={items} />`.
+ * pages only render `<ItemCollection typeId={type} items={items} />`. When the
+ * list mixes types (a collection), pass no `typeId` to use the card grid.
  */
 export function ItemCollection({ typeId, items }: ItemCollectionProps) {
-  const Layout = LAYOUTS[typeId] ?? ItemGridView;
+  const Layout = (typeId ? LAYOUTS[typeId] : undefined) ?? ItemGridView;
 
   return <Layout items={items} />;
 }

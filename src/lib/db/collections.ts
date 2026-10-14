@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { CreateCollectionData } from "@/lib/validations/collection";
 
@@ -20,6 +21,43 @@ export interface CollectionStats {
   favorites: number;
 }
 
+const COLLECTION_SUMMARY_SELECT = {
+  id: true,
+  name: true,
+  description: true,
+  isFavorite: true,
+  items: { select: { item: { select: { typeId: true } } } },
+} satisfies Prisma.CollectionSelect;
+
+type CollectionSummaryRow = Prisma.CollectionGetPayload<{
+  select: typeof COLLECTION_SUMMARY_SELECT;
+}>;
+
+/** Map a collection row (with its item types) to the shared summary shape. */
+function toCollectionSummary(
+  collection: CollectionSummaryRow,
+): CollectionSummary {
+  const counts = new Map<string, number>();
+
+  for (const { item } of collection.items) {
+    counts.set(item.typeId, (counts.get(item.typeId) ?? 0) + 1);
+  }
+
+  const typeIds = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([typeId]) => typeId);
+
+  return {
+    id: collection.id,
+    name: collection.name,
+    description: collection.description ?? "",
+    isFavorite: collection.isFavorite,
+    itemCount: collection.items.length,
+    typeIds,
+    dominantTypeId: typeIds[0] ?? null,
+  };
+}
+
 /**
  * Query `userId`'s collections, most recently updated first, including the item
  * type breakdown used to render the type icons and border colours.
@@ -36,36 +74,10 @@ async function findCollections(
     where: { userId },
     orderBy: { updatedAt: "desc" },
     take: limit,
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      isFavorite: true,
-      items: { select: { item: { select: { typeId: true } } } },
-    },
+    select: COLLECTION_SUMMARY_SELECT,
   });
 
-  return collections.map((collection) => {
-    const counts = new Map<string, number>();
-
-    for (const { item } of collection.items) {
-      counts.set(item.typeId, (counts.get(item.typeId) ?? 0) + 1);
-    }
-
-    const typeIds = [...counts.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .map(([typeId]) => typeId);
-
-    return {
-      id: collection.id,
-      name: collection.name,
-      description: collection.description ?? "",
-      isFavorite: collection.isFavorite,
-      itemCount: collection.items.length,
-      typeIds,
-      dominantTypeId: typeIds[0] ?? null,
-    };
-  });
+  return collections.map(toCollectionSummary);
 }
 
 /** `userId`'s most recent collections for the dashboard grid. */
@@ -81,6 +93,24 @@ export async function getCollections(
   userId: string,
 ): Promise<CollectionSummary[]> {
   return findCollections(userId);
+}
+
+/**
+ * A single collection owned by `userId`, or null when it does not exist or
+ * belongs to someone else. Used by the `/collections/[id]` page.
+ */
+export async function getCollectionById(
+  userId: string,
+  id: string,
+): Promise<CollectionSummary | null> {
+  await connection();
+
+  const collection = await prisma.collection.findFirst({
+    where: { id, userId },
+    select: COLLECTION_SUMMARY_SELECT,
+  });
+
+  return collection ? toCollectionSummary(collection) : null;
 }
 
 /** Aggregate collection counts for the dashboard stat cards. */

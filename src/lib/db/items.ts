@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 
+import { Prisma } from "@/generated/prisma/client";
 import { systemTypeOrder } from "@/lib/item-type-meta";
 import { prisma } from "@/lib/prisma";
 import {
@@ -65,13 +66,13 @@ export interface ItemDetail {
   updatedAt: Date;
 }
 
-/** Query the demo user's items, newest first, mapped to the row shape. */
+/** Query items matching `where`, newest first, mapped to the row shape. */
 async function findItemSummaries(
-  filter: { isPinned?: boolean; typeId?: string },
+  where: Prisma.ItemWhereInput,
   limit?: number,
 ): Promise<ItemSummary[]> {
   const items = await prisma.item.findMany({
-    where: { user: { email: DEMO_USER_EMAIL }, ...filter },
+    where,
     orderBy: { updatedAt: "desc" },
     take: limit,
     select: {
@@ -112,21 +113,41 @@ export async function getPinnedItems(): Promise<ItemSummary[]> {
   // rendering explicitly instead of baking the result into a static shell.
   await connection();
 
-  return findItemSummaries({ isPinned: true });
+  return findItemSummaries({
+    user: { email: DEMO_USER_EMAIL },
+    isPinned: true,
+  });
 }
 
 /** The demo user's most recently updated items. */
 export async function getRecentItems(limit = 10): Promise<ItemSummary[]> {
   await connection();
 
-  return findItemSummaries({}, limit);
+  return findItemSummaries({ user: { email: DEMO_USER_EMAIL } }, limit);
 }
 
 /** The demo user's items of a single item type, most recently updated first. */
 export async function getItemsByType(typeId: string): Promise<ItemSummary[]> {
   await connection();
 
-  return findItemSummaries({ typeId });
+  return findItemSummaries({ user: { email: DEMO_USER_EMAIL }, typeId });
+}
+
+/**
+ * The items `userId` has placed in `collectionId`, most recently updated first.
+ * Scoped to the signed-in user so a collection page can never list items from
+ * someone else's account.
+ */
+export async function getItemsByCollection(
+  userId: string,
+  collectionId: string,
+): Promise<ItemSummary[]> {
+  await connection();
+
+  return findItemSummaries({
+    userId,
+    collections: { some: { collectionId } },
+  });
 }
 
 /** Aggregate item counts for the dashboard stat cards. */
