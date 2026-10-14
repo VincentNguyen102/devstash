@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { signOut } from "next-auth/react";
-import { ChevronsUpDown, LogOut, User } from "lucide-react";
+import { ChevronsUpDown, LogOut, Settings, User } from "lucide-react";
 import { DropdownMenu } from "radix-ui";
 
 import { UserAvatar } from "@/components/auth/user-avatar";
@@ -46,6 +46,13 @@ export function UserMenu({ user }: { user: AuthUser | null }) {
             <Link href="/profile" className={itemClass}>
               <User aria-hidden className="size-4" />
               Profile
+            </Link>
+          </DropdownMenu.Item>
+
+          <DropdownMenu.Item asChild>
+            <Link href="/settings" className={itemClass}>
+              <Settings aria-hidden className="size-4" />
+              Settings
             </Link>
           </DropdownMenu.Item>
 
