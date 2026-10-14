@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
-import { AccountActions } from "@/components/profile/account-actions";
 import { ProfileCard } from "@/components/profile/profile-card";
 import { UsageStats } from "@/components/profile/usage-stats";
 import { getProfile } from "@/lib/db/profile";
@@ -48,8 +47,6 @@ export default async function ProfilePage() {
           />
         </div>
       </div>
-
-      <AccountActions hasPassword={profile.hasPassword} />
     </div>
   );
 }

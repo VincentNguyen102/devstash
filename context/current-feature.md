@@ -1,18 +1,34 @@
-# Current Feature
+# Current Feature: Settings Page
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Add a new protected `/settings` page (URL exactly `/settings`)
+- Add a "Settings" link to the user menu dropdown at the bottom of the sidebar
+- Move the "Account actions" section (change password + delete account) from `/profile` to `/settings`
+- Remove the Account actions section from the profile page, leaving the profile card and usage stats in place
+- Keep the change-password and delete-account dialogs/actions working after the move (delete account still cascades and signs the user out)
+- Run `npm run test`, `npm run lint` and `npm run build`, and verify the flow in the browser
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- Follow the existing `(dashboard)` route group pattern so `/settings` reuses the dashboard shell (sidebar/top bar): `src/app/(dashboard)/settings/page.tsx` with an `auth()` check and `redirect("/sign-in")` like `profile/page.tsx`.
+- Protection: add `/settings` to the `config.matcher` in `src/proxy.ts` (currently `/dashboard/:path*`, `/collections/:path*`, `/items/:path*`, `/profile`) so unauthenticated users are redirected to `/sign-in` with a `callbackUrl`.
+- Reuse the existing `AccountActions` component (`src/components/profile/account-actions.tsx`) and its `ChangePasswordDialog`/`DeleteAccountDialog`; the profile page reads `hasPassword` from `getProfile(userId)`, so the settings page needs the same profile lookup (or a lighter equivalent) to decide whether to show the password action.
+- Confirmed profile's "Account actions" card contains **Change password** and **Delete account** (there is no "forgot password" action on the profile — password *reset* lives at `/forgot-password`). The request's "forgot password" is treated as the change-password action; flag if a link to the forgot-password flow is actually wanted in settings.
+- Decision: `AccountActions` and its dialogs were left in `src/components/profile/` (reused as-is from the settings page) to keep the change minimal — no component moves/refactors.
+- Implementation: added `src/lib/db/settings.ts` (`getAccountSettings(userId)` → `{ hasPassword } | null`, a focused lookup so the settings page does not load the profile's usage stats) and `src/app/(dashboard)/settings/page.tsx` (auth + `redirect("/sign-in")`, `metadata.title = "Settings · DevStash"`, header + `<AccountActions>`). Removed `<AccountActions>` from the profile page and dropped the now-unused `hasPassword` from `getProfile`/`ProfileData` (and its `password` select). Added a "Settings" item to `user-menu.tsx` between Profile and the separator, and added `/settings` to the proxy matcher.
+- No new server actions or utilities are expected, so unit tests may not change — verified the dialogs, the protected redirect and both pages in the browser.
+- Verified: unauthenticated `GET /settings` → 307 to `/sign-in?callbackUrl=...`; user menu shows Profile / Settings / Sign out; `/settings` renders the Account actions card with working Change-password and Delete-account dialogs; `/profile` still renders the account card + usage stats with no Account actions; no console errors; `npm run test` (184 passing) + `npm run lint` + `npm run build` pass.
 
 
 ## History

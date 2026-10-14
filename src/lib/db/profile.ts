@@ -17,8 +17,6 @@ export interface ProfileData {
   email: string;
   image: string | null;
   createdAt: Date;
-  /** Whether the account can sign in with a password (credential account). */
-  hasPassword: boolean;
   itemCount: number;
   collectionCount: number;
   /** System item types in canonical order, including types with no items. */
@@ -45,7 +43,6 @@ export async function getProfile(userId: string): Promise<ProfileData | null> {
       email: true,
       image: true,
       createdAt: true,
-      password: true,
     },
   });
 
@@ -83,7 +80,6 @@ export async function getProfile(userId: string): Promise<ProfileData | null> {
     email: user.email,
     image: user.image,
     createdAt: user.createdAt,
-    hasPassword: Boolean(user.password),
     itemCount,
     collectionCount,
     typeCounts,
