@@ -1,18 +1,39 @@
-# Current Feature
+# Current Feature: Editor Preferences Settings
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Add an editor preferences section to the settings page
+- Font size dropdown
+- Tab size dropdown
+- Word wrap toggle (default: on)
+- Minimap toggle (default: off)
+- Theme dropdown: `vs-dark`, `monokai`, `github-dark` (default: `vs-dark`)
+- Store preferences in a JSON column `editorPreferences` on the `User` model
+- Create and run a migration for the database (never `db push`)
+- Create a server action to update preferences
+- Apply the settings to the Monaco editor component (`CodeEditor`)
+- Auto-save on change (no save button)
+- Show a success toast on save
+- Create an `EditorPreferencesContext` for client components
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- Spec: `context/features/editor-settings-spec.md`
+- The settings page already exists at `src/app/(dashboard)/settings/page.tsx` (built in the Settings Page feature) — extend it rather than creating a new route
+- The Monaco editor lives in `src/components/ui/code-editor.tsx` and is currently hardcoded to a custom `devstash-dark` theme
+- `prisma migrate dev` for the schema change (not `db push`); the migration must be run against the **development** branch only
+- Follow the `{ success, data, error }` server action pattern and validate input with Zod
+- Add/update Vitest unit tests for the new server action and any utilities touched
 
 
 
