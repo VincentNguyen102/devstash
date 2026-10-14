@@ -2,7 +2,10 @@ import { connection } from "next/server";
 
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import type { CreateCollectionData } from "@/lib/validations/collection";
+import type {
+  CreateCollectionData,
+  UpdateCollectionData,
+} from "@/lib/validations/collection";
 
 export interface CollectionSummary {
   id: string;
@@ -160,6 +163,46 @@ export async function createCollection(
     typeIds: [],
     dominantTypeId: null,
   };
+}
+
+/**
+ * Updates the name/description of a collection owned by `userId`. Returns the
+ * refreshed summary, or null when the collection does not exist or belongs to
+ * someone else.
+ */
+export async function updateCollection(
+  userId: string,
+  id: string,
+  data: UpdateCollectionData,
+): Promise<CollectionSummary | null> {
+  await connection();
+
+  const result = await prisma.collection.updateMany({
+    where: { id, userId },
+    data: { name: data.name, description: data.description },
+  });
+
+  if (result.count === 0) {
+    return null;
+  }
+
+  return getCollectionById(userId, id);
+}
+
+/**
+ * Deletes a collection owned by `userId`. Only the collection (and its
+ * `ItemCollection` links via cascade) is removed — the items themselves are
+ * left untouched. Returns false when nothing was deleted.
+ */
+export async function deleteCollection(
+  userId: string,
+  id: string,
+): Promise<boolean> {
+  await connection();
+
+  const result = await prisma.collection.deleteMany({ where: { id, userId } });
+
+  return result.count > 0;
 }
 
 /**

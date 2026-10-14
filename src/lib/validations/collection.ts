@@ -20,3 +20,15 @@ export type CreateCollectionInput = z.input<typeof createCollectionSchema>;
 
 /** Shape passed to the data layer after parsing. */
 export type CreateCollectionData = z.output<typeof createCollectionSchema>;
+
+/**
+ * Editing a collection has the same name/description requirements as creating
+ * one, so it reuses the create schema.
+ */
+export const updateCollectionSchema = createCollectionSchema;
+
+/** Shape accepted by the update action (before defaults/transforms). */
+export type UpdateCollectionInput = z.input<typeof updateCollectionSchema>;
+
+/** Shape passed to the data layer after parsing. */
+export type UpdateCollectionData = z.output<typeof updateCollectionSchema>;

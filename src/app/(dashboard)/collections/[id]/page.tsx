@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 
 import { auth } from "@/auth";
+import { CollectionActions } from "@/components/dashboard/collection-actions";
 import { ItemCollection } from "@/components/dashboard/item-collection";
 import { SectionHeading } from "@/components/dashboard/section-heading";
 import { getCollectionById } from "@/lib/db/collections";
@@ -24,14 +25,18 @@ export default async function CollectionPage(
 
   return (
     <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold">{collection.name}</h1>
-        {collection.description ? (
-          <p className="text-muted-foreground">{collection.description}</p>
-        ) : null}
-        <p className="text-sm text-muted-foreground">
-          {items.length} {items.length === 1 ? "item" : "items"}
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold">{collection.name}</h1>
+          {collection.description ? (
+            <p className="text-muted-foreground">{collection.description}</p>
+          ) : null}
+          <p className="text-sm text-muted-foreground">
+            {items.length} {items.length === 1 ? "item" : "items"}
+          </p>
+        </div>
+
+        <CollectionActions collection={collection} />
       </header>
 
       <section className="space-y-4">

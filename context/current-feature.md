@@ -1,18 +1,40 @@
-# Current Feature
+# Current Feature: Collection Actions
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- On `/collections/[id]`, add an action row in the header with **Edit**, **Delete** and **Favorite** buttons.
+  - **Edit** opens a modal to edit the collection's metadata (name + description).
+  - **Delete** opens a confirmation dialog; deleting removes **only the collection** — the items must **not** be deleted, they simply stop belonging to that collection.
+  - **Favorite** is the icon/button only for now — do **not** implement favoriting logic yet.
+- On the collection cards (both the `/collections` listing and the dashboard grid), add a **3-dots (⋮) menu** with Edit, Delete and Favorite.
+  - The menu items trigger the same edit modal, delete confirmation and favorite icon/button.
+  - Clicking anywhere else on the card still navigates to `/collections/[id]`; the menu must not trigger that navigation.
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- Requested as an inline description (no spec file).
+- Reuse existing patterns/components: `Dialog` (`src/components/ui/dialog.tsx`), the create-form markup in `collection-create-dialog.tsx` (`FormField` + `Input`/`Textarea`), the `DeleteItemDialog` confirmation pattern in `item-drawer/item-action-bar.tsx`, and `DropdownMenu` from `radix-ui` (already used inline in `user-menu.tsx`).
+- There is **no** `src/components/ui/dropdown-menu.tsx` primitive yet — either add a shared one or follow the inline `user-menu.tsx` style. A shared component is a bigger change; keep it minimal.
+- Data/actions to add:
+  - `src/lib/db/collections.ts`: `updateCollection(userId, id, data)` and `deleteCollection(userId, id)` — both ownership-scoped (`updateMany`/`deleteMany` with `{ id, userId }`), returning `false`/`null` when the collection is not owned.
+  - `src/actions/collections.ts`: `updateCollection` and `deleteCollection` server actions (auth check, Zod parse, `{ success, data?, error? }` result), mirroring `createCollection`.
+  - `src/lib/validations/collection.ts`: add an `updateCollectionSchema` (name required/trimmed, description normalised to `null`) — likely reuse the create schema.
+- Deleting the collection relies on the existing `ItemCollection` join cascade (`ItemCollection.collection` has `onDelete: Cascade`) — items themselves are untouched. Confirm no item rows are removed.
+- `isFavorite` already exists on the `Collection` model and `CollectionSummary`; `CollectionCard` currently renders a static star when `isFavorite`. Favorites stay UI-only (icon/button with no action call) per the request.
+- `CollectionCard` is currently a `Link` wrapping the whole `Card`, so the dropdown needs to sit outside the link/click area or stop propagation; the card body click must still navigate, and the menu must work on both the listing and dashboard.
+- After edit, `router.refresh()` so the card/grid and sidebar pick up the new name; after delete from the detail page, navigate back to `/collections`; from a card, refresh so it disappears. Handle the pending/disabled state while an action is in flight (no dismissing mid-flight, like the item delete dialog).
+- Collections are user-scoped (`getCollectionById`, `getCollections` take `userId`); both actions must enforce ownership and reject foreign ids.
+- Tests: unit-test the new schema + server actions (mirroring `src/actions/collections.test.ts`); the DB helpers stay browser-verified per convention. Verify in the browser at `/collections`, `/dashboard` and `/collections/[id]`, and delete any temporary test data afterwards on the development branch only.
 
 ## History
 

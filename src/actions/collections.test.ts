@@ -5,15 +5,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
   createCollectionRecord: vi.fn(),
+  updateCollectionRecord: vi.fn(),
+  deleteCollectionRecord: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
 
 vi.mock("@/lib/db/collections", () => ({
   createCollection: mocks.createCollectionRecord,
+  updateCollection: mocks.updateCollectionRecord,
+  deleteCollection: mocks.deleteCollectionRecord,
 }));
 
-import { createCollection } from "@/actions/collections";
+import {
+  createCollection,
+  deleteCollection,
+  updateCollection,
+} from "@/actions/collections";
 
 const validInput = {
   name: "  React Patterns  ",
@@ -77,6 +85,113 @@ describe("createCollection", () => {
     mocks.createCollectionRecord.mockRejectedValue(new Error("boom"));
 
     const result = await createCollection(validInput);
+
+    expect(result).toEqual({
+      success: false,
+      error: "Something went wrong. Please try again.",
+    });
+    consoleError.mockRestore();
+  });
+});
+
+describe("updateCollection", () => {
+  it("requires a signed-in user", async () => {
+    mocks.auth.mockResolvedValue(null);
+
+    const result = await updateCollection("collection-1", validInput);
+
+    expect(result).toEqual({
+      success: false,
+      error: "You must be signed in to do that.",
+    });
+    expect(mocks.updateCollectionRecord).not.toHaveBeenCalled();
+  });
+
+  it("validates the payload before hitting the database", async () => {
+    const result = await updateCollection("collection-1", { name: "   " });
+
+    expect(result).toEqual({ success: false, error: "Name is required" });
+    expect(mocks.updateCollectionRecord).not.toHaveBeenCalled();
+  });
+
+  it("passes parsed data to the query and returns the updated collection", async () => {
+    const collection = { id: "collection-1", name: "React Patterns" };
+    mocks.updateCollectionRecord.mockResolvedValue(collection);
+
+    const result = await updateCollection("collection-1", validInput);
+
+    expect(result).toEqual({ success: true, data: collection });
+    expect(mocks.updateCollectionRecord).toHaveBeenCalledWith(
+      "user-1",
+      "collection-1",
+      { name: "React Patterns", description: "Reusable patterns" },
+    );
+  });
+
+  it("returns not found when the collection is not the user's", async () => {
+    mocks.updateCollectionRecord.mockResolvedValue(null);
+
+    const result = await updateCollection("someone-elses", validInput);
+
+    expect(result).toEqual({ success: false, error: "Collection not found." });
+  });
+
+  it("returns a generic error when the query fails", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    mocks.updateCollectionRecord.mockRejectedValue(new Error("boom"));
+
+    const result = await updateCollection("collection-1", validInput);
+
+    expect(result).toEqual({
+      success: false,
+      error: "Something went wrong. Please try again.",
+    });
+    consoleError.mockRestore();
+  });
+});
+
+describe("deleteCollection", () => {
+  it("requires a signed-in user", async () => {
+    mocks.auth.mockResolvedValue(null);
+
+    const result = await deleteCollection("collection-1");
+
+    expect(result).toEqual({
+      success: false,
+      error: "You must be signed in to do that.",
+    });
+    expect(mocks.deleteCollectionRecord).not.toHaveBeenCalled();
+  });
+
+  it("deletes the user's collection", async () => {
+    mocks.deleteCollectionRecord.mockResolvedValue(true);
+
+    const result = await deleteCollection("collection-1");
+
+    expect(result).toEqual({ success: true });
+    expect(mocks.deleteCollectionRecord).toHaveBeenCalledWith(
+      "user-1",
+      "collection-1",
+    );
+  });
+
+  it("returns not found when the collection is not the user's", async () => {
+    mocks.deleteCollectionRecord.mockResolvedValue(false);
+
+    const result = await deleteCollection("someone-elses");
+
+    expect(result).toEqual({ success: false, error: "Collection not found." });
+  });
+
+  it("returns a generic error when the query fails", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    mocks.deleteCollectionRecord.mockRejectedValue(new Error("boom"));
+
+    const result = await deleteCollection("collection-1");
 
     expect(result).toEqual({
       success: false,
