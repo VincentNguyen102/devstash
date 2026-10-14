@@ -41,15 +41,15 @@ async function findCollections(
       name: true,
       description: true,
       isFavorite: true,
-      items: { select: { typeId: true } },
+      items: { select: { item: { select: { typeId: true } } } },
     },
   });
 
   return collections.map((collection) => {
     const counts = new Map<string, number>();
 
-    for (const { typeId } of collection.items) {
-      counts.set(typeId, (counts.get(typeId) ?? 0) + 1);
+    for (const { item } of collection.items) {
+      counts.set(item.typeId, (counts.get(item.typeId) ?? 0) + 1);
     }
 
     const typeIds = [...counts.entries()]
@@ -130,4 +130,24 @@ export async function createCollection(
     typeIds: [],
     dominantTypeId: null,
   };
+}
+
+/**
+ * The subset of `ids` that are collections owned by `userId`. Used to reject a
+ * crafted payload that tries to attach an item to someone else's collection.
+ */
+export async function getOwnedCollectionIds(
+  userId: string,
+  ids: string[],
+): Promise<string[]> {
+  if (ids.length === 0) {
+    return [];
+  }
+
+  const collections = await prisma.collection.findMany({
+    where: { id: { in: ids }, userId },
+    select: { id: true },
+  });
+
+  return collections.map((collection) => collection.id);
 }

@@ -57,8 +57,7 @@ model Item {
   typeId String
   type   ItemType @relation(fields: [typeId], references: [id], onDelete: Restrict)
 
-  collectionId String?
-  collection   Collection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+  collections ItemCollection[]
 
   tags ItemTag[]
 
@@ -67,7 +66,6 @@ model Item {
 
   @@index([userId])
   @@index([typeId])
-  @@index([collectionId])
   @@index([userId, createdAt])
   @@index([userId, isPinned])
 }
@@ -97,7 +95,7 @@ model Collection {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  items Item[]
+  items ItemCollection[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -128,6 +126,19 @@ model ItemTag {
 
   @@id([itemId, tagId])
   @@index([tagId])
+}
+
+// Join table for the item <-> collection many-to-many: an item can live in any
+// number of a user's collections.
+model ItemCollection {
+  itemId       String
+  collectionId String
+
+  item       Item       @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, collectionId])
+  @@index([collectionId])
 }
 
 // ---------------------------------------------------------------------------

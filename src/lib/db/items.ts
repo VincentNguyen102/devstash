@@ -60,8 +60,7 @@ export interface ItemDetail {
   isFavorite: boolean;
   isPinned: boolean;
   tags: string[];
-  collectionId: string | null;
-  collectionName: string | null;
+  collections: { id: string; name: string }[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -228,7 +227,7 @@ interface ItemDetailRow {
   createdAt: Date;
   updatedAt: Date;
   type: { name: string; icon: string | null };
-  collection: { id: string; name: string } | null;
+  collections: { collection: { id: string; name: string } }[];
   tags: { tag: { name: string } }[];
 }
 
@@ -249,8 +248,10 @@ function mapItemDetail(item: ItemDetailRow): ItemDetail {
     isFavorite: item.isFavorite,
     isPinned: item.isPinned,
     tags: item.tags.map(({ tag }) => tag.name),
-    collectionId: item.collection?.id ?? null,
-    collectionName: item.collection?.name ?? null,
+    collections: item.collections.map(({ collection }) => ({
+      id: collection.id,
+      name: collection.name,
+    })),
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
   };
@@ -283,7 +284,9 @@ export async function getItemDetail(
       createdAt: true,
       updatedAt: true,
       type: { select: { name: true, icon: true } },
-      collection: { select: { id: true, name: true } },
+      collections: {
+        select: { collection: { select: { id: true, name: true } } },
+      },
       tags: { select: { tag: { select: { name: true } } } },
     },
   });
@@ -374,6 +377,16 @@ function tagConnections(userId: string, tags: string[]) {
 }
 
 /**
+ * Nested Prisma payload that links an item to each collection via the
+ * `ItemCollection` join table. Callers must ensure the ids belong to the user.
+ */
+function collectionConnections(collectionIds: string[]) {
+  return [...new Set(collectionIds)].map((id) => ({
+    collection: { connect: { id } },
+  }));
+}
+
+/**
  * Creates an item owned by `userId`. Text types are stored as `text` content;
  * `file`/`image` types store the uploaded object's key, name and size. Each
  * supplied tag name is connected to the user's tag (created on demand). Returns
@@ -401,6 +414,7 @@ export async function createItem(
       userId,
       typeId: data.typeId,
       tags: { create: tagConnections(userId, data.tags) },
+      collections: { create: collectionConnections(data.collectionIds) },
     },
     select: { id: true },
   });
@@ -443,6 +457,10 @@ export async function updateItem(
         tags: {
           deleteMany: {},
           create: tagConnections(userId, data.tags),
+        },
+        collections: {
+          deleteMany: {},
+          create: collectionConnections(data.collectionIds),
         },
       },
     });

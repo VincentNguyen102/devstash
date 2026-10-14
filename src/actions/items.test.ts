@@ -8,9 +8,14 @@ const mocks = vi.hoisted(() => ({
   updateItemRecord: vi.fn(),
   deleteItemRecord: vi.fn(),
   deleteObject: vi.fn(),
+  getOwnedCollectionIds: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
+
+vi.mock("@/lib/db/collections", () => ({
+  getOwnedCollectionIds: mocks.getOwnedCollectionIds,
+}));
 
 vi.mock("@/lib/db/items", () => ({
   createItem: mocks.createItemRecord,
@@ -29,6 +34,7 @@ const validInput = {
   url: "",
   language: "ts",
   tags: ["react"],
+  collectionIds: [],
 };
 
 beforeEach(() => {
@@ -37,6 +43,10 @@ beforeEach(() => {
   mocks.updateItemRecord.mockResolvedValue({ id: "item-1", title: "My Snippet" });
   mocks.deleteItemRecord.mockResolvedValue({ fileKey: null });
   mocks.deleteObject.mockResolvedValue(true);
+  // Ownership check defaults to "everything the caller passes is owned".
+  mocks.getOwnedCollectionIds.mockImplementation((_userId, ids: string[]) =>
+    Promise.resolve(ids),
+  );
 });
 
 const validCreateInput = {
@@ -47,6 +57,7 @@ const validCreateInput = {
   url: "",
   language: "ts",
   tags: ["react"],
+  collectionIds: [],
 };
 
 describe("createItem", () => {
@@ -95,6 +106,7 @@ describe("createItem", () => {
       url: null,
       language: "ts",
       tags: ["react"],
+      collectionIds: [],
       fileKey: null,
       fileName: null,
       fileSize: null,
@@ -135,6 +147,38 @@ describe("createItem", () => {
         fileName: "pic.png",
         fileSize: 1234,
       }),
+    );
+  });
+
+  it("rejects a collection that belongs to another user", async () => {
+    mocks.getOwnedCollectionIds.mockResolvedValueOnce([]);
+
+    const result = await createItem({
+      ...validCreateInput,
+      collectionIds: ["someone-elses-collection"],
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Invalid collection selection.",
+    });
+    expect(mocks.createItemRecord).not.toHaveBeenCalled();
+  });
+
+  it("passes owned collection ids through to the query", async () => {
+    const result = await createItem({
+      ...validCreateInput,
+      collectionIds: ["col-1", "col-2"],
+    });
+
+    expect(mocks.getOwnedCollectionIds).toHaveBeenCalledWith("user-1", [
+      "col-1",
+      "col-2",
+    ]);
+    expect(result.success).toBe(true);
+    expect(mocks.createItemRecord).toHaveBeenCalledWith(
+      "user-1",
+      expect.objectContaining({ collectionIds: ["col-1", "col-2"] }),
     );
   });
 
@@ -196,7 +240,23 @@ describe("updateItem", () => {
       url: null,
       language: "ts",
       tags: ["react"],
+      collectionIds: [],
     });
+  });
+
+  it("rejects a collection that belongs to another user", async () => {
+    mocks.getOwnedCollectionIds.mockResolvedValueOnce([]);
+
+    const result = await updateItem("item-1", {
+      ...validInput,
+      collectionIds: ["someone-elses-collection"],
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Invalid collection selection.",
+    });
+    expect(mocks.updateItemRecord).not.toHaveBeenCalled();
   });
 
   it("returns a generic error when the query fails", async () => {

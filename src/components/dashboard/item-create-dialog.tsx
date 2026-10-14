@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { createItem } from "@/actions/items";
+import { CollectionSelect } from "@/components/dashboard/collection-select";
 import { FileUpload } from "@/components/dashboard/file-upload";
 import { ItemFormFields } from "@/components/dashboard/item-form-fields";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,7 @@ interface CreateFormState {
   language: string;
   url: string;
   tags: string;
+  collectionIds: string[];
   /** Set once a `file`/`image` upload completes. */
   uploadedFile: UploadedFile | null;
 }
@@ -62,6 +64,7 @@ function createInitialForm(typeId: CreateItemTypeId): CreateFormState {
     language: "",
     url: "",
     tags: "",
+    collectionIds: [],
     uploadedFile: null,
   };
 }
@@ -141,6 +144,7 @@ export function ItemCreateDialog({
         language: showLanguage ? form.language : "",
         url: showUrl ? form.url : "",
         tags: parseTags(form.tags),
+        collectionIds: form.collectionIds,
         fileKey: form.uploadedFile?.key ?? null,
         fileName: form.uploadedFile?.fileName ?? null,
         fileSize: form.uploadedFile?.fileSize ?? null,
@@ -250,6 +254,12 @@ export function ItemCreateDialog({
                 </FormField>
               ) : null
             }
+          />
+
+          <CollectionSelect
+            value={form.collectionIds}
+            onChange={(ids) => updateField("collectionIds", ids)}
+            disabled={isSubmitting}
           />
 
           <DialogFooter>

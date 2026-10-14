@@ -1,18 +1,38 @@
-# Current Feature
+# Current Feature: Add Items to Collections
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- An item can belong to **zero, one or many** collections (many-to-many), replacing the current single `Item.collectionId`.
+- Add a **Collections** field to the shared item form (`ItemFormFields`) so both the **New Item** dialog and the drawer's **inline edit** form can select collections from the signed-in user's available collections.
+- When editing, the field is pre-selected with the item's current collections; when creating it starts empty.
+- Available collections are fetched **client-side** through the existing user-scoped `GET /api/collections` (server components keep fetching via `lib/db`).
+- Persist the selection on create and update (replace-wholesale on update, matching how tags are handled); only collections owned by the signed-in user may be attached (ownership check like the upload/file-key guard).
+- Show the item's collections in the drawer view as multiple badges (reading from the new relation).
+- Sidebar/dashboard collection item counts must stay accurate through the new relation.
+- Update the seed and add a Prisma migration so the existing single-collection data is preserved (backfill the join table, then drop `collectionId`).
+- Out of scope (per request): do **not** build the `/collections/[id]` page contents yet.
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- **Schema change required.** `Item.collectionId` / `Collection.items` (many-to-one) becomes many-to-many. Suggested approach: an explicit `ItemCollection` join model mirroring `ItemTag` (`@@id([itemId, collectionId])`, index on `collectionId`) and remove `Item.collectionId`. This needs a Prisma migration **with a data backfill** (create join table → copy existing `collectionId` rows → drop the column). Per `AGENTS.md` I'll ask before running any migration (it contains ALTER/DROP).
+- Because it's an explicit join model, `Collection.items` becomes `ItemCollection[]`, so `findCollections`/`getCollectionStats` in `src/lib/db/collections.ts` must map `itemCollections → item.typeId` for counts/type breakdown.
+- Files expected to change: `prisma/schema.prisma`, `prisma/seed.ts`, `src/lib/db/items.ts` (`ItemDetail`, `createItem`, `updateItem`), `src/lib/db/collections.ts`, `src/lib/validations/item.ts`, `src/components/dashboard/item-form-fields.tsx`, `item-create-dialog.tsx`, `item-drawer/item-detail-view.tsx`, `item-drawer/item-detail-body.tsx` (plus a collections multi-select control / small client hook).
+- `ItemDetail` currently exposes `collectionId`/`collectionName`; replace with `collections: { id, name }[]` and update the drawer's "Collections" section to render multiple badges.
+- Multi-select UI: no multi-select primitive exists in the repo. Proposed a compact set of togglable chips/checkboxes (no new dependency); a Popover+Command combobox is the alternative if a searchable dropdown is preferred. Hide the field (or show a hint) when the user has no collections.
+- Reuse `GET /api/collections` (added with Collection Create) for the client-side list; it returns `CollectionSummary[]` — only `id`/`name` are needed by the selector.
+- `updateItem` replaces collections wholesale (delete existing links + connect selected), same pattern as tags; validate every supplied collection id belongs to `userId` before connecting.
+- Tests: extend `src/lib/validations/item.test.ts` (collectionIds default/trim) and `src/actions/items.test.ts` (create/update pass collections, reject foreign collection ids); no component tests.
+- UI-visible but the collection detail page stays mock-data, so no change there.
 
 ## History
 

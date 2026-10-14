@@ -443,8 +443,16 @@ async function seedCollections(userId: string) {
     for (const { tags, ...item } of items) {
       await prisma.item.upsert({
         where: { id: item.id },
-        update: { ...item, userId, collectionId: collection.id },
-        create: { ...item, userId, collectionId: collection.id },
+        update: { ...item, userId },
+        create: { ...item, userId },
+      });
+
+      await prisma.itemCollection.upsert({
+        where: {
+          itemId_collectionId: { itemId: item.id, collectionId: collection.id },
+        },
+        update: {},
+        create: { itemId: item.id, collectionId: collection.id },
       });
 
       for (const name of tags ?? []) {

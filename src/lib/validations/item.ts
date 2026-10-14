@@ -35,6 +35,10 @@ export const updateItemSchema = z.object({
   url: nullableUrl,
   language: nullableText,
   tags: z.array(z.string().trim().min(1, "Tags cannot be empty")).default([]),
+  collectionIds: z
+    .array(z.string().trim().min(1, "Collections cannot be empty"))
+    .default([])
+    .transform((ids) => [...new Set(ids)]),
 });
 
 /** Shape accepted by the action (before defaults/transforms). */
