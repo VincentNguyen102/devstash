@@ -1,18 +1,35 @@
-# Current Feature
+# Current Feature: Collections Pages
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Add a `/collections` page that shows all of the signed-in user's collections, using the existing `CollectionCard` grid (same presentation as the dashboard collections grid and the sidebar data source).
+- Add a `/collections/[id]` page that shows the items belonging to that collection, rendered with the existing item cards (`ItemCollection`, which already dispatches `ItemCard`, `ImageThumbnailCard` and `FileListItem` per type) — replacing the current mock-data placeholder.
+- Link the sidebar "View all collections" entry to `/collections`.
+- Link every collection card to its specific `/collections/[id]` page.
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- Requested as an inline description (no spec file).
+- Partially already in place on `main`:
+  - The `/collections` listing page (`src/app/(dashboard)/collections/page.tsx`) already fetches `getCollections(session.user.id)` and renders `CollectionCard`s.
+  - The sidebar "View all collections" link (`src/components/dashboard/sidebar.tsx`) already points to `/collections`, and the sidebar collection rows already link to `/collections/{id}`.
+  - `CollectionCard` (`src/components/dashboard/collection-card.tsx`) already wraps its card in a `Link` to `/collections/{id}`; the dashboard uses the same card.
+- The main remaining work is the `/collections/[id]` page, which currently renders `src/lib/mock-data.ts` collections (with `generateStaticParams`) instead of the database.
+- Data gaps to resolve for the detail page: there is no `getCollection(id, userId)` / collection-items query yet. Collections are user-scoped (`getCollections`, `getRecentCollections`, `getCollectionStats` all take `userId`), while the item helpers in `src/lib/db/items.ts` still use the hardcoded `DEMO_USER_EMAIL`. The new query should be scoped to the signed-in user and return `ItemSummary[]` (reusing `findItemSummaries`' select/shape) so the existing cards work unchanged.
+- Foreign or unknown collection ids should `notFound()`; an empty collection should show a sensible empty state.
+- Guard against a type mismatch: the mock `Collection` type (with `updatedAt: string`, no `dominantTypeId`) differs from the DB `CollectionSummary`; drop the mock import from the detail page.
+- Expected outcome: no new UI primitives — reuse `CollectionCard`, `ItemCollection`, `SectionHeading` and the existing `/items/[type]` page patterns.
+- No server actions or utilities are likely to change, so unit tests may not be required (presentational + query-only); confirm during the `test` step.
 
 ## History
 
