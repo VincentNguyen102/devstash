@@ -3,9 +3,12 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { CollectionActions } from "@/components/dashboard/collection-actions";
 import { ItemCollection } from "@/components/dashboard/item-collection";
+import { Pagination } from "@/components/dashboard/pagination";
 import { SectionHeading } from "@/components/dashboard/section-heading";
+import { COLLECTIONS_PER_PAGE } from "@/lib/constants";
 import { getCollectionById } from "@/lib/db/collections";
 import { getItemsByCollection } from "@/lib/db/items";
+import { parsePage } from "@/lib/pagination";
 
 export default async function CollectionPage(
   props: PageProps<"/collections/[id]">
@@ -17,11 +20,18 @@ export default async function CollectionPage(
   }
 
   const { id } = await props.params;
+  const { page } = await props.searchParams;
+
   const collection = await getCollectionById(session.user.id, id);
 
   if (!collection) notFound();
 
-  const items = await getItemsByCollection(session.user.id, id);
+  const items = await getItemsByCollection(
+    session.user.id,
+    id,
+    parsePage(page),
+    COLLECTIONS_PER_PAGE
+  );
 
   return (
     <div className="space-y-6">
@@ -32,7 +42,7 @@ export default async function CollectionPage(
             <p className="text-muted-foreground">{collection.description}</p>
           ) : null}
           <p className="text-sm text-muted-foreground">
-            {items.length} {items.length === 1 ? "item" : "items"}
+            {items.total} {items.total === 1 ? "item" : "items"}
           </p>
         </div>
 
@@ -41,8 +51,15 @@ export default async function CollectionPage(
 
       <section className="space-y-4">
         <SectionHeading title="Items" />
-        {items.length > 0 ? (
-          <ItemCollection items={items} />
+        {items.items.length > 0 ? (
+          <>
+            <ItemCollection items={items.items} />
+            <Pagination
+              page={items.page}
+              pageCount={items.pageCount}
+              basePath={`/collections/${id}`}
+            />
+          </>
         ) : (
           <p className="text-sm text-muted-foreground">
             No items in this collection yet.

@@ -1,6 +1,7 @@
 import { connection } from "next/server";
 
 import { Prisma } from "@/generated/prisma/client";
+import { DASHBOARD_COLLECTIONS_LIMIT } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import type {
   CreateCollectionData,
@@ -86,7 +87,7 @@ async function findCollections(
 /** `userId`'s most recent collections for the dashboard grid. */
 export async function getRecentCollections(
   userId: string,
-  limit = 6,
+  limit = DASHBOARD_COLLECTIONS_LIMIT,
 ): Promise<CollectionSummary[]> {
   return findCollections(userId, limit);
 }
