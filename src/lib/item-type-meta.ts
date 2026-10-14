@@ -76,6 +76,11 @@ export const CREATE_TYPE_LABELS: Record<CreateItemTypeId, string> = {
   url: "Link",
 };
 
+/** Display label for an item type id; unknown/custom types read as their id. */
+export function getTypeLabel(typeId: string): string {
+  return CREATE_TYPE_LABELS[typeId as CreateItemTypeId] ?? typeId;
+}
+
 const VISUALS_BY_TYPE_ID: Record<string, Omit<TypeVisual, "Icon">> = {
   snippet: {
     textClass: "text-blue-400",
