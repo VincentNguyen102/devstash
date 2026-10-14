@@ -1,18 +1,32 @@
-# Current Feature
+# Current Feature: Global Search / Command Palette
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- A global command palette opens with **Cmd+K** (Mac) / **Ctrl+K** (Windows/Linux)
+- Fuzzy search across **all items and collections** (client-side, no server round-trips)
+- Results grouped into an **Items** section and a **Collections** section
+- Full keyboard navigation: arrow keys move the highlight, Enter selects
+- Each item result shows its **type icon**; each collection result shows its **item count**
+- Selecting an item opens the **item drawer**; selecting a collection navigates to its **collection page**
+- The TopBar search input opens the palette when clicked
+- The search input shows a **⌘K hint** in its placeholder
 
 ## Notes
 
-<!-- Any extra notes -->
+- Spec: `context/features/global-search-spec.md`
+- Technical:
+  - Use the shadcn `cmdk` component (`Command`). `cmdk` is **not yet installed** and there is no `src/components/ui/command.tsx` — both need adding.
+  - Searchable data is **pre-fetched on app load** and filtered client-side.
+  - Search payload: items (`id`, `title`, `type`, content preview) and collections (`id`, `name`, `itemCount`).
+  - Reuse existing data fetching functions where possible (`src/lib/db/items.ts`, `src/lib/db/collections.ts`); note there is currently no "all items for a user" query — `findItemSummaries` filters by type/pinned/recent/collection, so a new all-items helper may be required.
+  - Existing UI to build on: `src/components/dashboard/top-bar.tsx` already renders a search `Input` (with a `⌘K` `<kbd>` hint) and `src/components/dashboard/item-drawer.tsx` exposes `useItemDrawer` for opening the item drawer.
+  - The `(dashboard)` layout is the likely mount point for the palette provider/hotkey listener (alongside the existing `ItemDrawerProvider`).
 
 ## History
 

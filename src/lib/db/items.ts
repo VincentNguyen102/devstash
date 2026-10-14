@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import { Prisma } from "@/generated/prisma/client";
 import { systemTypeOrder } from "@/lib/item-type-meta";
 import { prisma } from "@/lib/prisma";
+import { buildItemPreview, type SearchItem } from "@/lib/search";
 import {
   isUploadItemTypeId,
   type CreateItemData,
@@ -131,6 +132,41 @@ export async function getItemsByType(typeId: string): Promise<ItemSummary[]> {
   await connection();
 
   return findItemSummaries({ user: { email: DEMO_USER_EMAIL }, typeId });
+}
+
+/**
+ * A lightweight index of `userId`'s items for the global command palette:
+ * id, title, type and a short content preview. Fetched once when the dashboard
+ * loads so the palette can filter entirely on the client.
+ */
+export async function getSearchItems(userId: string): Promise<SearchItem[]> {
+  await connection();
+
+  const items = await prisma.item.findMany({
+    where: { userId },
+    orderBy: { updatedAt: "desc" },
+    select: {
+      id: true,
+      title: true,
+      typeId: true,
+      content: true,
+      url: true,
+      fileName: true,
+      description: true,
+    },
+  });
+
+  return items.map((item) => ({
+    id: item.id,
+    title: item.title,
+    typeId: item.typeId,
+    preview: buildItemPreview(
+      item.content,
+      item.url,
+      item.fileName,
+      item.description,
+    ),
+  }));
 }
 
 /**
