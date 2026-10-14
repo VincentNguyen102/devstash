@@ -119,16 +119,25 @@ export function ItemMetaSections({ item }: { item: ItemDetail }) {
         </DetailSection>
       ) : null}
 
-      {item.collectionId && item.collectionName ? (
+      {item.collections.length > 0 ? (
         <DetailSection
           title="Collections"
           icon={<Layers aria-hidden className="size-3.5" />}
         >
-          <Badge asChild variant="secondary" className="rounded-md">
-            <Link href={`/collections/${item.collectionId}`}>
-              {item.collectionName}
-            </Link>
-          </Badge>
+          <div className="flex flex-wrap gap-1.5">
+            {item.collections.map((collection) => (
+              <Badge
+                key={collection.id}
+                asChild
+                variant="secondary"
+                className="rounded-md"
+              >
+                <Link href={`/collections/${collection.id}`}>
+                  {collection.name}
+                </Link>
+              </Badge>
+            ))}
+          </div>
         </DetailSection>
       ) : null}
 

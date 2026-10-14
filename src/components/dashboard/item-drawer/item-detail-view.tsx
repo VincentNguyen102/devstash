@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { updateItem } from "@/actions/items";
+import { CollectionSelect } from "@/components/dashboard/collection-select";
 import { ItemActionBar } from "@/components/dashboard/item-drawer/item-action-bar";
 import {
   ItemDetailBody,
@@ -27,6 +28,7 @@ interface EditFormState {
   url: string;
   language: string;
   tags: string;
+  collectionIds: string[];
 }
 
 function toEditForm(item: ItemDetail): EditFormState {
@@ -37,6 +39,7 @@ function toEditForm(item: ItemDetail): EditFormState {
     url: item.url ?? "",
     language: item.language ?? "",
     tags: item.tags.join(", "),
+    collectionIds: item.collections.map((collection) => collection.id),
   };
 }
 
@@ -91,6 +94,7 @@ export function ItemDetailView({
         url: form.url,
         language: form.language,
         tags: parseTags(form.tags),
+        collectionIds: form.collectionIds,
       });
 
       if (!result.success || !result.data) {
@@ -178,12 +182,19 @@ export function ItemDetailView({
 
       <div className="space-y-6 p-6">
         {isEditing ? (
-          <ItemFormFields
-            typeId={item.typeId}
-            values={form}
-            onChange={(field, value) => updateField(field, value)}
-            idPrefix="item"
-          />
+          <>
+            <ItemFormFields
+              typeId={item.typeId}
+              values={form}
+              onChange={(field, value) => updateField(field, value)}
+              idPrefix="item"
+            />
+            <CollectionSelect
+              value={form.collectionIds}
+              onChange={(ids) => updateField("collectionIds", ids)}
+              disabled={isSaving}
+            />
+          </>
         ) : (
           <ItemDetailBody item={item} />
         )}

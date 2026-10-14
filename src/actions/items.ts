@@ -1,6 +1,7 @@
 "use server";
 
 import { auth } from "@/auth";
+import { getOwnedCollectionIds } from "@/lib/db/collections";
 import {
   createItem as createItemRecord,
   deleteItem as deleteItemRecord,
@@ -57,6 +58,16 @@ export async function createItem(
   }
 
   try {
+    // Every selected collection must belong to the signed-in user.
+    const ownedCollections = await getOwnedCollectionIds(
+      session.user.id,
+      parsed.data.collectionIds,
+    );
+
+    if (ownedCollections.length !== parsed.data.collectionIds.length) {
+      return { success: false, error: "Invalid collection selection." };
+    }
+
     const item = await createItemRecord(session.user.id, parsed.data);
 
     if (!item) {
@@ -106,6 +117,16 @@ export async function updateItem(
   }
 
   try {
+    // Every selected collection must belong to the signed-in user.
+    const ownedCollections = await getOwnedCollectionIds(
+      session.user.id,
+      parsed.data.collectionIds,
+    );
+
+    if (ownedCollections.length !== parsed.data.collectionIds.length) {
+      return { success: false, error: "Invalid collection selection." };
+    }
+
     const item = await updateItemRecord(itemId, session.user.id, parsed.data);
 
     if (!item) {

@@ -104,7 +104,25 @@ describe("updateItemSchema", () => {
       url: null,
       language: null,
       tags: [],
+      collectionIds: [],
     });
+  });
+
+  it("defaults collectionIds to an empty array", () => {
+    expect(updateItemSchema.parse(buildInput()).collectionIds).toEqual([]);
+  });
+
+  it("de-duplicates and rejects blank collection ids", () => {
+    expect(
+      updateItemSchema.parse(
+        buildInput({ collectionIds: ["col-1", "col-1", "col-2"] }),
+      ).collectionIds,
+    ).toEqual(["col-1", "col-2"]);
+
+    expect(
+      updateItemSchema.safeParse(buildInput({ collectionIds: ["col-1", "  "] }))
+        .success,
+    ).toBe(false);
   });
 });
 
@@ -133,10 +151,19 @@ describe("createItemSchema", () => {
       url: null,
       language: "ts",
       tags: ["react"],
+      collectionIds: [],
       fileKey: null,
       fileName: null,
       fileSize: null,
     });
+  });
+
+  it("carries selected collection ids through to the parsed payload", () => {
+    const result = createItemSchema.parse(
+      buildCreateInput({ collectionIds: ["col-1", "col-2"] }),
+    );
+
+    expect(result.collectionIds).toEqual(["col-1", "col-2"]);
   });
 
   it("rejects an unknown item type", () => {
