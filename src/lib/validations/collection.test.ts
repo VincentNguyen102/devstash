@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { createCollectionSchema } from "@/lib/validations/collection";
+import {
+  createCollectionSchema,
+  updateCollectionSchema,
+} from "@/lib/validations/collection";
 
 describe("createCollectionSchema", () => {
   it("trims the name", () => {
@@ -30,6 +33,33 @@ describe("createCollectionSchema", () => {
 
   it("keeps a provided description", () => {
     const result = createCollectionSchema.parse({
+      name: "React",
+      description: "Reusable patterns",
+    });
+
+    expect(result.description).toBe("Reusable patterns");
+  });
+});
+
+describe("updateCollectionSchema", () => {
+  it("requires a non-empty name", () => {
+    expect(updateCollectionSchema.safeParse({ name: "   " }).success).toBe(
+      false,
+    );
+    expect(updateCollectionSchema.safeParse({}).success).toBe(false);
+  });
+
+  it("trims the name and normalises a blank description to null", () => {
+    const result = updateCollectionSchema.parse({
+      name: "  React Patterns  ",
+      description: "   ",
+    });
+
+    expect(result).toEqual({ name: "React Patterns", description: null });
+  });
+
+  it("keeps a provided description", () => {
+    const result = updateCollectionSchema.parse({
       name: "React",
       description: "Reusable patterns",
     });
