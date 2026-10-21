@@ -42,7 +42,10 @@ export function ItemRow({
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="truncate text-sm font-medium">{item.title}</h3>
           {item.isPinned ? (
-            <Pin aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
+            <Pin
+              aria-hidden
+              className="size-3.5 shrink-0 fill-current text-rose-400"
+            />
           ) : null}
           {showFavoriteToggle ? (
             <ItemFavoriteButton item={item} className="-my-1" />

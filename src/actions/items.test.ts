@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   createItemRecord: vi.fn(),
   updateItemRecord: vi.fn(),
   setItemFavoriteRecord: vi.fn(),
+  setItemPinRecord: vi.fn(),
   deleteItemRecord: vi.fn(),
   deleteObject: vi.fn(),
   getOwnedCollectionIds: vi.fn(),
@@ -22,6 +23,7 @@ vi.mock("@/lib/db/items", () => ({
   createItem: mocks.createItemRecord,
   updateItem: mocks.updateItemRecord,
   setItemFavorite: mocks.setItemFavoriteRecord,
+  setItemPin: mocks.setItemPinRecord,
   deleteItem: mocks.deleteItemRecord,
 }));
 
@@ -31,6 +33,7 @@ import {
   createItem,
   deleteItem,
   setItemFavorite,
+  toggleItemPin,
   updateItem,
 } from "@/actions/items";
 
@@ -52,6 +55,7 @@ beforeEach(() => {
     id: "item-1",
     isFavorite: true,
   });
+  mocks.setItemPinRecord.mockResolvedValue({ id: "item-1", isPinned: true });
   mocks.deleteItemRecord.mockResolvedValue({ fileKey: null });
   mocks.deleteObject.mockResolvedValue(true);
   // Ownership check defaults to "everything the caller passes is owned".
@@ -338,6 +342,64 @@ describe("setItemFavorite", () => {
     mocks.setItemFavoriteRecord.mockRejectedValue(new Error("boom"));
 
     const result = await setItemFavorite("item-1", true);
+
+    expect(result).toEqual({
+      success: false,
+      error: "Something went wrong. Please try again.",
+    });
+    consoleError.mockRestore();
+  });
+});
+
+describe("toggleItemPin", () => {
+  it("requires a signed-in user", async () => {
+    mocks.auth.mockResolvedValue(null);
+
+    const result = await toggleItemPin("item-1", true);
+
+    expect(result).toEqual({
+      success: false,
+      error: "You must be signed in to do that.",
+    });
+    expect(mocks.setItemPinRecord).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-boolean value", async () => {
+    const result = await toggleItemPin("item-1", "yes" as unknown as boolean);
+
+    expect(result).toEqual({ success: false, error: "Invalid input." });
+    expect(mocks.setItemPinRecord).not.toHaveBeenCalled();
+  });
+
+  it("persists the requested state and returns the updated item", async () => {
+    const item = { id: "item-1", isPinned: true };
+    mocks.setItemPinRecord.mockResolvedValue(item);
+
+    const result = await toggleItemPin("item-1", true);
+
+    expect(result).toEqual({ success: true, data: item });
+    expect(mocks.setItemPinRecord).toHaveBeenCalledWith(
+      "item-1",
+      "user-1",
+      true,
+    );
+  });
+
+  it("returns not found when the item is not the user's", async () => {
+    mocks.setItemPinRecord.mockResolvedValue(null);
+
+    const result = await toggleItemPin("item-1", true);
+
+    expect(result).toEqual({ success: false, error: "Item not found." });
+  });
+
+  it("returns a generic error when the query fails", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    mocks.setItemPinRecord.mockRejectedValue(new Error("boom"));
+
+    const result = await toggleItemPin("item-1", true);
 
     expect(result).toEqual({
       success: false,

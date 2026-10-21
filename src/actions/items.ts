@@ -6,6 +6,7 @@ import {
   createItem as createItemRecord,
   deleteItem as deleteItemRecord,
   setItemFavorite as setItemFavoriteRecord,
+  setItemPin as setItemPinRecord,
   updateItem as updateItemRecord,
   type ItemDetail,
 } from "@/lib/db/items";
@@ -184,6 +185,49 @@ export async function setItemFavorite(
     return { success: true, data: item };
   } catch (error) {
     console.error("Update item favorite failed", error);
+
+    return {
+      success: false,
+      error: "Something went wrong. Please try again.",
+    };
+  }
+}
+
+export interface ToggleItemPinResult {
+  success: boolean;
+  data?: ItemDetail;
+  error?: string;
+}
+
+/**
+ * Sets the pinned flag on an item owned by the signed-in user. The desired
+ * value is required so a retried or double-clicked request cannot flip the
+ * item back to its previous state.
+ */
+export async function toggleItemPin(
+  itemId: string,
+  isPinned: boolean,
+): Promise<ToggleItemPinResult> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { success: false, error: "You must be signed in to do that." };
+  }
+
+  if (typeof isPinned !== "boolean") {
+    return { success: false, error: "Invalid input." };
+  }
+
+  try {
+    const item = await setItemPinRecord(itemId, session.user.id, isPinned);
+
+    if (!item) {
+      return { success: false, error: "Item not found." };
+    }
+
+    return { success: true, data: item };
+  } catch (error) {
+    console.error("Update item pin failed", error);
 
     return {
       success: false,

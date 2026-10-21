@@ -2,11 +2,16 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Copy, Download, Pencil, Pin, Trash2 } from "lucide-react";
+import { Copy, Download, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { deleteItem, setItemFavorite } from "@/actions/items";
+import {
+  deleteItem,
+  setItemFavorite,
+  toggleItemPin,
+} from "@/actions/items";
 import { FavoriteButton } from "@/components/dashboard/favorite-button";
+import { PinButton } from "@/components/dashboard/pin-button";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,7 +25,6 @@ import {
 import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 import type { ItemDetail } from "@/lib/db/items";
 import { FILE_TYPE_IDS } from "@/lib/item-type-fields";
-import { cn } from "@/lib/utils";
 
 /** View-mode action row: favourite / pin / download / copy / edit / delete. */
 export function ItemActionBar({
@@ -38,6 +42,16 @@ export function ItemActionBar({
 
   async function handleFavorite(next: boolean) {
     const result = await setItemFavorite(item.id, next);
+
+    if (result.success && result.data) {
+      onItemUpdated(result.data);
+    }
+
+    return result;
+  }
+
+  async function handlePin(next: boolean) {
+    const result = await toggleItemPin(item.id, next);
 
     if (result.success && result.data) {
       onItemUpdated(result.data);
@@ -67,21 +81,11 @@ export function ItemActionBar({
         onToggle={handleFavorite}
       />
 
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className={cn(
-          "gap-1.5 text-muted-foreground",
-          item.isPinned && "text-foreground",
-        )}
-      >
-        <Pin
-          aria-hidden
-          className={cn("size-4", item.isPinned && "fill-current")}
-        />
-        Pin
-      </Button>
+      <PinButton
+        isPinned={item.isPinned}
+        subject={item.title}
+        onToggle={handlePin}
+      />
 
       {FILE_TYPE_IDS.has(item.typeId) ? (
         <Button

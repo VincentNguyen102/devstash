@@ -62,7 +62,10 @@ export function ImageThumbnailCard({
 
         <div className="absolute top-2 right-2 flex items-center gap-1 rounded-md bg-background/80 px-1.5 py-1 backdrop-blur-sm">
           {item.isPinned ? (
-            <Pin aria-hidden className="size-3.5 text-muted-foreground" />
+            <Pin
+              aria-hidden
+              className="size-3.5 fill-current text-rose-400"
+            />
           ) : null}
           <ItemFavoriteButton
             item={item}

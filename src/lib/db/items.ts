@@ -131,9 +131,18 @@ async function findItemSummaries(
 }
 
 /**
- * A single page of `where`-matching items, newest first, plus the totals the
- * pagination control needs. Only the current page's rows are fetched — the
- * count query drives the page links. An out-of-range page is clamped so a
+ * Listing order: pinned items float to the top, then the most recently updated
+ * first within each group.
+ */
+const ITEM_LIST_ORDER: Prisma.ItemOrderByWithRelationInput[] = [
+  { isPinned: "desc" },
+  { updatedAt: "desc" },
+];
+
+/**
+ * A single page of `where`-matching items, pinned first then newest, plus the
+ * totals the pagination control needs. Only the current page's rows are fetched
+ * — the count query drives the page links. An out-of-range page is clamped so a
  * hand-typed `?page=` still returns the last page instead of an empty list.
  */
 async function findItemPage(
@@ -147,7 +156,7 @@ async function findItemPage(
 
   const items = await prisma.item.findMany({
     where,
-    orderBy: { updatedAt: "desc" },
+    orderBy: ITEM_LIST_ORDER,
     skip: getPageSkip(currentPage, perPage),
     take: perPage,
     select: ITEM_SUMMARY_SELECT,
@@ -570,6 +579,31 @@ export async function setItemFavorite(
   const result = await prisma.item.updateMany({
     where: { id: itemId, userId },
     data: { isFavorite },
+  });
+
+  if (result.count === 0) {
+    return null;
+  }
+
+  return getItemDetail(itemId, userId);
+}
+
+/**
+ * Sets the pinned flag on an item owned by `userId`, returning the refreshed
+ * detail or null when the item does not exist or belongs to someone else. Like
+ * favorites, the desired value is passed explicitly so a retried or
+ * double-clicked request cannot flip the item back to its previous state.
+ */
+export async function setItemPin(
+  itemId: string,
+  userId: string,
+  isPinned: boolean,
+): Promise<ItemDetail | null> {
+  await connection();
+
+  const result = await prisma.item.updateMany({
+    where: { id: itemId, userId },
+    data: { isPinned },
   });
 
   if (result.count === 0) {
