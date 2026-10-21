@@ -1,31 +1,18 @@
-# Current Feature: Pinned Items
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-In Progress
+Not Started
 
 ## Goals
 
 <!-- Goals & requirements -->
 
-- Create `toggleItemPin` server action (items only, not collections)
-- Make the existing Pin button in `ItemDrawer` functional (it currently has no `onClick`)
-- Optimistic UI updates for instant feedback when pinning/unpinning
-- Toast notification on success and error
-- Pinned items sort to the top of listings
-- Follow the existing Favorite Button pattern
-- Pin icon on `ItemCard` stays a static indicator
-
 ## Notes
 
 <!-- Any extra notes -->
-
-- Spec: `context/features/pinned-spec.md`
-- Scope is items only — collections have no pin behaviour
-- The `Item.pinned` column already exists from the initial migration; no schema change expected
-- Dashboard already has a "Pinned" section (`getPinnedItems`), so it should reflect pin changes after a refresh
 
 
 
@@ -75,3 +62,4 @@ In Progress
 - Settings Page completed — added a protected `/settings` route and moved the account actions off the profile: `src/app/(dashboard)/settings/page.tsx` lives in the `(dashboard)` group (reuses the shell), auth-checks the session, redirects a stale session to `/sign-in`, sets `metadata.title = "Settings · DevStash"` and renders the existing `AccountActions` card (change password + delete account); added `/settings` to the `config.matcher` in `src/proxy.ts`; added a "Settings" item (with a `Settings` icon) to the sidebar user-menu dropdown between Profile and the separator (`src/components/dashboard/user-menu.tsx`); added `src/lib/db/settings.ts` (`getAccountSettings(userId)` → `{ hasPassword } | null`, a focused lookup so settings does not load the profile's usage stats) and removed `<AccountActions>` from `/profile` along with the now-unused `hasPassword` field/`password` select in `getProfile`/`ProfileData` (`src/lib/db/profile.ts`); `AccountActions` and its dialogs intentionally stay in `src/components/profile/` (reused, no component moves); no new server actions/utilities so no unit-test changes — verified in the browser with the demo account (unauthenticated `GET /settings` → 307 to `/sign-in?callbackUrl=...`, dropdown shows Profile/Settings/Sign out, `/settings` renders the account actions with working change-password and delete-account dialogs, `/profile` shows only the account card + usage stats, no console errors) plus `npm run test` (184 passing) + `npm run lint` + `npm run build`
 - Editor Preferences Settings completed — added an editor-preferences section to `/settings` that auto-saves to a new `User.editorPreferences` JSON column (migration `20261014182005_add_user_editor_preferences`, applied to the development branch); `src/lib/editor-preferences.ts` holds the framework-free `EditorPreferences` type, defaults (font 12, tab 2, word wrap on, minimap off, theme `vs-dark`), the font/tab/theme option lists, per-field guards and `normalizeEditorPreferences` (fills each invalid/missing field independently from the stored JSON); added the strict `editorPreferencesSchema` (`src/lib/validations/editor-preferences.ts`), the `updateEditorPreferences` server action (`src/actions/settings.ts`, auth + Zod + `{ success, data, error }`) backed by `getEditorPreferences`/`updateEditorPreferences` in `src/lib/db/settings.ts`; `EditorPreferencesProvider` + `useEditorPreferences` (`src/components/dashboard/editor-preferences-provider.tsx`, `src/hooks/use-editor-preferences.ts`) is seeded once from the `(dashboard)` layout and mounted in `DashboardShell`, applies changes optimistically and rolls back on failure with an "Editor preferences saved" toast; `EditorPreferencesCard` (`src/components/settings/editor-preferences-card.tsx`) renders Font size / Tab size / Theme selects and Word wrap / Minimap switches (disabled while saving, no save button) and the Monaco `CodeEditor` now applies `fontSize`/`tabSize`/`wordWrap`/`minimap`/theme; moved the theme definitions into `src/lib/monaco-theme.ts` (the existing custom `devstash-dark` theme kept as the `vs-dark` option, plus new Monokai and GitHub Dark themes) and added the shadcn `Select`/`Switch`/`Label` primitives; added 18 unit tests (`src/lib/editor-preferences.test.ts`, `src/lib/validations/editor-preferences.test.ts`, `src/actions/settings.test.ts`; 202 passing) and verified in the browser with the demo account (defaults render, theme/font/tab/minimap/wrap changes auto-save with a toast and persist across reload, Monaco reflected 16px + Monokai `#272822` + minimap, no console errors) then reset the demo user's preferences to defaults; plus `npm run test` + `npm run lint` + `npm run build`; the spec is `context/features/editor-settings-spec.md`
 - Favorites — Toggles & Page completed — made favorites persist across the app and added a dedicated favorites page: added ownership-scoped `setItemFavorite`/`setCollectionFavorite` DB helpers and auth-checked server actions (`{ success, data, error }`), plus a shared optimistic `FavoriteButton` (`useOptimistic` + `useTransition`, rollback/pending/stopPropagation) wired into the item drawer, collection detail header, item grid/image cards, collection cards and the collection ⋮ menu; added the protected `/favorites` page (proxy matcher + `(dashboard)` shell) with user-scoped `getFavoriteItems`/`getFavoriteCollections`, favorite items rendered as `ItemRow` list rows (new optional interactive star) and collections as cards, per-section/global empty states, client-side sorting by Date (newest), Name (A–Z) and item Type via `src/lib/favorites-sort.ts` (collections sort by dominant type; `FavoriteCollectionSummary` carries `updatedAt`), and an outlined star button in the top bar linking to `/favorites` with an active state; added 20 unit tests (`favorites-sort`, `setItemFavorite`, `setCollectionFavorite`; 222 passing) and verified in the browser (toggle from drawer/cards/header/menu updates stats, sidebar grouping and counts; favorites page lists/sorts rows and collections; unauthenticated `/favorites` redirects; no console errors) plus `npm run lint` + `npm run build`.
+- Pinned Items completed — made the drawer Pin button functional and surfaced pinned items at the top of listings: added `setItemPin` to `src/lib/db/items.ts` (ownership-scoped `updateMany` returning the refreshed `ItemDetail`) and the `toggleItemPin` server action in `src/actions/items.ts` (auth check, boolean guard, `{ success, data, error }`), plus a shared optimistic `PinButton` (`useOptimistic` + `useTransition`, rollback, success/error toast, `router.refresh()`) wired into the item drawer action bar; paginated type/collection listings now order by `isPinned` desc then `updatedAt` desc, while the dashboard Pinned section picks up changes after refresh; static pin indicators on `ItemCard`, `ItemRow` and `ImageThumbnailCard` (and the drawer's active Pin state) use a filled rose-400 icon; collections intentionally unchanged; added 5 unit tests for `toggleItemPin` (227 passing) and verified in the browser (pin/unpin from the drawer, optimistic pressed state + success toast, reorder on `/items/snippet`, dashboard Pinned section add/remove, no console errors) plus `npm run test` + `npm run lint` + `npm run build`; the spec is `context/features/pinned-spec.md`.
