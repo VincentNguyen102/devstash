@@ -1,8 +1,9 @@
 "use client";
 
-import { Pin, Star } from "lucide-react";
+import { Pin } from "lucide-react";
 
 import { ItemCopyButton } from "@/components/dashboard/item-copy-button";
+import { ItemFavoriteButton } from "@/components/dashboard/item-favorite-button";
 import { useItemOpenTarget } from "@/hooks/use-item-open-target";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -46,12 +47,7 @@ export function ItemCard({ item }: { item: ItemSummary }) {
               className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
             />
           ) : null}
-          {item.isFavorite ? (
-            <Star
-              aria-hidden
-              className="mt-0.5 size-3.5 shrink-0 fill-yellow-400 text-yellow-400"
-            />
-          ) : null}
+          <ItemFavoriteButton item={item} className="-mt-0.5" />
           <ItemCopyButton item={item} className="-mt-0.5 -mr-1" />
         </CardTitle>
         <CardDescription className="line-clamp-2">

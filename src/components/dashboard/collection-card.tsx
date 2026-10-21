@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { Star } from "lucide-react";
 
 import { CollectionCardMenu } from "@/components/dashboard/collection-card-menu";
+import { CollectionFavoriteButton } from "@/components/dashboard/collection-favorite-button";
 import {
   Card,
   CardAction,
@@ -41,18 +41,10 @@ export function CollectionCard({
       <CardHeader className="pointer-events-none">
         <CardTitle className="flex items-center gap-2">
           <span className="truncate">{collection.name}</span>
-          {collection.isFavorite ? (
-            <>
-              <Star
-                aria-hidden
-                className="size-3.5 shrink-0 fill-yellow-400 text-yellow-400"
-              />
-              <span className="sr-only">Favorite</span>
-            </>
-          ) : null}
         </CardTitle>
         <CardDescription>{collection.itemCount} items</CardDescription>
-        <CardAction className="pointer-events-auto relative z-10">
+        <CardAction className="pointer-events-auto relative z-10 flex items-center gap-1">
+          <CollectionFavoriteButton collection={collection} />
           <CollectionCardMenu collection={collection} />
         </CardAction>
       </CardHeader>

@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
   createItemRecord: vi.fn(),
   updateItemRecord: vi.fn(),
+  setItemFavoriteRecord: vi.fn(),
   deleteItemRecord: vi.fn(),
   deleteObject: vi.fn(),
   getOwnedCollectionIds: vi.fn(),
@@ -20,12 +21,18 @@ vi.mock("@/lib/db/collections", () => ({
 vi.mock("@/lib/db/items", () => ({
   createItem: mocks.createItemRecord,
   updateItem: mocks.updateItemRecord,
+  setItemFavorite: mocks.setItemFavoriteRecord,
   deleteItem: mocks.deleteItemRecord,
 }));
 
 vi.mock("@/lib/storage", () => ({ deleteObject: mocks.deleteObject }));
 
-import { createItem, deleteItem, updateItem } from "@/actions/items";
+import {
+  createItem,
+  deleteItem,
+  setItemFavorite,
+  updateItem,
+} from "@/actions/items";
 
 const validInput = {
   title: "My Snippet",
@@ -41,6 +48,10 @@ beforeEach(() => {
   mocks.auth.mockResolvedValue({ user: { id: "user-1" } });
   mocks.createItemRecord.mockResolvedValue({ id: "item-1", title: "My Snippet" });
   mocks.updateItemRecord.mockResolvedValue({ id: "item-1", title: "My Snippet" });
+  mocks.setItemFavoriteRecord.mockResolvedValue({
+    id: "item-1",
+    isFavorite: true,
+  });
   mocks.deleteItemRecord.mockResolvedValue({ fileKey: null });
   mocks.deleteObject.mockResolvedValue(true);
   // Ownership check defaults to "everything the caller passes is owned".
@@ -266,6 +277,67 @@ describe("updateItem", () => {
     mocks.updateItemRecord.mockRejectedValue(new Error("boom"));
 
     const result = await updateItem("item-1", validInput);
+
+    expect(result).toEqual({
+      success: false,
+      error: "Something went wrong. Please try again.",
+    });
+    consoleError.mockRestore();
+  });
+});
+
+describe("setItemFavorite", () => {
+  it("requires a signed-in user", async () => {
+    mocks.auth.mockResolvedValue(null);
+
+    const result = await setItemFavorite("item-1", true);
+
+    expect(result).toEqual({
+      success: false,
+      error: "You must be signed in to do that.",
+    });
+    expect(mocks.setItemFavoriteRecord).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-boolean value", async () => {
+    const result = await setItemFavorite(
+      "item-1",
+      "yes" as unknown as boolean,
+    );
+
+    expect(result).toEqual({ success: false, error: "Invalid input." });
+    expect(mocks.setItemFavoriteRecord).not.toHaveBeenCalled();
+  });
+
+  it("persists the requested state and returns the updated item", async () => {
+    const item = { id: "item-1", isFavorite: false };
+    mocks.setItemFavoriteRecord.mockResolvedValue(item);
+
+    const result = await setItemFavorite("item-1", false);
+
+    expect(result).toEqual({ success: true, data: item });
+    expect(mocks.setItemFavoriteRecord).toHaveBeenCalledWith(
+      "item-1",
+      "user-1",
+      false,
+    );
+  });
+
+  it("returns not found when the item is not the user's", async () => {
+    mocks.setItemFavoriteRecord.mockResolvedValue(null);
+
+    const result = await setItemFavorite("item-1", true);
+
+    expect(result).toEqual({ success: false, error: "Item not found." });
+  });
+
+  it("returns a generic error when the query fails", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    mocks.setItemFavoriteRecord.mockRejectedValue(new Error("boom"));
+
+    const result = await setItemFavorite("item-1", true);
 
     expect(result).toEqual({
       success: false,

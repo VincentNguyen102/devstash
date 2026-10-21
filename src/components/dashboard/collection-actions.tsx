@@ -2,18 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Star, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 
 import { CollectionEditDialog } from "@/components/dashboard/collection-edit-dialog";
+import { CollectionFavoriteButton } from "@/components/dashboard/collection-favorite-button";
 import { DeleteCollectionDialog } from "@/components/dashboard/delete-collection-dialog";
 import { Button } from "@/components/ui/button";
 import type { CollectionSummary } from "@/lib/db/collections";
-import { cn } from "@/lib/utils";
 
 /**
  * Header actions for the collection detail page: Edit (modal), Delete
- * (confirmation, then back to the listing) and Favorite (icon-only for now — no
- * favouriting logic yet).
+ * (confirmation, then back to the listing) and Favorite (persisted toggle).
  */
 export function CollectionActions({
   collection,
@@ -48,21 +47,11 @@ export function CollectionActions({
         Delete
       </Button>
 
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className={cn(
-          "gap-1.5 text-muted-foreground",
-          collection.isFavorite && "text-yellow-400 hover:text-yellow-400",
-        )}
-      >
-        <Star
-          aria-hidden
-          className={cn("size-4", collection.isFavorite && "fill-yellow-400")}
-        />
-        Favorite
-      </Button>
+      <CollectionFavoriteButton
+        collection={collection}
+        showLabel
+        announceSuccess
+      />
 
       <CollectionEditDialog
         collection={collection}

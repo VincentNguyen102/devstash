@@ -5,6 +5,7 @@ import { getOwnedCollectionIds } from "@/lib/db/collections";
 import {
   createItem as createItemRecord,
   deleteItem as deleteItemRecord,
+  setItemFavorite as setItemFavoriteRecord,
   updateItem as updateItemRecord,
   type ItemDetail,
 } from "@/lib/db/items";
@@ -136,6 +137,53 @@ export async function updateItem(
     return { success: true, data: item };
   } catch (error) {
     console.error("Update item failed", error);
+
+    return {
+      success: false,
+      error: "Something went wrong. Please try again.",
+    };
+  }
+}
+
+export interface SetItemFavoriteResult {
+  success: boolean;
+  data?: ItemDetail;
+  error?: string;
+}
+
+/**
+ * Sets the favorite flag on an item owned by the signed-in user. The desired
+ * value is required so a retried or double-clicked request cannot flip the
+ * item back to its previous state.
+ */
+export async function setItemFavorite(
+  itemId: string,
+  isFavorite: boolean,
+): Promise<SetItemFavoriteResult> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { success: false, error: "You must be signed in to do that." };
+  }
+
+  if (typeof isFavorite !== "boolean") {
+    return { success: false, error: "Invalid input." };
+  }
+
+  try {
+    const item = await setItemFavoriteRecord(
+      itemId,
+      session.user.id,
+      isFavorite,
+    );
+
+    if (!item) {
+      return { success: false, error: "Item not found." };
+    }
+
+    return { success: true, data: item };
+  } catch (error) {
+    console.error("Update item favorite failed", error);
 
     return {
       success: false,

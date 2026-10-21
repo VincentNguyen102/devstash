@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import {
   createCollection as createCollectionRecord,
   deleteCollection as deleteCollectionRecord,
+  setCollectionFavorite as setCollectionFavoriteRecord,
   updateCollection as updateCollectionRecord,
   type CollectionSummary,
 } from "@/lib/db/collections";
@@ -104,6 +105,53 @@ export async function updateCollection(
     return { success: true, data: collection };
   } catch (error) {
     console.error("Update collection failed", error);
+
+    return {
+      success: false,
+      error: "Something went wrong. Please try again.",
+    };
+  }
+}
+
+export interface SetCollectionFavoriteResult {
+  success: boolean;
+  data?: CollectionSummary;
+  error?: string;
+}
+
+/**
+ * Sets the favorite flag on a collection owned by the signed-in user. The
+ * desired value is passed explicitly so a retried request cannot flip the
+ * collection back to its previous state.
+ */
+export async function setCollectionFavorite(
+  collectionId: string,
+  isFavorite: boolean,
+): Promise<SetCollectionFavoriteResult> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { success: false, error: "You must be signed in to do that." };
+  }
+
+  if (typeof isFavorite !== "boolean") {
+    return { success: false, error: "Invalid input." };
+  }
+
+  try {
+    const collection = await setCollectionFavoriteRecord(
+      session.user.id,
+      collectionId,
+      isFavorite,
+    );
+
+    if (!collection) {
+      return { success: false, error: "Collection not found." };
+    }
+
+    return { success: true, data: collection };
+  } catch (error) {
+    console.error("Update collection favorite failed", error);
 
     return {
       success: false,
