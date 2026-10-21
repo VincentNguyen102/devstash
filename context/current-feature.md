@@ -1,18 +1,32 @@
-# Current Feature
+# Current Feature: Homepage Mockup
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Build a static marketing homepage prototype in `prototypes/homepage/` with `index.html`, `styles.css` and `script.js`
+- Dark theme using the item-type accent colours (snippet blue `#3b82f6`, prompt amber `#f59e0b`, command cyan `#06b6d4`, note green `#22c55e`, file slate `#64748b`, image pink `#ec4899`, URL indigo `#6366f1`)
+- Hero "chaos to order" visual: chaos container with 8 floating source icons (Notion, GitHub, Slack, VS Code, browser tabs, terminal, text file, bookmark), a pulsing transform arrow, and a simplified DevStash dashboard mockup (sidebar nav + item cards with type-coloured top borders)
+- Chaos icons animate with `requestAnimationFrame`: random drift, wall bouncing, subtle rotation/scale pulsing, and mouse-cursor repulsion
+- Fixed top navigation (logo, Features/Pricing links, Sign In/Get Started) that becomes more opaque on scroll
+- Hero text: "Stop Losing Your Developer Knowledge" gradient headline, scattered-knowledge subheadline and CTA buttons
+- Features section: 6 cards (Code Snippets, AI Prompts, Instant Search, Commands, Files & Docs, Collections), each using its item-type accent colour
+- AI section: two columns — "Pro Feature" badge + capability checklist on the left, code-editor mockup with "AI Generated Tags" demo on the right
+- Pricing: Free ($0, 50 items, 3 collections) vs Pro ($8/mo, unlimited + AI features, highlighted with "Most Popular"), plus a yearly ($72) billing toggle
+- Final CTA ("Ready to Organize Your Knowledge?" + button) and footer with logo, link columns and current-year copyright
+- Scroll-triggered fade-in animations for sections
+- Responsive layout: chaos/arrow/dashboard stack vertically on mobile with the arrow rotated 90° to point down, and all grids collapse to single column
 
 ## Notes
 
-<!-- Any extra notes -->
+- Spec source: `context/features/homepage-mockup-spec.md`
+- Output is a self-contained static prototype (plain HTML/CSS/JS), separate from the Next.js app — no React/Tailwind, Prisma, server actions or unit tests involved
+- Keep it dependency-free (no build step, no external JS libraries); system font stack is fine
+- All animation logic lives in `script.js`
 
 
 
