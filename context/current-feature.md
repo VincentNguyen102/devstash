@@ -1,18 +1,42 @@
-# Current Feature
+# Current Feature: Favorites — Toggles & Page
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Make the drawer's Favorite action functional: toggling it persists the item's `isFavorite` state and reflects the change immediately (icon fill/colour + toast).
+- Make the collection detail page's Favorite action functional: toggling it persists the collection's `isFavorite` state and updates the page.
+- Add a Favorite toggle to item cards (`ItemCard` and the image gallery card) that toggles `isFavorite` without opening the drawer.
+- Add a Favorite toggle to collection cards (dashboard + `/collections` listing), without navigating to the collection.
+- Add auth-checked, ownership-scoped server actions and DB helpers for both toggles (`{ success, data/error }` result pattern, Zod not needed for a boolean toggle).
+- Keep all favorite surfaces in sync: dashboard stat counts, sidebar Favorites/Recent grouping, and `router.refresh()` after a successful toggle.
+- Use optimistic or immediate local feedback with rollback on failure, and disable the control while the request is in flight.
+- Add Vitest unit tests for the new server actions and any pure utilities; verify in the browser.
+- Add a protected `/favorites` page listing all of the signed-in user's favorite items and favorite collections.
+- Add a star icon button to the top bar that navigates to `/favorites` and shows an active state while there.
+- Add client-side sorting to the favorites page with Name (A–Z), Date (newest first) and Type options; the selected sort applies to both the item and collection sections.
+- Display the favorite items as a vertical list of rows instead of a card grid, keeping the favorite toggle available on each row.
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- `Item.isFavorite` and `Collection.isFavorite` already exist in the Prisma schema (no migration needed).
+- The drawer's Favorite button (`src/components/dashboard/item-drawer/item-action-bar.tsx`), the collection header (`collection-actions.tsx`) and the collection card menu (`collection-card-menu.tsx`) are currently UI-only placeholders.
+- Existing favorites are rendered as static stars on `ItemCard`, `ImageThumbnailCard`, `ItemRow`, `CollectionCard`, the sidebar and the command palette.
+- Clicking a favorite control inside a clickable card must `stopPropagation` (and handle keydown) so it never opens the drawer or navigates.
+- Scope: drawer, collection detail header, item grid/image cards and collection cards. File list rows and command palette stay display-only unless asked.
+- Favorites page: user-scoped DB helpers (`getFavoriteItems`, `getFavoriteCollections`), reuses `ItemCollection` for the mixed-type item grid and `CollectionCard` for collections, plus per-section empty states.
+- `/favorites` must be added to the proxy matcher and rendered inside the existing `(dashboard)` shell.
+- Sorting is client-side only (no extra server round-trip): the page fetches the favorites once and a client view sorts in memory. Items use `updatedAt` for Date and canonical system-type order for Type; collections use `updatedAt` and their dominant type. Date defaults to newest first to match the current DB ordering.
+- The favorites item list reuses `ItemRow` (type icon, title, tags, date, drawer opening) with a new optional favorite toggle; the dashboard rows keep their existing display-only star.
+- The top-bar favorites link uses the `outline` button variant (with a border) at the same height as the New Collection / New Item buttons, rather than a borderless ghost icon.
 
 
 

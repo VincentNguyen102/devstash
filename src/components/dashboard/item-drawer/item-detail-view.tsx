@@ -176,6 +176,7 @@ export function ItemDetailView({
             item={item}
             onEdit={startEditing}
             onDeleted={onDeleted}
+            onItemUpdated={onItemUpdated}
           />
         )}
       </header>

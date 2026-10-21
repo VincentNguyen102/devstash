@@ -182,6 +182,15 @@ export async function getRecentItems(
   return findItemSummaries({ user: { email: DEMO_USER_EMAIL } }, limit);
 }
 
+/** The signed-in user's favorite items, newest first. */
+export async function getFavoriteItems(
+  userId: string,
+): Promise<ItemSummary[]> {
+  await connection();
+
+  return findItemSummaries({ userId, isFavorite: true });
+}
+
 /**
  * The demo user's items of a single item type, newest first, as one page.
  * `total` is the full count for the type so the header and page links stay
@@ -543,6 +552,31 @@ export async function createItem(
   });
 
   return getItemDetail(item.id, userId);
+}
+
+/**
+ * Sets the favorite flag on an item owned by `userId`, returning the refreshed
+ * detail or null when the item does not exist or belongs to someone else. The
+ * desired value is passed explicitly instead of toggling in the query so the
+ * write is idempotent and matches what the user saw in the UI.
+ */
+export async function setItemFavorite(
+  itemId: string,
+  userId: string,
+  isFavorite: boolean,
+): Promise<ItemDetail | null> {
+  await connection();
+
+  const result = await prisma.item.updateMany({
+    where: { id: itemId, userId },
+    data: { isFavorite },
+  });
+
+  if (result.count === 0) {
+    return null;
+  }
+
+  return getItemDetail(itemId, userId);
 }
 
 /**

@@ -20,6 +20,11 @@ export interface CollectionSummary {
   dominantTypeId: string | null;
 }
 
+/** A collection summary plus the timestamp the favorites page sorts by. */
+export interface FavoriteCollectionSummary extends CollectionSummary {
+  updatedAt: Date;
+}
+
 export interface CollectionStats {
   total: number;
   favorites: number;
@@ -35,6 +40,15 @@ const COLLECTION_SUMMARY_SELECT = {
 
 type CollectionSummaryRow = Prisma.CollectionGetPayload<{
   select: typeof COLLECTION_SUMMARY_SELECT;
+}>;
+
+const FAVORITE_COLLECTION_SELECT = {
+  ...COLLECTION_SUMMARY_SELECT,
+  updatedAt: true,
+} satisfies Prisma.CollectionSelect;
+
+type FavoriteCollectionRow = Prisma.CollectionGetPayload<{
+  select: typeof FAVORITE_COLLECTION_SELECT;
 }>;
 
 /** Map a collection row (with its item types) to the shared summary shape. */
@@ -59,6 +73,16 @@ function toCollectionSummary(
     itemCount: collection.items.length,
     typeIds,
     dominantTypeId: typeIds[0] ?? null,
+  };
+}
+
+/** Map a favorite collection row to a summary plus its `updatedAt` date. */
+function toFavoriteCollectionSummary(
+  collection: FavoriteCollectionRow,
+): FavoriteCollectionSummary {
+  return {
+    ...toCollectionSummary(collection),
+    updatedAt: collection.updatedAt,
   };
 }
 
@@ -97,6 +121,21 @@ export async function getCollections(
   userId: string,
 ): Promise<CollectionSummary[]> {
   return findCollections(userId);
+}
+
+/** `userId`'s favorite collections, most recently updated first. */
+export async function getFavoriteCollections(
+  userId: string,
+): Promise<FavoriteCollectionSummary[]> {
+  await connection();
+
+  const collections = await prisma.collection.findMany({
+    where: { userId, isFavorite: true },
+    orderBy: { updatedAt: "desc" },
+    select: FAVORITE_COLLECTION_SELECT,
+  });
+
+  return collections.map(toFavoriteCollectionSummary);
 }
 
 /**
@@ -164,6 +203,31 @@ export async function createCollection(
     typeIds: [],
     dominantTypeId: null,
   };
+}
+
+/**
+ * Sets the favorite flag on a collection owned by `userId`, returning the
+ * refreshed summary or null when the collection does not exist or belongs to
+ * someone else. The desired value is passed explicitly so the write is
+ * idempotent rather than toggling whatever is currently stored.
+ */
+export async function setCollectionFavorite(
+  userId: string,
+  id: string,
+  isFavorite: boolean,
+): Promise<CollectionSummary | null> {
+  await connection();
+
+  const result = await prisma.collection.updateMany({
+    where: { id, userId },
+    data: { isFavorite },
+  });
+
+  if (result.count === 0) {
+    return null;
+  }
+
+  return getCollectionById(userId, id);
 }
 
 /**

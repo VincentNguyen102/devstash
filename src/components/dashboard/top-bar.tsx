@@ -1,14 +1,19 @@
 "use client";
 
-import { FolderPlus, PanelLeft, Search } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { FolderPlus, PanelLeft, Search, Star } from "lucide-react";
 
 import { CollectionCreateDialog } from "@/components/dashboard/collection-create-dialog";
 import { ItemCreateDialog } from "@/components/dashboard/item-create-dialog";
 import { Button } from "@/components/ui/button";
 import { useCommandPalette } from "@/hooks/use-command-palette";
+import { cn } from "@/lib/utils";
 
 export function TopBar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   const { open: openCommandPalette } = useCommandPalette();
+  const pathname = usePathname();
+  const isFavoritesPage = pathname === "/favorites";
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-4">
@@ -40,6 +45,24 @@ export function TopBar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
       </button>
 
       <div className="flex flex-1 items-center justify-end gap-2">
+        <Button
+          asChild
+          variant="outline"
+          size="icon-lg"
+          className={cn(isFavoritesPage && "text-yellow-400 hover:text-yellow-400")}
+        >
+          <Link
+            href="/favorites"
+            aria-label="Favorites"
+            aria-current={isFavoritesPage ? "page" : undefined}
+            title="Favorites"
+          >
+            <Star
+              aria-hidden
+              className={cn(isFavoritesPage && "fill-yellow-400")}
+            />
+          </Link>
+        </Button>
         <CollectionCreateDialog
           trigger={
             <Button variant="outline" size="lg" className="hidden sm:inline-flex">

@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Copy, Download, Pencil, Pin, Star, Trash2 } from "lucide-react";
+import { Copy, Download, Pencil, Pin, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { deleteItem } from "@/actions/items";
+import { deleteItem, setItemFavorite } from "@/actions/items";
+import { FavoriteButton } from "@/components/dashboard/favorite-button";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,12 +27,24 @@ export function ItemActionBar({
   item,
   onEdit,
   onDeleted,
+  onItemUpdated,
 }: {
   item: ItemDetail;
   onEdit: () => void;
   onDeleted: () => void;
+  onItemUpdated: (item: ItemDetail) => void;
 }) {
   const { copy } = useCopyFeedback();
+
+  async function handleFavorite(next: boolean) {
+    const result = await setItemFavorite(item.id, next);
+
+    if (result.success && result.data) {
+      onItemUpdated(result.data);
+    }
+
+    return result;
+  }
 
   async function handleCopy() {
     const text = item.content ?? item.url ?? "";
@@ -46,21 +59,13 @@ export function ItemActionBar({
 
   return (
     <div className="flex flex-wrap items-center gap-1">
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className={cn(
-          "gap-1.5 text-muted-foreground",
-          item.isFavorite && "text-yellow-400 hover:text-yellow-400",
-        )}
-      >
-        <Star
-          aria-hidden
-          className={cn("size-4", item.isFavorite && "fill-yellow-400")}
-        />
-        Favorite
-      </Button>
+      <FavoriteButton
+        isFavorite={item.isFavorite}
+        subject={item.title}
+        showLabel
+        announceSuccess
+        onToggle={handleFavorite}
+      />
 
       <Button
         type="button"

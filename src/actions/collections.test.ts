@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
   createCollectionRecord: vi.fn(),
   updateCollectionRecord: vi.fn(),
+  setCollectionFavoriteRecord: vi.fn(),
   deleteCollectionRecord: vi.fn(),
 }));
 
@@ -14,12 +15,14 @@ vi.mock("@/auth", () => ({ auth: mocks.auth }));
 vi.mock("@/lib/db/collections", () => ({
   createCollection: mocks.createCollectionRecord,
   updateCollection: mocks.updateCollectionRecord,
+  setCollectionFavorite: mocks.setCollectionFavoriteRecord,
   deleteCollection: mocks.deleteCollectionRecord,
 }));
 
 import {
   createCollection,
   deleteCollection,
+  setCollectionFavorite,
   updateCollection,
 } from "@/actions/collections";
 
@@ -33,6 +36,10 @@ beforeEach(() => {
   mocks.createCollectionRecord.mockResolvedValue({
     id: "collection-1",
     name: "React Patterns",
+  });
+  mocks.setCollectionFavoriteRecord.mockResolvedValue({
+    id: "collection-1",
+    isFavorite: true,
   });
 });
 
@@ -143,6 +150,67 @@ describe("updateCollection", () => {
     mocks.updateCollectionRecord.mockRejectedValue(new Error("boom"));
 
     const result = await updateCollection("collection-1", validInput);
+
+    expect(result).toEqual({
+      success: false,
+      error: "Something went wrong. Please try again.",
+    });
+    consoleError.mockRestore();
+  });
+});
+
+describe("setCollectionFavorite", () => {
+  it("requires a signed-in user", async () => {
+    mocks.auth.mockResolvedValue(null);
+
+    const result = await setCollectionFavorite("collection-1", true);
+
+    expect(result).toEqual({
+      success: false,
+      error: "You must be signed in to do that.",
+    });
+    expect(mocks.setCollectionFavoriteRecord).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-boolean value", async () => {
+    const result = await setCollectionFavorite(
+      "collection-1",
+      1 as unknown as boolean,
+    );
+
+    expect(result).toEqual({ success: false, error: "Invalid input." });
+    expect(mocks.setCollectionFavoriteRecord).not.toHaveBeenCalled();
+  });
+
+  it("persists the requested state and returns the updated collection", async () => {
+    const collection = { id: "collection-1", isFavorite: true };
+    mocks.setCollectionFavoriteRecord.mockResolvedValue(collection);
+
+    const result = await setCollectionFavorite("collection-1", true);
+
+    expect(result).toEqual({ success: true, data: collection });
+    expect(mocks.setCollectionFavoriteRecord).toHaveBeenCalledWith(
+      "user-1",
+      "collection-1",
+      true,
+    );
+  });
+
+  it("returns not found when the collection is not the user's", async () => {
+    mocks.setCollectionFavoriteRecord.mockResolvedValue(null);
+
+    const result = await setCollectionFavorite("someone-elses", true);
+
+    expect(result).toEqual({ success: false, error: "Collection not found." });
+  });
+
+  it("returns a generic error when the query fails", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    mocks.setCollectionFavoriteRecord.mockRejectedValue(new Error("boom"));
+
+    const result = await setCollectionFavorite("collection-1", true);
 
     expect(result).toEqual({
       success: false,

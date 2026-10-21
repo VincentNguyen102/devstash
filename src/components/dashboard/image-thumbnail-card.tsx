@@ -1,10 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { Pin, Star } from "lucide-react";
+import { Pin } from "lucide-react";
 
 import { ItemCard } from "@/components/dashboard/item-card";
 import { ItemCopyButton } from "@/components/dashboard/item-copy-button";
+import { ItemFavoriteButton } from "@/components/dashboard/item-favorite-button";
 import { useItemOpenTarget } from "@/hooks/use-item-open-target";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -59,19 +60,15 @@ export function ImageThumbnailCard({
           className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
 
-        {item.isPinned || item.isFavorite ? (
-          <div className="absolute top-2 right-2 flex items-center gap-1 rounded-md bg-background/80 px-1.5 py-1 backdrop-blur-sm">
-            {item.isPinned ? (
-              <Pin aria-hidden className="size-3.5 text-muted-foreground" />
-            ) : null}
-            {item.isFavorite ? (
-              <Star
-                aria-hidden
-                className="size-3.5 fill-yellow-400 text-yellow-400"
-              />
-            ) : null}
-          </div>
-        ) : null}
+        <div className="absolute top-2 right-2 flex items-center gap-1 rounded-md bg-background/80 px-1.5 py-1 backdrop-blur-sm">
+          {item.isPinned ? (
+            <Pin aria-hidden className="size-3.5 text-muted-foreground" />
+          ) : null}
+          <ItemFavoriteButton
+            item={item}
+            className="hover:bg-transparent"
+          />
+        </div>
       </div>
 
       <CardHeader>

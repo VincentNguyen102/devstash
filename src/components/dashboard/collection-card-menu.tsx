@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { MoreVertical, Pencil, Star, Trash2 } from "lucide-react";
 import { DropdownMenu } from "radix-ui";
+import { toast } from "sonner";
 
+import { setCollectionFavorite } from "@/actions/collections";
 import { CollectionEditDialog } from "@/components/dashboard/collection-edit-dialog";
 import { DeleteCollectionDialog } from "@/components/dashboard/delete-collection-dialog";
 import type { CollectionSummary } from "@/lib/db/collections";
@@ -15,15 +18,37 @@ const itemClass =
 /**
  * 3-dots menu for a collection card with Edit, Favorite and Delete. The menu is
  * a sibling of the card's link overlay, so opening it never navigates to the
- * collection page. Favorite is icon-only for now (no favouriting logic yet).
+ * collection page.
  */
 export function CollectionCardMenu({
   collection,
 }: {
   collection: CollectionSummary;
 }) {
+  const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [isFavoritePending, startFavoriteTransition] = useTransition();
+
+  function handleFavorite() {
+    const next = !collection.isFavorite;
+
+    startFavoriteTransition(async () => {
+      try {
+        const result = await setCollectionFavorite(collection.id, next);
+
+        if (!result.success) {
+          toast.error(result.error ?? "Couldn't update favorite.");
+          return;
+        }
+
+        toast.success(next ? "Added to favorites" : "Removed from favorites");
+        router.refresh();
+      } catch {
+        toast.error("Something went wrong. Please try again.");
+      }
+    });
+  }
 
   return (
     <>
@@ -60,9 +85,21 @@ export function CollectionCardMenu({
               Delete
             </DropdownMenu.Item>
 
-            <DropdownMenu.Item className={itemClass}>
-              <Star aria-hidden className="size-4" />
-              Favorite
+            <DropdownMenu.Item
+              className={itemClass}
+              disabled={isFavoritePending}
+              onSelect={handleFavorite}
+            >
+              <Star
+                aria-hidden
+                className={cn(
+                  "size-4",
+                  collection.isFavorite && "fill-yellow-400 text-yellow-400",
+                )}
+              />
+              {collection.isFavorite
+                ? "Remove from favorites"
+                : "Add to favorites"}
             </DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu.Portal>

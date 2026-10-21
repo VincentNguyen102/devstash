@@ -2,6 +2,7 @@
 
 import { Pin, Star } from "lucide-react";
 
+import { ItemFavoriteButton } from "@/components/dashboard/item-favorite-button";
 import { useItemOpenTarget } from "@/hooks/use-item-open-target";
 import { Badge } from "@/components/ui/badge";
 import { formatShortDate } from "@/lib/date";
@@ -9,7 +10,14 @@ import type { ItemSummary } from "@/lib/db/items";
 import { getTypeVisual } from "@/lib/item-type-meta";
 import { cn } from "@/lib/utils";
 
-export function ItemRow({ item }: { item: ItemSummary }) {
+export function ItemRow({
+  item,
+  showFavoriteToggle = false,
+}: {
+  item: ItemSummary;
+  /** Render an interactive star instead of the read-only favorite indicator. */
+  showFavoriteToggle?: boolean;
+}) {
   const openTarget = useItemOpenTarget(item.id, item.title);
   const { Icon, textClass, bgClass, accentClass } = getTypeVisual(item.typeId);
 
@@ -36,7 +44,9 @@ export function ItemRow({ item }: { item: ItemSummary }) {
           {item.isPinned ? (
             <Pin aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
           ) : null}
-          {item.isFavorite ? (
+          {showFavoriteToggle ? (
+            <ItemFavoriteButton item={item} className="-my-1" />
+          ) : item.isFavorite ? (
             <Star
               aria-hidden
               className="size-3.5 shrink-0 fill-yellow-400 text-yellow-400"
