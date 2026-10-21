@@ -1,18 +1,31 @@
-# Current Feature
+# Current Feature: Pinned Items
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Create `toggleItemPin` server action (items only, not collections)
+- Make the existing Pin button in `ItemDrawer` functional (it currently has no `onClick`)
+- Optimistic UI updates for instant feedback when pinning/unpinning
+- Toast notification on success and error
+- Pinned items sort to the top of listings
+- Follow the existing Favorite Button pattern
+- Pin icon on `ItemCard` stays a static indicator
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- Spec: `context/features/pinned-spec.md`
+- Scope is items only — collections have no pin behaviour
+- The `Item.pinned` column already exists from the initial migration; no schema change expected
+- Dashboard already has a "Pinned" section (`getPinnedItems`), so it should reflect pin changes after a refresh
 
 
 

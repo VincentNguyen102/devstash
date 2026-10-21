@@ -44,7 +44,7 @@ export function ItemCard({ item }: { item: ItemSummary }) {
           {item.isPinned ? (
             <Pin
               aria-hidden
-              className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
+              className="mt-0.5 size-3.5 shrink-0 fill-current text-rose-400"
             />
           ) : null}
           <ItemFavoriteButton item={item} className="-mt-0.5" />
