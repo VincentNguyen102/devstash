@@ -1,32 +1,18 @@
-# Current Feature: Homepage Mockup
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-In Progress
+Not Started
 
 ## Goals
 
-- Build a static marketing homepage prototype in `prototypes/homepage/` with `index.html`, `styles.css` and `script.js`
-- Dark theme using the item-type accent colours (snippet blue `#3b82f6`, prompt amber `#f59e0b`, command cyan `#06b6d4`, note green `#22c55e`, file slate `#64748b`, image pink `#ec4899`, URL indigo `#6366f1`)
-- Hero "chaos to order" visual: chaos container with 8 floating source icons (Notion, GitHub, Slack, VS Code, browser tabs, terminal, text file, bookmark), a pulsing transform arrow, and a simplified DevStash dashboard mockup (sidebar nav + item cards with type-coloured top borders)
-- Chaos icons animate with `requestAnimationFrame`: random drift, wall bouncing, subtle rotation/scale pulsing, and mouse-cursor repulsion
-- Fixed top navigation (logo, Features/Pricing links, Sign In/Get Started) that becomes more opaque on scroll
-- Hero text: "Stop Losing Your Developer Knowledge" gradient headline, scattered-knowledge subheadline and CTA buttons
-- Features section: 6 cards (Code Snippets, AI Prompts, Instant Search, Commands, Files & Docs, Collections), each using its item-type accent colour
-- AI section: two columns — "Pro Feature" badge + capability checklist on the left, code-editor mockup with "AI Generated Tags" demo on the right
-- Pricing: Free ($0, 50 items, 3 collections) vs Pro ($8/mo, unlimited + AI features, highlighted with "Most Popular"), plus a yearly ($72) billing toggle
-- Final CTA ("Ready to Organize Your Knowledge?" + button) and footer with logo, link columns and current-year copyright
-- Scroll-triggered fade-in animations for sections
-- Responsive layout: chaos/arrow/dashboard stack vertically on mobile with the arrow rotated 90° to point down, and all grids collapse to single column
+<!-- Goals & requirements -->
 
 ## Notes
 
-- Spec source: `context/features/homepage-mockup-spec.md`
-- Output is a self-contained static prototype (plain HTML/CSS/JS), separate from the Next.js app — no React/Tailwind, Prisma, server actions or unit tests involved
-- Keep it dependency-free (no build step, no external JS libraries); system font stack is fine
-- All animation logic lives in `script.js`
+<!-- Any extra notes -->
 
 
 
@@ -77,3 +63,4 @@ In Progress
 - Editor Preferences Settings completed — added an editor-preferences section to `/settings` that auto-saves to a new `User.editorPreferences` JSON column (migration `20261014182005_add_user_editor_preferences`, applied to the development branch); `src/lib/editor-preferences.ts` holds the framework-free `EditorPreferences` type, defaults (font 12, tab 2, word wrap on, minimap off, theme `vs-dark`), the font/tab/theme option lists, per-field guards and `normalizeEditorPreferences` (fills each invalid/missing field independently from the stored JSON); added the strict `editorPreferencesSchema` (`src/lib/validations/editor-preferences.ts`), the `updateEditorPreferences` server action (`src/actions/settings.ts`, auth + Zod + `{ success, data, error }`) backed by `getEditorPreferences`/`updateEditorPreferences` in `src/lib/db/settings.ts`; `EditorPreferencesProvider` + `useEditorPreferences` (`src/components/dashboard/editor-preferences-provider.tsx`, `src/hooks/use-editor-preferences.ts`) is seeded once from the `(dashboard)` layout and mounted in `DashboardShell`, applies changes optimistically and rolls back on failure with an "Editor preferences saved" toast; `EditorPreferencesCard` (`src/components/settings/editor-preferences-card.tsx`) renders Font size / Tab size / Theme selects and Word wrap / Minimap switches (disabled while saving, no save button) and the Monaco `CodeEditor` now applies `fontSize`/`tabSize`/`wordWrap`/`minimap`/theme; moved the theme definitions into `src/lib/monaco-theme.ts` (the existing custom `devstash-dark` theme kept as the `vs-dark` option, plus new Monokai and GitHub Dark themes) and added the shadcn `Select`/`Switch`/`Label` primitives; added 18 unit tests (`src/lib/editor-preferences.test.ts`, `src/lib/validations/editor-preferences.test.ts`, `src/actions/settings.test.ts`; 202 passing) and verified in the browser with the demo account (defaults render, theme/font/tab/minimap/wrap changes auto-save with a toast and persist across reload, Monaco reflected 16px + Monokai `#272822` + minimap, no console errors) then reset the demo user's preferences to defaults; plus `npm run test` + `npm run lint` + `npm run build`; the spec is `context/features/editor-settings-spec.md`
 - Favorites — Toggles & Page completed — made favorites persist across the app and added a dedicated favorites page: added ownership-scoped `setItemFavorite`/`setCollectionFavorite` DB helpers and auth-checked server actions (`{ success, data, error }`), plus a shared optimistic `FavoriteButton` (`useOptimistic` + `useTransition`, rollback/pending/stopPropagation) wired into the item drawer, collection detail header, item grid/image cards, collection cards and the collection ⋮ menu; added the protected `/favorites` page (proxy matcher + `(dashboard)` shell) with user-scoped `getFavoriteItems`/`getFavoriteCollections`, favorite items rendered as `ItemRow` list rows (new optional interactive star) and collections as cards, per-section/global empty states, client-side sorting by Date (newest), Name (A–Z) and item Type via `src/lib/favorites-sort.ts` (collections sort by dominant type; `FavoriteCollectionSummary` carries `updatedAt`), and an outlined star button in the top bar linking to `/favorites` with an active state; added 20 unit tests (`favorites-sort`, `setItemFavorite`, `setCollectionFavorite`; 222 passing) and verified in the browser (toggle from drawer/cards/header/menu updates stats, sidebar grouping and counts; favorites page lists/sorts rows and collections; unauthenticated `/favorites` redirects; no console errors) plus `npm run lint` + `npm run build`.
 - Pinned Items completed — made the drawer Pin button functional and surfaced pinned items at the top of listings: added `setItemPin` to `src/lib/db/items.ts` (ownership-scoped `updateMany` returning the refreshed `ItemDetail`) and the `toggleItemPin` server action in `src/actions/items.ts` (auth check, boolean guard, `{ success, data, error }`), plus a shared optimistic `PinButton` (`useOptimistic` + `useTransition`, rollback, success/error toast, `router.refresh()`) wired into the item drawer action bar; paginated type/collection listings now order by `isPinned` desc then `updatedAt` desc, while the dashboard Pinned section picks up changes after refresh; static pin indicators on `ItemCard`, `ItemRow` and `ImageThumbnailCard` (and the drawer's active Pin state) use a filled rose-400 icon; collections intentionally unchanged; added 5 unit tests for `toggleItemPin` (227 passing) and verified in the browser (pin/unpin from the drawer, optimistic pressed state + success toast, reorder on `/items/snippet`, dashboard Pinned section add/remove, no console errors) plus `npm run test` + `npm run lint` + `npm run build`; the spec is `context/features/pinned-spec.md`.
+- Homepage Mockup completed — added a self-contained marketing homepage prototype in `prototypes/homepage/` (`index.html`, `styles.css`, `script.js`): fixed nav that solidifies on scroll, gradient hero with the "chaos → order" visual (eight brand/tool tiles that drift, bounce, rotate/pulse and flee the cursor via `requestAnimationFrame`, a CSS-pulsing transform arrow, and a type-coloured dashboard mockup), six accent-coloured feature cards, an AI section with a syntax-highlighted editor and animated AI tags, Free/Pro pricing with a monthly/yearly toggle ($8/mo ↔ $6/mo billed $72), CTA and footer with a JS-updated copyright year; added IntersectionObserver scroll reveals, a mobile menu, responsive stacking (arrow rotates 90°) and `prefers-reduced-motion` support; verified in the browser at 1440/1096/390px (cursor repulsion 41px → 111px, icons stay inside the stage, no horizontal overflow or console errors, yearly toggle/mobile menu work) plus `npm run test` (227 passing) + `npm run lint` + `npm run build`; no unit tests (static prototype, no server actions/utilities); the spec is `context/features/homepage-mockup-spec.md`
