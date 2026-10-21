@@ -1,31 +1,18 @@
-# Current Feature: Homepage
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-In Progress
+Not Started
 
 ## Goals
 
-- Build the marketing homepage at `/` from `prototypes/homepage/`, replacing the placeholder in `src/app/page.tsx`
-- Render all sections in order: header, hero (chaos → arrow → dashboard), features, AI, pricing, CTA, footer
-- Keep the page server-rendered by default; use client components only for the header, chaos stage, pricing toggle and scroll reveal
-- Use Tailwind v4 and existing ShadCN primitives (`Button`, `Badge`, `Card`), reusing `getTypeVisual()` for type accents with no new dependencies
-- Wire all links correctly: Sign In → `/sign-in`, Get Started/Start free/trial → `/register`, in-page anchors → `#features`, `#ai`, `#pricing`; omit dead footer links
-- Implement motion: header scroll state, chaos tile physics, pulsing arrow, scroll reveal, staggered AI tags and monthly/yearly pricing toggle; respect `prefers-reduced-motion`
-- Make the page responsive and accessible: stacked hero/grids, mobile menu, skip link, semantic landmarks, no horizontal overflow
-- Keep the page public and static with a `metadata` export; no auth, database or server actions
-- Verify with `npm run lint`, `npm run build`, `npm run test` and in the browser at ~1440px, ~1096px and 390px
+<!-- Goals & requirements -->
 
 ## Notes
 
-- Spec: `@context/features/homepage-spec.md`
-- Design references: `@prototypes/homepage/index.html`, `styles.css`, `script.js`
-- Root layout already provides the dark theme, Geist fonts and `<Toaster />`; no layout changes needed
-- No unit tests required (no server actions or utilities changed)
-- All Pro CTAs go to `/register` until Stripe/checkout exists
-- Footer pages that do not exist (Docs, Guides, Support, Status, About, Blog, Contact, Privacy) should be omitted rather than linked with dead `href="#"` values
+<!-- Any extra notes -->
 
 ## History
 
@@ -75,3 +62,4 @@ In Progress
 - Favorites — Toggles & Page completed — made favorites persist across the app and added a dedicated favorites page: added ownership-scoped `setItemFavorite`/`setCollectionFavorite` DB helpers and auth-checked server actions (`{ success, data, error }`), plus a shared optimistic `FavoriteButton` (`useOptimistic` + `useTransition`, rollback/pending/stopPropagation) wired into the item drawer, collection detail header, item grid/image cards, collection cards and the collection ⋮ menu; added the protected `/favorites` page (proxy matcher + `(dashboard)` shell) with user-scoped `getFavoriteItems`/`getFavoriteCollections`, favorite items rendered as `ItemRow` list rows (new optional interactive star) and collections as cards, per-section/global empty states, client-side sorting by Date (newest), Name (A–Z) and item Type via `src/lib/favorites-sort.ts` (collections sort by dominant type; `FavoriteCollectionSummary` carries `updatedAt`), and an outlined star button in the top bar linking to `/favorites` with an active state; added 20 unit tests (`favorites-sort`, `setItemFavorite`, `setCollectionFavorite`; 222 passing) and verified in the browser (toggle from drawer/cards/header/menu updates stats, sidebar grouping and counts; favorites page lists/sorts rows and collections; unauthenticated `/favorites` redirects; no console errors) plus `npm run lint` + `npm run build`.
 - Pinned Items completed — made the drawer Pin button functional and surfaced pinned items at the top of listings: added `setItemPin` to `src/lib/db/items.ts` (ownership-scoped `updateMany` returning the refreshed `ItemDetail`) and the `toggleItemPin` server action in `src/actions/items.ts` (auth check, boolean guard, `{ success, data, error }`), plus a shared optimistic `PinButton` (`useOptimistic` + `useTransition`, rollback, success/error toast, `router.refresh()`) wired into the item drawer action bar; paginated type/collection listings now order by `isPinned` desc then `updatedAt` desc, while the dashboard Pinned section picks up changes after refresh; static pin indicators on `ItemCard`, `ItemRow` and `ImageThumbnailCard` (and the drawer's active Pin state) use a filled rose-400 icon; collections intentionally unchanged; added 5 unit tests for `toggleItemPin` (227 passing) and verified in the browser (pin/unpin from the drawer, optimistic pressed state + success toast, reorder on `/items/snippet`, dashboard Pinned section add/remove, no console errors) plus `npm run test` + `npm run lint` + `npm run build`; the spec is `context/features/pinned-spec.md`.
 - Homepage Mockup completed — added a self-contained marketing homepage prototype in `prototypes/homepage/` (`index.html`, `styles.css`, `script.js`): fixed nav that solidifies on scroll, gradient hero with the "chaos → order" visual (eight brand/tool tiles that drift, bounce, rotate/pulse and flee the cursor via `requestAnimationFrame`, a CSS-pulsing transform arrow, and a type-coloured dashboard mockup), six accent-coloured feature cards, an AI section with a syntax-highlighted editor and animated AI tags, Free/Pro pricing with a monthly/yearly toggle ($8/mo ↔ $6/mo billed $72), CTA and footer with a JS-updated copyright year; added IntersectionObserver scroll reveals, a mobile menu, responsive stacking (arrow rotates 90°) and `prefers-reduced-motion` support; verified in the browser at 1440/1096/390px (cursor repulsion 41px → 111px, icons stay inside the stage, no horizontal overflow or console errors, yearly toggle/mobile menu work) plus `npm run test` (227 passing) + `npm run lint` + `npm run build`; no unit tests (static prototype, no server actions/utilities); the spec is `context/features/homepage-mockup-spec.md`
+- Homepage completed — replaced the `/` placeholder with the full marketing homepage from `prototypes/homepage/`: server-rendered hero, features, AI, pricing, CTA and footer sections composed in `src/app/page.tsx`, with client components only for the scroll-aware `SiteHeader` (mobile menu), `ChaosStage`, `PricingSection` billing toggle and `ScrollReveal`; shared marketing content and `HOME_HREFS`/`PRIMARY_CTA_CLASS` live in `src/lib/homepage.ts`, section primitives in `src/components/home/section.tsx`, and the chaos physics in `src/hooks/use-chaos-stage.ts`; reused `Button`/`Badge`/`Card` and `getTypeVisual()` (with `Search`/`Layers` icon overrides for conceptual feature cards), wired Sign In → `/sign-in`, all Get Started/plan CTAs → `/register`, and in-page anchors to `#features`/`#ai`/`#pricing` with no dead footer links, and added arrow-pulse/reveal/AI-tag keyframes plus `prefers-reduced-motion` and `scripting: none` fallbacks to `src/app/globals.css`; verified at 1440/1096/390px (hero visible immediately, scroll reveals, chaos drift/bounce, mobile menu close paths, monthly/yearly toggle, no horizontal overflow or console errors) plus `npm run test` (227 passing) + `npm run lint` + `npm run build`; no unit tests required (static page, no server actions/utilities); the spec is `context/features/homepage-spec.md`
