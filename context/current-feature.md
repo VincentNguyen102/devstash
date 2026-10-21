@@ -1,20 +1,31 @@
-# Current Feature
+# Current Feature: Homepage
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Build the marketing homepage at `/` from `prototypes/homepage/`, replacing the placeholder in `src/app/page.tsx`
+- Render all sections in order: header, hero (chaos → arrow → dashboard), features, AI, pricing, CTA, footer
+- Keep the page server-rendered by default; use client components only for the header, chaos stage, pricing toggle and scroll reveal
+- Use Tailwind v4 and existing ShadCN primitives (`Button`, `Badge`, `Card`), reusing `getTypeVisual()` for type accents with no new dependencies
+- Wire all links correctly: Sign In → `/sign-in`, Get Started/Start free/trial → `/register`, in-page anchors → `#features`, `#ai`, `#pricing`; omit dead footer links
+- Implement motion: header scroll state, chaos tile physics, pulsing arrow, scroll reveal, staggered AI tags and monthly/yearly pricing toggle; respect `prefers-reduced-motion`
+- Make the page responsive and accessible: stacked hero/grids, mobile menu, skip link, semantic landmarks, no horizontal overflow
+- Keep the page public and static with a `metadata` export; no auth, database or server actions
+- Verify with `npm run lint`, `npm run build`, `npm run test` and in the browser at ~1440px, ~1096px and 390px
 
 ## Notes
 
-<!-- Any extra notes -->
-
-
+- Spec: `@context/features/homepage-spec.md`
+- Design references: `@prototypes/homepage/index.html`, `styles.css`, `script.js`
+- Root layout already provides the dark theme, Geist fonts and `<Toaster />`; no layout changes needed
+- No unit tests required (no server actions or utilities changed)
+- All Pro CTAs go to `/register` until Stripe/checkout exists
+- Footer pages that do not exist (Docs, Guides, Support, Status, About, Blog, Contact, Privacy) should be omitted rather than linked with dead `href="#"` values
 
 ## History
 
