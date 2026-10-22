@@ -1,40 +1,18 @@
-# Current Feature: Stripe Integration — Phase 1: Core Infrastructure
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-In Progress
+Not Started
 
 ## Goals
 
-- Add the Stripe billing fields to the `User` model (`stripeCustomerId`, `stripeSubscriptionId`, `stripePriceId`, `stripeSubscriptionStatus`, `stripeCurrentPeriodEnd`, `stripeCancelAtPeriodEnd`) and make the two Stripe IDs unique.
-- Create and apply the Prisma migration on the development branch (never production), then regenerate the client.
-- Install `stripe@^23` and document the Stripe environment variables in `.env.example`.
-- Extract `getAppUrl()` into `src/lib/app-url.ts` and update the email-verification/password-reset imports.
-- Create `src/lib/usage-limits.ts` with the Free/Pro rules: 50 items, 3 collections, Pro-only `file`/`image`, and the `check*` helpers.
-- Create `src/lib/billing.ts` with `BILLING_INTERVALS`, `PRO_PLANS`, `PRO_SUBSCRIPTION_STATUSES`, `isProSubscriptionStatus`, `BillingOverview` and `isStaleSubscriptionEvent`.
-- Create `src/lib/validations/billing.ts` with `billingIntervalSchema`.
-- Create `src/lib/stripe.ts` (lazy client, price-ID helpers) and `src/lib/stripe-subscription.ts` (`subscriptionSnapshot`).
-- Create `src/lib/db/billing.ts` with the billing read helpers and the subscription sync/clear write helpers.
-- Add the Auth.js `jwt` callback that always syncs `isPro` from the database, and expose it on the session and types.
-- Write `src/lib/usage-limits.test.ts` covering every branch, plus the additional pure-module tests listed in the spec.
-- Verify `npm run test`, `npm run lint`, `npm run build` and `npm run db:status`; confirm a manual `isPro` DB toggle is reflected after a dashboard reload.
+<!-- Goals & requirements -->
 
 ## Notes
 
-- Spec: `context/features/stripe-phase-1-spec.md`
-- Reference: `docs/stripe-integration-plan.md` §5–§7
-- Phase 1 adds **no** Stripe API calls, webhook route, feature-gating enforcement in actions/routes, or billing UI. Those are Phase 2.
-- `src/lib/usage-limits.ts` is an intentional split from the plan's `src/lib/billing.ts` so the pure limits can be unit tested and imported by client components without billing/Stripe code.
-- The required test file is `src/lib/usage-limits.test.ts`; additional pure-module tests are `billing.test.ts`, `validations/billing.test.ts`, `stripe-subscription.test.ts` and `stripe.test.ts`.
-- Env names come from the existing `.env.example`: `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` (optional; not used by hosted Checkout), `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID_MONTHLY`, `STRIPE_PRICE_ID_YEARLY`.
-- The migration is DDL: ask for approval before running it and target only the development branch (`br-twilight-wind-b3lrs3kz`).
-- Decisions to confirm before starting:
-  - `file` and `image` are both Pro by default; the project spec lists image uploads under Free.
-  - `past_due` keeps Pro access as a grace period by default.
-  - No 14-day trial is implemented, despite the homepage copy.
-- Verification commands: `npm run test`, `npm run lint`, `npm run build`, `npm run db:status`.
+<!-- Any extra notes -->
 
 ## History
 
@@ -86,3 +64,4 @@ In Progress
 - Homepage Mockup completed — added a self-contained marketing homepage prototype in `prototypes/homepage/` (`index.html`, `styles.css`, `script.js`): fixed nav that solidifies on scroll, gradient hero with the "chaos → order" visual (eight brand/tool tiles that drift, bounce, rotate/pulse and flee the cursor via `requestAnimationFrame`, a CSS-pulsing transform arrow, and a type-coloured dashboard mockup), six accent-coloured feature cards, an AI section with a syntax-highlighted editor and animated AI tags, Free/Pro pricing with a monthly/yearly toggle ($8/mo ↔ $6/mo billed $72), CTA and footer with a JS-updated copyright year; added IntersectionObserver scroll reveals, a mobile menu, responsive stacking (arrow rotates 90°) and `prefers-reduced-motion` support; verified in the browser at 1440/1096/390px (cursor repulsion 41px → 111px, icons stay inside the stage, no horizontal overflow or console errors, yearly toggle/mobile menu work) plus `npm run test` (227 passing) + `npm run lint` + `npm run build`; no unit tests (static prototype, no server actions/utilities); the spec is `context/features/homepage-mockup-spec.md`
 - Homepage completed — replaced the `/` placeholder with the full marketing homepage from `prototypes/homepage/`: server-rendered hero, features, AI, pricing, CTA and footer sections composed in `src/app/page.tsx`, with client components only for the scroll-aware `SiteHeader` (mobile menu), `ChaosStage`, `PricingSection` billing toggle and `ScrollReveal`; shared marketing content and `HOME_HREFS`/`PRIMARY_CTA_CLASS` live in `src/lib/homepage.ts`, section primitives in `src/components/home/section.tsx`, and the chaos physics in `src/hooks/use-chaos-stage.ts`; reused `Button`/`Badge`/`Card` and `getTypeVisual()` (with `Search`/`Layers` icon overrides for conceptual feature cards), wired Sign In → `/sign-in`, all Get Started/plan CTAs → `/register`, and in-page anchors to `#features`/`#ai`/`#pricing` with no dead footer links, and added arrow-pulse/reveal/AI-tag keyframes plus `prefers-reduced-motion` and `scripting: none` fallbacks to `src/app/globals.css`; verified at 1440/1096/390px (hero visible immediately, scroll reveals, chaos drift/bounce, mobile menu close paths, monthly/yearly toggle, no horizontal overflow or console errors) plus `npm run test` (227 passing) + `npm run lint` + `npm run build`; no unit tests required (static page, no server actions/utilities); the spec is `context/features/homepage-spec.md`
 - Auth page top nav completed — added the marketing header to `/sign-in` and `/register`: a new `AuthShell` (`src/components/auth/auth-shell.tsx`) renders a skip link, `SiteHeader` and a vertically centred form with clearance under the fixed 64px nav; `SiteHeader` gained optional `links`/`actions`/`variant` props (homepage defaults unchanged, `solid` variant for pages without a hero), `AUTH_NAV_LINKS` (`/#features`, `/#pricing`) in `src/lib/homepage.ts` makes the section links work from auth routes, and the pages pass context-aware actions (`/sign-in` → Get Started, `/register` → Sign In) on desktop and in the mobile menu; verified at 1440/768/390px (no horizontal overflow, mobile menu open/close and section navigation, skip link on first Tab, demo credentials sign-in → `/dashboard`, homepage header unchanged) plus `npm run test` (227 passing) + `npm run lint` + `npm run build`; presentational-only, no new unit tests.
+- Stripe Phase 1 (Core Infrastructure) completed — added the billing fields to `User` (`stripeCustomerId`/`stripeSubscriptionId` unique, `stripePriceId`, `stripeSubscriptionStatus`, `stripeCurrentPeriodEnd`, `stripeCancelAtPeriodEnd`) and applied migration `20261022120000_add_stripe_billing_fields` to the development branch; installed `stripe@23.0.0`; extracted `getAppUrl()` into `src/lib/app-url.ts`; added `src/lib/usage-limits.ts` (50 items, 3 collections, Pro-only `file`/`image`, `checkItemLimit`/`checkCollectionLimit`/`checkItemType`/`checkItemCreation`) with `usage-limits.test.ts`; added `src/lib/billing.ts` (intervals, `PRO_PLANS`, status helper, `BillingOverview`, stale-subscription helper), `src/lib/validations/billing.ts`, `src/lib/stripe.ts` (lazy client + price-ID helpers), `src/lib/stripe-subscription.ts` (`subscriptionSnapshot`) and `src/lib/db/billing.ts` (overview/entitlements reads plus subscription sync/clear writes); the Auth.js `jwt` callback now always syncs `isPro` from the database and the session exposes it, with `next-auth`/JWT type augmentation; verified the session reports `isPro: false` by default and flips to `true` after a manual DB update + session fetch (then reverted); `npm run test` (271 passing) + `npm run lint` + `npm run build` + `npm run db:status` all pass; no Stripe API calls, webhooks, gating enforcement or billing UI yet — Phase 2 covers those; the spec is `context/features/stripe-phase-1-spec.md`.
