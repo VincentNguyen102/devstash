@@ -86,6 +86,12 @@ export const HOME_NAV_LINKS: HomeLinkItem[] = [
   { label: "Pricing", href: "#pricing" },
 ];
 
+/** Section links for marketing pages rendered outside the homepage. */
+export const AUTH_NAV_LINKS: HomeLinkItem[] = [
+  { label: "Features", href: "/#features" },
+  { label: "Pricing", href: "/#pricing" },
+];
+
 export const HOME_HERO = {
   eyebrow: "The developer knowledge hub",
   titleLead: "Stop Losing Your",

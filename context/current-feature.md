@@ -1,18 +1,35 @@
-# Current Feature
+# Current Feature: Homepage Top Nav on Sign In & Register
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Render the marketing `SiteHeader` (logo, section links, auth actions) at the top of `/sign-in` and `/register`
+- Make the header work from auth routes: Features/Pricing must navigate to the homepage sections (`/#features`, `/#pricing`) instead of being dead same-page anchors
+- Show the context-appropriate action so the header isn't redundant: `/sign-in` shows only "Get Started", `/register` shows only "Sign In" (confirmed by the user); logo + Features/Pricing stay on both
+- Give the auth content clearance for the fixed 64px header and keep the card/form vertically centred on desktop and mobile
+- Keep the header visually consistent with the homepage (same logo, spacing, CTA styling); use a solid/scrolled treatment on auth pages since there is no content behind it
+- Preserve existing auth behaviour: forms, server actions, error and rate-limit states, email-verification flag, GitHub OAuth, cross-links, metadata
+- Responsive at 390 / 768 / 1096 / 1440: mobile hamburger menu opens/closes (Escape, outside click, link click) with no horizontal overflow
+- Accessibility: labelled nav, visible focus states, no duplicated/confusing landmarks; header must not trap or steal focus from the form
+- Do not change the dashboard or the other auth screens (`/forgot-password`, `/reset-password`, `/verify-email`, `/check-email`)
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- `SiteHeader` lives at `src/components/home/site-header.tsx` (client component). It hardcodes `HOME_NAV_LINKS` (`#features`, `#pricing`) and always renders both Sign In + Get Started, so it needs a small variant/prop rather than being dropped in unchanged.
+- `/sign-in` and `/register` are standalone server components (`src/app/sign-in/page.tsx`, `src/app/register/page.tsx`) with `<main className="flex min-h-svh items-center justify-center p-6">`. There is no shared auth layout; decide whether to add one or render the header per page.
+- Homepage composes the header inside a `relative flex min-h-svh flex-col overflow-x-clip` wrapper with a skip link; the header is `fixed inset-x-0 top-0 z-50` and 64px tall (`h-16`).
+- Preferred implementation: add props/variant to `SiteHeader` (e.g. `navLinks`/`cta`) and reuse `HomeLink` + `PRIMARY_CTA_CLASS`, avoiding duplicated header markup.
+- Presentational-only change: no server actions or utilities are touched, so no new Vitest tests; verify in the browser and run `npm run test`, `npm run lint`, `npm run build`.
+- Out of scope: rebranding the auth pages beyond the header (the reviewer also flagged the auth page's missing logo/footer and smaller CTA sizing — note for a separate feature).
 
 ## History
 

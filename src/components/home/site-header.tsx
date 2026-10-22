@@ -10,8 +10,25 @@ import {
   HOME_HREFS,
   HOME_NAV_LINKS,
   PRIMARY_CTA_CLASS,
+  type HomeLinkItem,
 } from "@/lib/homepage";
 import { cn } from "@/lib/utils";
+
+export type SiteHeaderAction = "sign-in" | "get-started";
+
+export interface SiteHeaderProps {
+  /** Section links shown in the nav. Defaults to the homepage anchors. */
+  links?: HomeLinkItem[];
+  /** Auth actions to show on the right. Defaults to both. */
+  actions?: SiteHeaderAction[];
+  /**
+   * `solid` keeps the header opaque over pages with no hero behind it.
+   * Defaults to the transparent treatment that solidifies on scroll.
+   */
+  variant?: "transparent" | "solid";
+}
+
+const DEFAULT_ACTIONS: SiteHeaderAction[] = ["sign-in", "get-started"];
 
 const subscribeToScroll = (onChange: () => void) => {
   window.addEventListener("scroll", onChange, { passive: true });
@@ -21,8 +38,14 @@ const subscribeToScroll = (onChange: () => void) => {
 const getScrollSnapshot = () => window.scrollY > 8;
 const getServerScrollSnapshot = () => false;
 
-export function SiteHeader() {
+export function SiteHeader({
+  links = HOME_NAV_LINKS,
+  actions = DEFAULT_ACTIONS,
+  variant = "transparent",
+}: SiteHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const showSignIn = actions.includes("sign-in");
+  const showGetStarted = actions.includes("get-started");
   const headerRef = useRef<HTMLElement>(null);
   const scrolled = useSyncExternalStore(
     subscribeToScroll,
@@ -63,13 +86,14 @@ export function SiteHeader() {
   }, [menuOpen]);
 
   const closeMenu = () => setMenuOpen(false);
+  const solid = variant === "solid" || scrolled;
 
   return (
     <header
       ref={headerRef}
       className={cn(
         "fixed inset-x-0 top-0 z-50 border-b transition-colors duration-300",
-        scrolled
+        solid
           ? "border-border/80 bg-background/85 backdrop-blur-xl"
           : "border-transparent bg-background/30 backdrop-blur-md",
       )}
@@ -92,7 +116,7 @@ export function SiteHeader() {
           aria-label="Main"
           className="hidden items-center gap-1 md:flex"
         >
-          {HOME_NAV_LINKS.map((link) => (
+          {links.map((link) => (
             <HomeLink
               key={link.href}
               href={link.href}
@@ -104,16 +128,20 @@ export function SiteHeader() {
         </nav>
 
         <div className="ml-auto hidden items-center gap-2 md:flex">
-          <Button asChild variant="ghost" size="lg">
-            <HomeLink href={HOME_HREFS.signIn}>Sign In</HomeLink>
-          </Button>
-          <Button
-            asChild
-            size="lg"
-            className={cn(PRIMARY_CTA_CLASS, "px-4")}
-          >
-            <HomeLink href={HOME_HREFS.register}>Get Started</HomeLink>
-          </Button>
+          {showSignIn ? (
+            <Button asChild variant="ghost" size="lg">
+              <HomeLink href={HOME_HREFS.signIn}>Sign In</HomeLink>
+            </Button>
+          ) : null}
+          {showGetStarted ? (
+            <Button
+              asChild
+              size="lg"
+              className={cn(PRIMARY_CTA_CLASS, "px-4")}
+            >
+              <HomeLink href={HOME_HREFS.register}>Get Started</HomeLink>
+            </Button>
+          ) : null}
         </div>
 
         <Button
@@ -136,7 +164,7 @@ export function SiteHeader() {
           className="border-t border-border bg-background/95 backdrop-blur-xl md:hidden"
         >
           <Container className="flex flex-col gap-1 py-4">
-            {HOME_NAV_LINKS.map((link) => (
+            {links.map((link) => (
               <HomeLink
                 key={link.href}
                 href={link.href}
@@ -148,20 +176,20 @@ export function SiteHeader() {
             ))}
 
             <div className="mt-3 flex flex-col gap-2 border-t border-border pt-4">
-              <Button asChild variant="outline" size="lg">
-                <HomeLink href={HOME_HREFS.signIn} onClick={closeMenu}>
-                  Sign In
-                </HomeLink>
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                className={PRIMARY_CTA_CLASS}
-              >
-                <HomeLink href={HOME_HREFS.register} onClick={closeMenu}>
-                  Get Started
-                </HomeLink>
-              </Button>
+              {showSignIn ? (
+                <Button asChild variant="outline" size="lg">
+                  <HomeLink href={HOME_HREFS.signIn} onClick={closeMenu}>
+                    Sign In
+                  </HomeLink>
+                </Button>
+              ) : null}
+              {showGetStarted ? (
+                <Button asChild size="lg" className={PRIMARY_CTA_CLASS}>
+                  <HomeLink href={HOME_HREFS.register} onClick={closeMenu}>
+                    Get Started
+                  </HomeLink>
+                </Button>
+              ) : null}
             </div>
           </Container>
         </div>
