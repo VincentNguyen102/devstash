@@ -61,7 +61,8 @@ export function DeleteAccountDialog() {
           <DialogTitle>Delete account</DialogTitle>
           <DialogDescription>
             This permanently deletes your account along with all of your items,
-            collections and tags. This action cannot be undone.
+            collections and tags. If you have an active Pro subscription, it
+            will be cancelled first. This action cannot be undone.
           </DialogDescription>
         </DialogHeader>
 

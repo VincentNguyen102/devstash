@@ -4,6 +4,7 @@ import { compare, hash } from "bcryptjs";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { getStripe } from "@/lib/stripe";
 import {
   currentPasswordField,
   passwordField,
@@ -108,6 +109,35 @@ export async function deleteAccount(): Promise<DeleteAccountState> {
   }
 
   try {
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { stripeSubscriptionId: true },
+    });
+
+    if (user?.stripeSubscriptionId && process.env.STRIPE_SECRET_KEY) {
+      try {
+        const stripe = getStripe();
+        const subscription = await stripe.subscriptions.retrieve(
+          user.stripeSubscriptionId,
+        );
+
+        if (subscription.status !== "canceled") {
+          await stripe.subscriptions.cancel(subscription.id);
+        }
+      } catch (error) {
+        console.error(
+          "Failed to cancel subscription before deleting user",
+          error,
+        );
+
+        return {
+          success: false,
+          error:
+            "We couldn't cancel your subscription. Please try again, or manage billing first.",
+        };
+      }
+    }
+
     await prisma.user.delete({ where: { id: session.user.id } });
   } catch (error) {
     console.error("Delete account failed", error);

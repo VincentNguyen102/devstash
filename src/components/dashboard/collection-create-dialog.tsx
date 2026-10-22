@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, type FormEvent, type ReactNode } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FolderPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { createCollection } from "@/actions/collections";
 import { Button } from "@/components/ui/button";
+import { useBilling } from "@/hooks/use-billing";
+import { FREE_COLLECTION_LIMIT } from "@/lib/usage-limits";
 import {
   Dialog,
   DialogContent,
@@ -39,8 +42,11 @@ export function CollectionCreateDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const { isPro, collectionCount } = useBilling();
 
-  const canSubmit = name.trim().length > 0;
+  const atCollectionLimit =
+    !isPro && collectionCount >= FREE_COLLECTION_LIMIT;
+  const canSubmit = name.trim().length > 0 && !atCollectionLimit;
 
   function reset() {
     setName("");
@@ -101,6 +107,19 @@ export function CollectionCreateDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {atCollectionLimit ? (
+            <p className="rounded-lg border border-indigo-400/30 bg-indigo-500/10 p-3 text-sm">
+              You&apos;ve reached the Free plan limit of {FREE_COLLECTION_LIMIT}{" "}
+              collections.{" "}
+              <Link
+                href="/settings#billing"
+                className="font-medium underline underline-offset-2"
+              >
+                Upgrade to Pro
+              </Link>
+            </p>
+          ) : null}
+
           <FormField label="Name" htmlFor="create-collection-name">
             <Input
               id="create-collection-name"

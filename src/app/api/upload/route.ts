@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getSessionUserId, jsonError, unauthorized } from "@/lib/api";
+import { getBillingEntitlements } from "@/lib/db/billing";
 import { uploadObject } from "@/lib/storage";
 import {
   buildStorageKey,
@@ -20,6 +21,15 @@ export async function POST(request: Request) {
 
   if (!userId) {
     return unauthorized("You must be signed in to upload files.");
+  }
+
+  const entitlement = await getBillingEntitlements(userId);
+
+  if (!entitlement?.isPro) {
+    return jsonError(
+      "File and image uploads are a Pro feature. Upgrade to Pro to upload.",
+      403,
+    );
   }
 
   let formData: FormData;

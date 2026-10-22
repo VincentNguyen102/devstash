@@ -9,14 +9,13 @@ import { Collapsible } from "radix-ui";
 import { UserMenu } from "@/components/dashboard/user-menu";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { useBilling } from "@/hooks/use-billing";
 import type { CollectionSummary } from "@/lib/db/collections";
 import type { ItemTypeSummary } from "@/lib/db/items";
 import { getTypeVisual } from "@/lib/item-type-meta";
+import { isProOnlyTypeId } from "@/lib/usage-limits";
 import type { AuthUser } from "@/types/auth";
 import { cn } from "@/lib/utils";
-
-/** System item types that require a Pro membership. */
-const PRO_TYPE_IDS = new Set(["file", "image"]);
 
 interface NavRowProps {
   href: string;
@@ -154,6 +153,7 @@ export function SidebarContent({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const { isPro } = useBilling();
 
   const favoriteCollections = collections.filter(
     (collection) => collection.isFavorite
@@ -190,7 +190,7 @@ export function SidebarContent({
                 label={type.name}
                 count={type.itemCount}
                 trailing={
-                  PRO_TYPE_IDS.has(type.id) ? (
+                  !isPro && isProOnlyTypeId(type.id) ? (
                     <Badge
                       variant="outline"
                       className="h-4 rounded-full px-1.5 text-[0.625rem] font-semibold tracking-wide text-muted-foreground"

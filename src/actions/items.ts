@@ -1,6 +1,7 @@
 "use server";
 
 import { auth } from "@/auth";
+import { getBillingEntitlements } from "@/lib/db/billing";
 import { getOwnedCollectionIds } from "@/lib/db/collections";
 import {
   createItem as createItemRecord,
@@ -12,6 +13,7 @@ import {
 } from "@/lib/db/items";
 import { deleteObject } from "@/lib/storage";
 import { isStorageKeyForUser } from "@/lib/upload";
+import { checkItemCreation } from "@/lib/usage-limits";
 import {
   createItemSchema,
   isUploadItemTypeId,
@@ -60,6 +62,18 @@ export async function createItem(
   }
 
   try {
+    const entitlement = await getBillingEntitlements(session.user.id);
+
+    if (!entitlement) {
+      return { success: false, error: "Account not found." };
+    }
+
+    const limit = checkItemCreation(parsed.data.typeId, entitlement);
+
+    if (!limit.allowed) {
+      return { success: false, error: limit.error };
+    }
+
     // Every selected collection must belong to the signed-in user.
     const ownedCollections = await getOwnedCollectionIds(
       session.user.id,

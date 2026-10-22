@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Lock, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { createItem } from "@/actions/items";
@@ -10,6 +11,8 @@ import { CollectionSelect } from "@/components/dashboard/collection-select";
 import { FileUpload } from "@/components/dashboard/file-upload";
 import { ItemFormFields } from "@/components/dashboard/item-form-fields";
 import { Button } from "@/components/ui/button";
+import { useBilling } from "@/hooks/use-billing";
+import { FREE_ITEM_LIMIT, isProOnlyTypeId } from "@/lib/usage-limits";
 import {
   Dialog,
   DialogContent,
@@ -96,6 +99,7 @@ export function ItemCreateDialog({
     [defaultTypeId],
   );
   const [form, setForm] = useState<CreateFormState>(initialForm);
+  const { isPro, itemCount } = useBilling();
 
   const uploadKind = uploadKindForTypeId(form.typeId);
   // Only send fields the selected type actually exposes, so switching types
@@ -103,10 +107,13 @@ export function ItemCreateDialog({
   const showContent = CONTENT_TYPE_IDS.has(form.typeId);
   const showLanguage = LANGUAGE_TYPE_IDS.has(form.typeId);
   const showUrl = form.typeId === "url";
+  const atItemLimit = !isPro && itemCount >= FREE_ITEM_LIMIT;
   const canSubmit =
     form.title.trim().length > 0 &&
     (form.typeId !== "url" || form.url.trim().length > 0) &&
-    (uploadKind === null || form.uploadedFile !== null);
+    (uploadKind === null || form.uploadedFile !== null) &&
+    !atItemLimit &&
+    (isPro || !isProOnlyTypeId(form.typeId));
 
   function updateField<K extends keyof CreateFormState>(
     field: K,
@@ -190,6 +197,20 @@ export function ItemCreateDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {!isPro ? (
+            <p className="rounded-lg border border-indigo-400/30 bg-indigo-500/10 p-3 text-sm">
+              {atItemLimit
+                ? `You've reached the Free plan limit of ${FREE_ITEM_LIMIT} items.`
+                : "File and image items require Pro."}{" "}
+              <Link
+                href="/settings#billing"
+                className="font-medium underline underline-offset-2"
+              >
+                Upgrade to Pro
+              </Link>
+            </p>
+          ) : null}
+
           <div className="space-y-2">
             <span className="text-sm font-medium">Type</span>
             <div
@@ -200,13 +221,16 @@ export function ItemCreateDialog({
               {CREATE_TYPES.map(({ id, label }) => {
                 const { Icon, textClass } = getTypeVisual(id);
                 const isActive = form.typeId === id;
+                const isLocked = !isPro && isProOnlyTypeId(id);
 
                 return (
                   <button
                     key={id}
                     type="button"
                     aria-pressed={isActive}
-                    disabled={isSubmitting}
+                    aria-disabled={isLocked}
+                    disabled={isSubmitting || isLocked}
+                    title={isLocked ? "Available on Pro" : undefined}
                     onClick={() => handleTypeChange(id)}
                     className={cn(
                       "flex flex-col items-center gap-1 rounded-lg border border-border p-2 text-xs text-muted-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50",
@@ -217,7 +241,10 @@ export function ItemCreateDialog({
                       aria-hidden
                       className={cn("size-4", isActive && textClass)}
                     />
-                    {label}
+                    <span className="flex items-center gap-1">
+                      {label}
+                      {isLocked ? <Lock aria-hidden className="size-3" /> : null}
+                    </span>
                   </button>
                 );
               })}

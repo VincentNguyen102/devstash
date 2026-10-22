@@ -1,6 +1,7 @@
 "use server";
 
 import { auth } from "@/auth";
+import { getBillingEntitlements } from "@/lib/db/billing";
 import {
   createCollection as createCollectionRecord,
   deleteCollection as deleteCollectionRecord,
@@ -8,6 +9,7 @@ import {
   updateCollection as updateCollectionRecord,
   type CollectionSummary,
 } from "@/lib/db/collections";
+import { checkCollectionLimit } from "@/lib/usage-limits";
 import {
   createCollectionSchema,
   updateCollectionSchema,
@@ -45,6 +47,18 @@ export async function createCollection(
   }
 
   try {
+    const entitlement = await getBillingEntitlements(session.user.id);
+
+    if (!entitlement) {
+      return { success: false, error: "Account not found." };
+    }
+
+    const limit = checkCollectionLimit(entitlement);
+
+    if (!limit.allowed) {
+      return { success: false, error: limit.error };
+    }
+
     const collection = await createCollectionRecord(
       session.user.id,
       parsed.data,

@@ -8,9 +8,14 @@ const mocks = vi.hoisted(() => ({
   updateCollectionRecord: vi.fn(),
   setCollectionFavoriteRecord: vi.fn(),
   deleteCollectionRecord: vi.fn(),
+  getBillingEntitlements: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
+
+vi.mock("@/lib/db/billing", () => ({
+  getBillingEntitlements: mocks.getBillingEntitlements,
+}));
 
 vi.mock("@/lib/db/collections", () => ({
   createCollection: mocks.createCollectionRecord,
@@ -40,6 +45,13 @@ beforeEach(() => {
   mocks.setCollectionFavoriteRecord.mockResolvedValue({
     id: "collection-1",
     isFavorite: true,
+  });
+  // Existing tests focus on CRUD; default them to Pro so billing gates do not
+  // interfere. The Free-tier cases below override this explicitly.
+  mocks.getBillingEntitlements.mockResolvedValue({
+    isPro: true,
+    itemCount: 0,
+    collectionCount: 0,
   });
 });
 
@@ -98,6 +110,46 @@ describe("createCollection", () => {
       error: "Something went wrong. Please try again.",
     });
     consoleError.mockRestore();
+  });
+
+  it("blocks a Free user at the collection limit", async () => {
+    mocks.getBillingEntitlements.mockResolvedValue({
+      isPro: false,
+      itemCount: 0,
+      collectionCount: 3,
+    });
+
+    const result = await createCollection(validInput);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("3");
+    expect(mocks.createCollectionRecord).not.toHaveBeenCalled();
+  });
+
+  it("allows a Free user under the collection limit", async () => {
+    mocks.getBillingEntitlements.mockResolvedValue({
+      isPro: false,
+      itemCount: 0,
+      collectionCount: 2,
+    });
+
+    const result = await createCollection(validInput);
+
+    expect(result.success).toBe(true);
+    expect(mocks.createCollectionRecord).toHaveBeenCalled();
+  });
+
+  it("allows Pro users at any collection count", async () => {
+    mocks.getBillingEntitlements.mockResolvedValue({
+      isPro: true,
+      itemCount: 0,
+      collectionCount: 10,
+    });
+
+    const result = await createCollection(validInput);
+
+    expect(result.success).toBe(true);
+    expect(mocks.createCollectionRecord).toHaveBeenCalled();
   });
 });
 

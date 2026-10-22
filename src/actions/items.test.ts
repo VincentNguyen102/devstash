@@ -11,12 +11,17 @@ const mocks = vi.hoisted(() => ({
   deleteItemRecord: vi.fn(),
   deleteObject: vi.fn(),
   getOwnedCollectionIds: vi.fn(),
+  getBillingEntitlements: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
 
 vi.mock("@/lib/db/collections", () => ({
   getOwnedCollectionIds: mocks.getOwnedCollectionIds,
+}));
+
+vi.mock("@/lib/db/billing", () => ({
+  getBillingEntitlements: mocks.getBillingEntitlements,
 }));
 
 vi.mock("@/lib/db/items", () => ({
@@ -62,6 +67,13 @@ beforeEach(() => {
   mocks.getOwnedCollectionIds.mockImplementation((_userId, ids: string[]) =>
     Promise.resolve(ids),
   );
+  // Existing tests focus on CRUD; default them to Pro so billing gates do not
+  // interfere. The Free-tier cases below override this explicitly.
+  mocks.getBillingEntitlements.mockResolvedValue({
+    isPro: true,
+    itemCount: 0,
+    collectionCount: 0,
+  });
 });
 
 const validCreateInput = {
@@ -210,6 +222,84 @@ describe("createItem", () => {
       error: "Something went wrong. Please try again.",
     });
     consoleError.mockRestore();
+  });
+
+  it("blocks a Free user at the item limit", async () => {
+    mocks.getBillingEntitlements.mockResolvedValue({
+      isPro: false,
+      itemCount: 50,
+      collectionCount: 0,
+    });
+
+    const result = await createItem(validCreateInput);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("50");
+    expect(mocks.createItemRecord).not.toHaveBeenCalled();
+  });
+
+  it("allows a Free user under the item limit", async () => {
+    mocks.getBillingEntitlements.mockResolvedValue({
+      isPro: false,
+      itemCount: 49,
+      collectionCount: 0,
+    });
+
+    const result = await createItem(validCreateInput);
+
+    expect(result.success).toBe(true);
+    expect(mocks.createItemRecord).toHaveBeenCalled();
+  });
+
+  it("allows Pro users at any item count", async () => {
+    mocks.getBillingEntitlements.mockResolvedValue({
+      isPro: true,
+      itemCount: 10_000,
+      collectionCount: 0,
+    });
+
+    const result = await createItem(validCreateInput);
+
+    expect(result.success).toBe(true);
+    expect(mocks.createItemRecord).toHaveBeenCalled();
+  });
+
+  it("blocks Free users from creating file and image items", async () => {
+    mocks.getBillingEntitlements.mockResolvedValue({
+      isPro: false,
+      itemCount: 0,
+      collectionCount: 0,
+    });
+
+    for (const typeId of ["file", "image"] as const) {
+      const result = await createItem({
+        ...validCreateInput,
+        typeId,
+        fileKey: `uploads/user-1/${typeId}.pdf`,
+        fileName: `${typeId}.pdf`,
+        fileSize: 1024,
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/Pro feature/);
+    }
+
+    expect(mocks.createItemRecord).not.toHaveBeenCalled();
+  });
+
+  it("allows Pro users to create file and image items", async () => {
+    const item = { id: "item-2", title: "File" };
+    mocks.createItemRecord.mockResolvedValue(item);
+
+    const result = await createItem({
+      ...validCreateInput,
+      typeId: "file",
+      fileKey: "uploads/user-1/notes.pdf",
+      fileName: "notes.pdf",
+      fileSize: 2048,
+    });
+
+    expect(result).toEqual({ success: true, data: item });
   });
 });
 
