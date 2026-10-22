@@ -30,6 +30,10 @@ Icons are Lucide React component names. All types have `isSystem: true`.
 
 ### Collections & Items
 
+The demo user is on the Free plan (max 3 collections and fewer than 50 items),
+so the seed must stay within those limits — currently 3 collections and 10
+items.
+
 #### React Patterns
 
 _Description: Reusable React patterns and hooks_
@@ -57,25 +61,3 @@ _Description: Infrastructure and deployment resources_
 - 1 snippet (Docker, CI/CD config)
 - 1 command (deployment scripts)
 - 2 links (documentation URLs - use real URLs)
-
-#### Terminal Commands
-
-_Description: Useful shell commands for everyday development_
-
-4 commands:
-
-- Git operations
-- Docker commands
-- Process management
-- Package manager utilities
-
-#### Design Resources
-
-_Description: UI/UX resources and references_
-
-4 links (use real URLs):
-
-- CSS/Tailwind references
-- Component libraries
-- Design systems
-- Icon libraries

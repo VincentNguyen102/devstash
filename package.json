@@ -13,6 +13,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
+    "db:clear-users": "tsx scripts/clear-users.ts",
     "db:status": "prisma migrate status",
     "db:studio": "prisma studio",
     "db:test": "tsx scripts/test-db.ts",

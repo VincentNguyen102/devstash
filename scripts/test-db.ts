@@ -19,15 +19,10 @@ const EXPECTED_TABLES = [
 const EXPECTED_TYPE_IDS = ["snippet", "prompt", "command", "note", "file", "image", "url"];
 
 // Demo data created by `npm run db:seed` (see `context/features/seed-spec.md`).
+// The demo user is on the Free plan: 3 collections and fewer than 50 items.
 const DEMO_USER_EMAIL = "demo@devstash.io";
-const EXPECTED_COLLECTION_NAMES = [
-  "React Patterns",
-  "AI Workflows",
-  "DevOps",
-  "Terminal Commands",
-  "Design Resources",
-];
-const EXPECTED_ITEM_COUNT = 18;
+const EXPECTED_COLLECTION_NAMES = ["React Patterns", "AI Workflows", "DevOps"];
+const EXPECTED_ITEM_COUNT = 10;
 
 interface Check {
   label: string;
