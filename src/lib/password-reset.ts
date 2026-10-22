@@ -1,6 +1,6 @@
 import { hash } from "bcryptjs";
 
-import { getAppUrl } from "@/lib/email-verification";
+import { getAppUrl } from "@/lib/app-url";
 import { prisma } from "@/lib/prisma";
 import {
   generateToken,

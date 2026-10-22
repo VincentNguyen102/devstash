@@ -1,3 +1,4 @@
+import { getAppUrl } from "@/lib/app-url";
 import { prisma } from "@/lib/prisma";
 import {
   generateToken,
@@ -25,16 +26,6 @@ export interface VerifyEmailResult {
   status: VerifyEmailStatus;
   /** Present for `expired` so the UI can prefill a resend request. */
   email?: string;
-}
-
-/** Absolute base URL used to build the link that goes in the email. */
-export function getAppUrl(): string {
-  const configured =
-    process.env.NEXT_PUBLIC_APP_URL ??
-    process.env.AUTH_URL ??
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined);
-
-  return (configured ?? "http://localhost:3000").replace(/\/+$/, "");
 }
 
 /**

@@ -74,12 +74,38 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.sub = user.id;
+      }
+
+      // Always sync isPro from the database so webhook updates are picked up on
+      // the next session read (e.g. a page reload after checkout).
+      if (token.sub) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.sub },
+            select: { isPro: true },
+          });
+
+          token.isPro = dbUser?.isPro ?? false;
+        } catch (error) {
+          // Keep the last known value on a transient database failure.
+          console.error("Failed to sync isPro from the database", error);
+        }
+      }
+
+      return token;
+    },
+
     session({ session, token }) {
       // The JWT strategy only exposes a subset of the user by default; surface
       // the user id (JWT `sub`) so it is available on `session.user.id`.
       if (token.sub) {
         session.user.id = token.sub;
       }
+
+      session.user.isPro = token.isPro ?? false;
 
       return session;
     },

@@ -1,18 +1,40 @@
-# Current Feature
+# Current Feature: Stripe Integration — Phase 1: Core Infrastructure
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Add the Stripe billing fields to the `User` model (`stripeCustomerId`, `stripeSubscriptionId`, `stripePriceId`, `stripeSubscriptionStatus`, `stripeCurrentPeriodEnd`, `stripeCancelAtPeriodEnd`) and make the two Stripe IDs unique.
+- Create and apply the Prisma migration on the development branch (never production), then regenerate the client.
+- Install `stripe@^23` and document the Stripe environment variables in `.env.example`.
+- Extract `getAppUrl()` into `src/lib/app-url.ts` and update the email-verification/password-reset imports.
+- Create `src/lib/usage-limits.ts` with the Free/Pro rules: 50 items, 3 collections, Pro-only `file`/`image`, and the `check*` helpers.
+- Create `src/lib/billing.ts` with `BILLING_INTERVALS`, `PRO_PLANS`, `PRO_SUBSCRIPTION_STATUSES`, `isProSubscriptionStatus`, `BillingOverview` and `isStaleSubscriptionEvent`.
+- Create `src/lib/validations/billing.ts` with `billingIntervalSchema`.
+- Create `src/lib/stripe.ts` (lazy client, price-ID helpers) and `src/lib/stripe-subscription.ts` (`subscriptionSnapshot`).
+- Create `src/lib/db/billing.ts` with the billing read helpers and the subscription sync/clear write helpers.
+- Add the Auth.js `jwt` callback that always syncs `isPro` from the database, and expose it on the session and types.
+- Write `src/lib/usage-limits.test.ts` covering every branch, plus the additional pure-module tests listed in the spec.
+- Verify `npm run test`, `npm run lint`, `npm run build` and `npm run db:status`; confirm a manual `isPro` DB toggle is reflected after a dashboard reload.
 
 ## Notes
 
-<!-- Any extra notes -->
+- Spec: `context/features/stripe-phase-1-spec.md`
+- Reference: `docs/stripe-integration-plan.md` §5–§7
+- Phase 1 adds **no** Stripe API calls, webhook route, feature-gating enforcement in actions/routes, or billing UI. Those are Phase 2.
+- `src/lib/usage-limits.ts` is an intentional split from the plan's `src/lib/billing.ts` so the pure limits can be unit tested and imported by client components without billing/Stripe code.
+- The required test file is `src/lib/usage-limits.test.ts`; additional pure-module tests are `billing.test.ts`, `validations/billing.test.ts`, `stripe-subscription.test.ts` and `stripe.test.ts`.
+- Env names come from the existing `.env.example`: `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` (optional; not used by hosted Checkout), `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID_MONTHLY`, `STRIPE_PRICE_ID_YEARLY`.
+- The migration is DDL: ask for approval before running it and target only the development branch (`br-twilight-wind-b3lrs3kz`).
+- Decisions to confirm before starting:
+  - `file` and `image` are both Pro by default; the project spec lists image uploads under Free.
+  - `past_due` keeps Pro access as a grace period by default.
+  - No 14-day trial is implemented, despite the homepage copy.
+- Verification commands: `npm run test`, `npm run lint`, `npm run build`, `npm run db:status`.
 
 ## History
 

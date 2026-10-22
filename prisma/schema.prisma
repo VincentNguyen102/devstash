@@ -22,11 +22,15 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?
-  isPro         Boolean   @default(false)
-  stripeCustomerId     String?
-  stripeSubscriptionId String?
+  isPro                    Boolean   @default(false)
+  stripeCustomerId         String?   @unique
+  stripeSubscriptionId     String?   @unique
+  stripePriceId            String?
+  stripeSubscriptionStatus String?
+  stripeCurrentPeriodEnd   DateTime?
+  stripeCancelAtPeriodEnd  Boolean   @default(false)
   // Monaco editor preferences (font size, tab size, word wrap, minimap, theme).
-  editorPreferences    Json?
+  editorPreferences        Json?
 
   accounts    Account[]
   sessions    Session[]
