@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { ItemDetail } from "@/lib/db/items";
 import { getTypeVisual } from "@/lib/item-type-meta";
+import { getLanguageLabel } from "@/lib/languages";
 import { parseTags } from "@/lib/tags";
 import { cn } from "@/lib/utils";
 
@@ -144,7 +145,7 @@ export function ItemDetailView({
               </Badge>
               {!isEditing && item.language ? (
                 <Badge variant="secondary" className="rounded-md">
-                  {item.language}
+                  {getLanguageLabel(item.language)}
                 </Badge>
               ) : null}
             </div>

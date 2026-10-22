@@ -1,18 +1,28 @@
-# Current Feature
+# Language Dropdown
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+Complete
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Replace the free-text Language input with a dropdown of common languages in the New Item dialog and the drawer's inline edit form.
+- Render the Language field above the Content field so the chosen language is clear before typing.
+- Selecting a language immediately applies syntax highlighting in the Monaco editor as the user types.
+- Keep the Language field limited to snippets and commands (the code editor types).
+- Preserve legacy/unknown stored language values without losing them on edit.
+- Add unit tests for the language option helpers and update the feature history.
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- The form field set is shared by both surfaces through `ItemFormFields`, so the change belongs there.
+- Language values are stored as Monaco language ids; legacy aliases (`tsx`, `bash`, …) are normalised for display via `toMonacoLanguage`.
 
 ## History
 
@@ -68,3 +78,4 @@ Not Started
 - Stripe Phase 2 (Integration & UI) completed — added `src/actions/billing.ts` (`createCheckoutSession` with idempotent customer creation and `createPortalSession`), `src/lib/stripe-webhook.ts` plus `POST /api/stripe/webhook` (raw-body signature verification, 400/500/200 handling) and the required `/api/stripe/checkout/complete` reconciliation route; added `src/hooks/use-billing.ts` + `BillingProvider` seeded by the `(dashboard)` layout and `DashboardShell`, the `/settings` `BillingCard` (Free/Pro state, usage, upgrade buttons, portal, renewal/cancellation date, checkout banners), Free-tier gating in `createItem`/`createCollection`/`POST /api/upload`, Pro-only type locks and collection-limit banners in the create dialogs, sidebar `isProOnlyTypeId` badge handling, and subscription cancellation before account deletion; added/updated 35 tests (`billing` actions, webhook handler, item/collection gating and account deletion; 306 passing) and verified `npm run lint` + `npm run build` + `npm run db:status`; manual Stripe test-mode checks covered Free settings/limits, monthly Checkout with the test card, checkout-return reconciliation, Customer Portal, Pro upload, signed webhook updates (including cancel-at-period-end), missing/bad signature 400s and Free upload 403; the demo account and Stripe test customer/subscription were cleaned up afterward; note the Stripe CLI is not installed and `.env` has an empty `STRIPE_WEBHOOK_SECRET`, so the webhook was verified with a temporary signed local request — set a real secret/endpoint before production; the spec is `context/features/stripe-phase-2-spec.md`.
 - Free-plan demo seed completed — trimmed `prisma/seed.ts` to the 3 collections a Free account can own (React Patterns, AI Workflows, DevOps; 10 items) and added an `assertFreePlanLimits()` guard using `FREE_COLLECTION_LIMIT`/`FREE_ITEM_LIMIT` so the seed can't drift over the plan limits; exported `seed()` (with a direct-run guard) and added `scripts/clear-users.ts` (`npm run db:clear-users`) which deletes every user except `demo@devstash.io`, wipes the demo user's items/collections/tags, then re-seeds; updated `scripts/test-db.ts` expectations (3 collections, 10 items) and `context/features/seed-spec.md`; ran the script against the development branch (removed 3 users, cleared 24 items/5 collections/43 tags → 1 user, 3 collections, 10 items, 15 tags) and verified `npm run db:seed` + `npm run db:test` + `tsc --noEmit` + `eslint`
 - Pro-only item type gate completed — Free users visiting `/items/file` or `/items/image` now get an upgrade screen instead of the listing: `src/app/(dashboard)/items/[type]/page.tsx` checks `isProOnlyTypeId(type)` before querying items, reads the signed-in user's `getBillingEntitlements()` and returns the new `ProUpgrade` component (`src/components/dashboard/pro-upgrade.tsx`) when `checkItemType(type, isPro)` denies access; the screen is rendered inside the dashboard shell with the type icon/colour, a PRO badge, a type-specific title/description, Pro benefits and "Upgrade to Pro" (`/settings#billing`) + "Back to dashboard" CTAs; Pro users keep the normal listing (verified by temporarily flipping the demo user's `isPro`), snippet/prompt/link pages are unaffected, and `tsc --noEmit` + `eslint` + `npm run test` (308 passing) + browser checks at 1280px pass
+- Language Dropdown completed — replaced the free-text Language input with a shadcn `Select` of 41 Monaco language ids (`src/lib/languages.ts`: `LANGUAGE_OPTIONS`, `toLanguageValue`, `getLanguageLabel`, `languageOptionsFor`) inside the shared `ItemFormFields`, so the New Item dialog and the drawer's inline edit form both get the same control; moved Language above Content so picking a language applies highlighting immediately through the existing `CodeEditor` language prop; legacy aliases (`tsx`, `bash`, …) select their canonical option and unknown stored values are appended as an extra option so editing can't drop them; `CodeEditor`'s header and the drawer's language badge now show friendly labels (e.g. `TypeScript`, `Plain text`); the Select stays controlled with `""` for the placeholder to avoid Radix's uncontrolled→controlled warning; added 10 unit tests in `src/lib/languages.test.ts` (318 passing) and verified in the browser (dropdown above Content in create + edit, live TypeScript → Python re-highlighting, created/edited/deleted a test snippet to confirm the persisted language, prompt keeps no Language field, no console warnings/errors) plus `npm run lint` + `npm run build`
