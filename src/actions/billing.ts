@@ -1,8 +1,12 @@
 "use server";
 
+import type Stripe from "stripe";
+
 import { auth } from "@/auth";
 import { getAppUrl } from "@/lib/app-url";
+import type { BillingInterval } from "@/lib/billing";
 import {
+  clearStripeCustomerId,
   getBillingEntitlements,
   getStripeCustomerId,
   setStripeCustomerId,
@@ -21,6 +25,53 @@ export interface BillingRedirectResult {
   success: boolean;
   data?: { url: string };
   error?: string;
+}
+
+/** True when Stripe rejects a Checkout request because the customer is gone. */
+function isMissingCustomerError(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
+  const { code, param } = error as { code?: unknown; param?: unknown };
+
+  return code === "resource_missing" && param === "customer";
+}
+
+async function createStripeCustomer(
+  stripe: Stripe,
+  user: { id: string; email?: string | null; name?: string | null },
+  idempotencyKey: string,
+): Promise<string> {
+  const customer = await stripe.customers.create(
+    {
+      email: user.email ?? undefined,
+      name: user.name ?? undefined,
+      metadata: { userId: user.id },
+    },
+    { idempotencyKey },
+  );
+
+  await setStripeCustomerId(user.id, customer.id);
+
+  return customer.id;
+}
+
+function checkoutSessionParams(
+  customerId: string,
+  userId: string,
+  interval: BillingInterval,
+): Stripe.Checkout.SessionCreateParams {
+  return {
+    mode: "subscription",
+    customer: customerId,
+    client_reference_id: userId,
+    line_items: [{ price: getProPriceId(interval), quantity: 1 }],
+    success_url: `${getAppUrl()}/api/stripe/checkout/complete?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${getAppUrl()}/settings?checkout=cancelled`,
+    metadata: { userId, plan: "pro" },
+    subscription_data: { metadata: { userId, plan: "pro" } },
+  };
 }
 
 /**
@@ -62,31 +113,37 @@ export async function createCheckoutSession(
 
     if (!customerId) {
       // The idempotency key makes concurrent clicks return the same customer.
-      const customer = await stripe.customers.create(
-        {
-          email: session.user.email ?? undefined,
-          name: session.user.name ?? undefined,
-          metadata: { userId: session.user.id },
-        },
-        { idempotencyKey: `devstash-customer-${session.user.id}` },
+      customerId = await createStripeCustomer(
+        stripe,
+        session.user,
+        `devstash-customer-${session.user.id}`,
       );
-
-      customerId = customer.id;
-      await setStripeCustomerId(session.user.id, customerId);
     }
 
-    const checkout = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      customer: customerId,
-      client_reference_id: session.user.id,
-      line_items: [{ price: getProPriceId(parsed.data), quantity: 1 }],
-      success_url: `${getAppUrl()}/api/stripe/checkout/complete?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${getAppUrl()}/settings?checkout=cancelled`,
-      metadata: { userId: session.user.id, plan: "pro" },
-      subscription_data: {
-        metadata: { userId: session.user.id, plan: "pro" },
-      },
-    });
+    let checkout: Stripe.Checkout.Session;
+
+    try {
+      checkout = await stripe.checkout.sessions.create(
+        checkoutSessionParams(customerId, session.user.id, parsed.data),
+      );
+    } catch (error) {
+      if (!isMissingCustomerError(error)) {
+        throw error;
+      }
+
+      // The stored customer was deleted (or Stripe returned a cached deleted
+      // customer for the deterministic idempotency key). Clear the stale id,
+      // create a fresh customer with a unique key, and retry once.
+      await clearStripeCustomerId(session.user.id);
+      customerId = await createStripeCustomer(
+        stripe,
+        session.user,
+        `devstash-customer-${session.user.id}-${crypto.randomUUID()}`,
+      );
+      checkout = await stripe.checkout.sessions.create(
+        checkoutSessionParams(customerId, session.user.id, parsed.data),
+      );
+    }
 
     if (!checkout.url) {
       return { success: false, error: "Couldn't start checkout." };

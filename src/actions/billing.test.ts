@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   getBillingEntitlements: vi.fn(),
   getStripeCustomerId: vi.fn(),
   setStripeCustomerId: vi.fn(),
+  clearStripeCustomerId: vi.fn(),
   getAppUrl: vi.fn(),
   getProPriceId: vi.fn(),
   getStripe: vi.fn(),
@@ -17,6 +18,7 @@ vi.mock("@/lib/db/billing", () => ({
   getBillingEntitlements: mocks.getBillingEntitlements,
   getStripeCustomerId: mocks.getStripeCustomerId,
   setStripeCustomerId: mocks.setStripeCustomerId,
+  clearStripeCustomerId: mocks.clearStripeCustomerId,
 }));
 
 vi.mock("@/lib/app-url", () => ({ getAppUrl: mocks.getAppUrl }));
@@ -54,6 +56,7 @@ beforeEach(() => {
   });
   mocks.getStripeCustomerId.mockResolvedValue("cus_1");
   mocks.setStripeCustomerId.mockResolvedValue(undefined);
+  mocks.clearStripeCustomerId.mockResolvedValue(undefined);
   mocks.getStripe.mockReturnValue(stripe);
   stripe.customers.create.mockResolvedValue({ id: "cus_new" });
   stripe.checkout.sessions.create.mockResolvedValue({
@@ -179,6 +182,51 @@ describe("createCheckoutSession", () => {
     const result = await createCheckoutSession("monthly");
 
     expect(result).toEqual({ success: false, error: "Account not found." });
+  });
+
+  it("recovers from a stale/deleted Stripe customer", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    stripe.checkout.sessions.create
+      .mockRejectedValueOnce({ code: "resource_missing", param: "customer" })
+      .mockResolvedValueOnce({ url: "https://checkout.stripe.test/retry" });
+
+    const result = await createCheckoutSession("monthly");
+
+    expect(result).toEqual({
+      success: true,
+      data: { url: "https://checkout.stripe.test/retry" },
+    });
+    expect(mocks.clearStripeCustomerId).toHaveBeenCalledWith("user-1");
+    expect(stripe.customers.create).toHaveBeenCalledWith(
+      expect.anything(),
+      {
+        idempotencyKey: expect.stringMatching(/^devstash-customer-user-1-/),
+      },
+    );
+    expect(stripe.checkout.sessions.create).toHaveBeenCalledTimes(2);
+    consoleError.mockRestore();
+  });
+
+  it("does not retry non-customer Stripe errors", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    stripe.checkout.sessions.create.mockRejectedValueOnce({
+      code: "card_declined",
+      param: "payment_method",
+    });
+
+    const result = await createCheckoutSession("monthly");
+
+    expect(result).toEqual({
+      success: false,
+      error: "Something went wrong. Please try again.",
+    });
+    expect(mocks.clearStripeCustomerId).not.toHaveBeenCalled();
+    expect(stripe.checkout.sessions.create).toHaveBeenCalledTimes(1);
+    consoleError.mockRestore();
   });
 });
 

@@ -86,6 +86,14 @@ export async function setStripeCustomerId(
   });
 }
 
+/** Clears a stale customer reference (e.g. the customer was deleted in Stripe). */
+export async function clearStripeCustomerId(userId: string): Promise<void> {
+  await prisma.user.update({
+    where: { id: userId },
+    data: { stripeCustomerId: null },
+  });
+}
+
 /** Resolve the DevStash user for a Stripe subscription. */
 async function findUserForSubscription(
   subscription: Stripe.Subscription,
