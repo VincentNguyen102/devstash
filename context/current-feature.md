@@ -1,35 +1,18 @@
-# Current Feature: Homepage Top Nav on Sign In & Register
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-In Progress
+Not Started
 
 ## Goals
 
 <!-- Goals & requirements -->
 
-- Render the marketing `SiteHeader` (logo, section links, auth actions) at the top of `/sign-in` and `/register`
-- Make the header work from auth routes: Features/Pricing must navigate to the homepage sections (`/#features`, `/#pricing`) instead of being dead same-page anchors
-- Show the context-appropriate action so the header isn't redundant: `/sign-in` shows only "Get Started", `/register` shows only "Sign In" (confirmed by the user); logo + Features/Pricing stay on both
-- Give the auth content clearance for the fixed 64px header and keep the card/form vertically centred on desktop and mobile
-- Keep the header visually consistent with the homepage (same logo, spacing, CTA styling); use a solid/scrolled treatment on auth pages since there is no content behind it
-- Preserve existing auth behaviour: forms, server actions, error and rate-limit states, email-verification flag, GitHub OAuth, cross-links, metadata
-- Responsive at 390 / 768 / 1096 / 1440: mobile hamburger menu opens/closes (Escape, outside click, link click) with no horizontal overflow
-- Accessibility: labelled nav, visible focus states, no duplicated/confusing landmarks; header must not trap or steal focus from the form
-- Do not change the dashboard or the other auth screens (`/forgot-password`, `/reset-password`, `/verify-email`, `/check-email`)
-
 ## Notes
 
 <!-- Any extra notes -->
-
-- `SiteHeader` lives at `src/components/home/site-header.tsx` (client component). It hardcodes `HOME_NAV_LINKS` (`#features`, `#pricing`) and always renders both Sign In + Get Started, so it needs a small variant/prop rather than being dropped in unchanged.
-- `/sign-in` and `/register` are standalone server components (`src/app/sign-in/page.tsx`, `src/app/register/page.tsx`) with `<main className="flex min-h-svh items-center justify-center p-6">`. There is no shared auth layout; decide whether to add one or render the header per page.
-- Homepage composes the header inside a `relative flex min-h-svh flex-col overflow-x-clip` wrapper with a skip link; the header is `fixed inset-x-0 top-0 z-50` and 64px tall (`h-16`).
-- Preferred implementation: add props/variant to `SiteHeader` (e.g. `navLinks`/`cta`) and reuse `HomeLink` + `PRIMARY_CTA_CLASS`, avoiding duplicated header markup.
-- Presentational-only change: no server actions or utilities are touched, so no new Vitest tests; verify in the browser and run `npm run test`, `npm run lint`, `npm run build`.
-- Out of scope: rebranding the auth pages beyond the header (the reviewer also flagged the auth page's missing logo/footer and smaller CTA sizing — note for a separate feature).
 
 ## History
 
@@ -80,3 +63,4 @@ In Progress
 - Pinned Items completed — made the drawer Pin button functional and surfaced pinned items at the top of listings: added `setItemPin` to `src/lib/db/items.ts` (ownership-scoped `updateMany` returning the refreshed `ItemDetail`) and the `toggleItemPin` server action in `src/actions/items.ts` (auth check, boolean guard, `{ success, data, error }`), plus a shared optimistic `PinButton` (`useOptimistic` + `useTransition`, rollback, success/error toast, `router.refresh()`) wired into the item drawer action bar; paginated type/collection listings now order by `isPinned` desc then `updatedAt` desc, while the dashboard Pinned section picks up changes after refresh; static pin indicators on `ItemCard`, `ItemRow` and `ImageThumbnailCard` (and the drawer's active Pin state) use a filled rose-400 icon; collections intentionally unchanged; added 5 unit tests for `toggleItemPin` (227 passing) and verified in the browser (pin/unpin from the drawer, optimistic pressed state + success toast, reorder on `/items/snippet`, dashboard Pinned section add/remove, no console errors) plus `npm run test` + `npm run lint` + `npm run build`; the spec is `context/features/pinned-spec.md`.
 - Homepage Mockup completed — added a self-contained marketing homepage prototype in `prototypes/homepage/` (`index.html`, `styles.css`, `script.js`): fixed nav that solidifies on scroll, gradient hero with the "chaos → order" visual (eight brand/tool tiles that drift, bounce, rotate/pulse and flee the cursor via `requestAnimationFrame`, a CSS-pulsing transform arrow, and a type-coloured dashboard mockup), six accent-coloured feature cards, an AI section with a syntax-highlighted editor and animated AI tags, Free/Pro pricing with a monthly/yearly toggle ($8/mo ↔ $6/mo billed $72), CTA and footer with a JS-updated copyright year; added IntersectionObserver scroll reveals, a mobile menu, responsive stacking (arrow rotates 90°) and `prefers-reduced-motion` support; verified in the browser at 1440/1096/390px (cursor repulsion 41px → 111px, icons stay inside the stage, no horizontal overflow or console errors, yearly toggle/mobile menu work) plus `npm run test` (227 passing) + `npm run lint` + `npm run build`; no unit tests (static prototype, no server actions/utilities); the spec is `context/features/homepage-mockup-spec.md`
 - Homepage completed — replaced the `/` placeholder with the full marketing homepage from `prototypes/homepage/`: server-rendered hero, features, AI, pricing, CTA and footer sections composed in `src/app/page.tsx`, with client components only for the scroll-aware `SiteHeader` (mobile menu), `ChaosStage`, `PricingSection` billing toggle and `ScrollReveal`; shared marketing content and `HOME_HREFS`/`PRIMARY_CTA_CLASS` live in `src/lib/homepage.ts`, section primitives in `src/components/home/section.tsx`, and the chaos physics in `src/hooks/use-chaos-stage.ts`; reused `Button`/`Badge`/`Card` and `getTypeVisual()` (with `Search`/`Layers` icon overrides for conceptual feature cards), wired Sign In → `/sign-in`, all Get Started/plan CTAs → `/register`, and in-page anchors to `#features`/`#ai`/`#pricing` with no dead footer links, and added arrow-pulse/reveal/AI-tag keyframes plus `prefers-reduced-motion` and `scripting: none` fallbacks to `src/app/globals.css`; verified at 1440/1096/390px (hero visible immediately, scroll reveals, chaos drift/bounce, mobile menu close paths, monthly/yearly toggle, no horizontal overflow or console errors) plus `npm run test` (227 passing) + `npm run lint` + `npm run build`; no unit tests required (static page, no server actions/utilities); the spec is `context/features/homepage-spec.md`
+- Auth page top nav completed — added the marketing header to `/sign-in` and `/register`: a new `AuthShell` (`src/components/auth/auth-shell.tsx`) renders a skip link, `SiteHeader` and a vertically centred form with clearance under the fixed 64px nav; `SiteHeader` gained optional `links`/`actions`/`variant` props (homepage defaults unchanged, `solid` variant for pages without a hero), `AUTH_NAV_LINKS` (`/#features`, `/#pricing`) in `src/lib/homepage.ts` makes the section links work from auth routes, and the pages pass context-aware actions (`/sign-in` → Get Started, `/register` → Sign In) on desktop and in the mobile menu; verified at 1440/768/390px (no horizontal overflow, mobile menu open/close and section navigation, skip link on first Tab, demo credentials sign-in → `/dashboard`, homepage header unchanged) plus `npm run test` (227 passing) + `npm run lint` + `npm run build`; presentational-only, no new unit tests.
