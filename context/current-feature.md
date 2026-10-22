@@ -1,38 +1,18 @@
-# Current Feature: Stripe Integration — Phase 2: Integration & UI
+# Current Feature
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-In Progress
+Not Started
 
 ## Goals
 
-- Create `src/actions/billing.ts` with `createCheckoutSession(interval)` and `createPortalSession()` using the Phase 1 Stripe client, price IDs and DB helpers.
-- Add `src/actions/billing.test.ts` covering auth, validation, configuration, existing/new customers, checkout URLs, portal sessions and Stripe errors.
-- Create `src/lib/stripe-webhook.ts` (`parseStripeEvent`, `handleStripeEvent`) and `POST /api/stripe/webhook` with raw-body signature verification and correct 400/500/200 responses.
-- Create the required checkout-return reconciliation route at `src/app/api/stripe/checkout/complete/route.ts` and verify ownership before syncing.
-- Enforce server-side gating in `createItem`, `createCollection` and `POST /api/upload` using the Phase 1 entitlements/limits.
-- Add `src/hooks/use-billing.ts` and `src/components/billing/billing-provider.tsx`, and wire entitlements through the `(dashboard)` layout and `DashboardShell`.
-- Add `src/components/settings/billing-card.tsx` and render it on `/settings` with Free/Pro state, usage, upgrade buttons, portal button, renewal/cancellation dates and checkout banners.
-- Gate `ItemCreateDialog` (Pro-only types + 50-item limit), `CollectionCreateDialog` (3-collection limit) and update the sidebar to use `isProOnlyTypeId`.
-- Cancel an active Stripe subscription before deleting an account; block deletion if cancellation fails.
-- Add/update unit tests for `billing` actions, webhook handling, item/collection gating and account deletion.
-- Complete the Stripe test-mode Dashboard setup and verify the full flow with the Stripe CLI/test cards, then run `npm run test`, `npm run lint`, `npm run build` and `npm run db:status`.
+<!-- Goals & requirements -->
 
 ## Notes
 
-- Spec: `context/features/stripe-phase-2-spec.md`
-- Reference: `docs/stripe-integration-plan.md` §4, §6.8–§6.14, §7.5–§7.14, §8–§11
-- Phase 1 is complete and merged: billing schema/migration, `usage-limits`, `billing`, `stripe`, `stripe-subscription`, `db/billing` and the session `isPro` sync.
-- The Stripe env vars are already present in `.env`, but the **Stripe CLI is not installed**. Install it for `stripe listen`/event replay, or use a `stripe.webhooks.generateTestHeaderString` script to exercise the webhook route. Live mode is out of scope.
-- Test-mode product/prices must match: `$8.00 USD` monthly and `$72.00 USD` yearly, with the IDs in `STRIPE_PRICE_ID_MONTHLY` / `STRIPE_PRICE_ID_YEARLY`.
-- Use a throwaway test account for destructive billing tests; do not use the demo account.
-- The checkout success URL points at the checkout-return route; it is required, not optional.
-- Defaults from Phase 1: `file` + `image` are Pro, `past_due` keeps Pro access as a grace period, and no 14-day trial is implemented.
-- Out of scope: AI/custom-type/export gating, live mode, tax/refunds, and a separate `/settings/billing` route.
-- Do not commit until the unit tests, browser/CLI checklist and `npm run test` / `npm run lint` / `npm run build` pass.
-- Implementation and verification are complete: 306 unit tests pass; lint/build/db status pass; manual checks covered Free settings/limits, Stripe test-mode Checkout, checkout-return reconciliation, Customer Portal, Pro upload, signed webhook updates (including cancel-at-period-end), and Free upload 403. The Stripe CLI is not installed, so the webhook was verified with a signed local request instead of `stripe listen`.
+<!-- Any extra notes -->
 
 ## History
 
@@ -85,3 +65,4 @@ In Progress
 - Homepage completed — replaced the `/` placeholder with the full marketing homepage from `prototypes/homepage/`: server-rendered hero, features, AI, pricing, CTA and footer sections composed in `src/app/page.tsx`, with client components only for the scroll-aware `SiteHeader` (mobile menu), `ChaosStage`, `PricingSection` billing toggle and `ScrollReveal`; shared marketing content and `HOME_HREFS`/`PRIMARY_CTA_CLASS` live in `src/lib/homepage.ts`, section primitives in `src/components/home/section.tsx`, and the chaos physics in `src/hooks/use-chaos-stage.ts`; reused `Button`/`Badge`/`Card` and `getTypeVisual()` (with `Search`/`Layers` icon overrides for conceptual feature cards), wired Sign In → `/sign-in`, all Get Started/plan CTAs → `/register`, and in-page anchors to `#features`/`#ai`/`#pricing` with no dead footer links, and added arrow-pulse/reveal/AI-tag keyframes plus `prefers-reduced-motion` and `scripting: none` fallbacks to `src/app/globals.css`; verified at 1440/1096/390px (hero visible immediately, scroll reveals, chaos drift/bounce, mobile menu close paths, monthly/yearly toggle, no horizontal overflow or console errors) plus `npm run test` (227 passing) + `npm run lint` + `npm run build`; no unit tests required (static page, no server actions/utilities); the spec is `context/features/homepage-spec.md`
 - Auth page top nav completed — added the marketing header to `/sign-in` and `/register`: a new `AuthShell` (`src/components/auth/auth-shell.tsx`) renders a skip link, `SiteHeader` and a vertically centred form with clearance under the fixed 64px nav; `SiteHeader` gained optional `links`/`actions`/`variant` props (homepage defaults unchanged, `solid` variant for pages without a hero), `AUTH_NAV_LINKS` (`/#features`, `/#pricing`) in `src/lib/homepage.ts` makes the section links work from auth routes, and the pages pass context-aware actions (`/sign-in` → Get Started, `/register` → Sign In) on desktop and in the mobile menu; verified at 1440/768/390px (no horizontal overflow, mobile menu open/close and section navigation, skip link on first Tab, demo credentials sign-in → `/dashboard`, homepage header unchanged) plus `npm run test` (227 passing) + `npm run lint` + `npm run build`; presentational-only, no new unit tests.
 - Stripe Phase 1 (Core Infrastructure) completed — added the billing fields to `User` (`stripeCustomerId`/`stripeSubscriptionId` unique, `stripePriceId`, `stripeSubscriptionStatus`, `stripeCurrentPeriodEnd`, `stripeCancelAtPeriodEnd`) and applied migration `20261022120000_add_stripe_billing_fields` to the development branch; installed `stripe@23.0.0`; extracted `getAppUrl()` into `src/lib/app-url.ts`; added `src/lib/usage-limits.ts` (50 items, 3 collections, Pro-only `file`/`image`, `checkItemLimit`/`checkCollectionLimit`/`checkItemType`/`checkItemCreation`) with `usage-limits.test.ts`; added `src/lib/billing.ts` (intervals, `PRO_PLANS`, status helper, `BillingOverview`, stale-subscription helper), `src/lib/validations/billing.ts`, `src/lib/stripe.ts` (lazy client + price-ID helpers), `src/lib/stripe-subscription.ts` (`subscriptionSnapshot`) and `src/lib/db/billing.ts` (overview/entitlements reads plus subscription sync/clear writes); the Auth.js `jwt` callback now always syncs `isPro` from the database and the session exposes it, with `next-auth`/JWT type augmentation; verified the session reports `isPro: false` by default and flips to `true` after a manual DB update + session fetch (then reverted); `npm run test` (271 passing) + `npm run lint` + `npm run build` + `npm run db:status` all pass; no Stripe API calls, webhooks, gating enforcement or billing UI yet — Phase 2 covers those; the spec is `context/features/stripe-phase-1-spec.md`.
+- Stripe Phase 2 (Integration & UI) completed — added `src/actions/billing.ts` (`createCheckoutSession` with idempotent customer creation and `createPortalSession`), `src/lib/stripe-webhook.ts` plus `POST /api/stripe/webhook` (raw-body signature verification, 400/500/200 handling) and the required `/api/stripe/checkout/complete` reconciliation route; added `src/hooks/use-billing.ts` + `BillingProvider` seeded by the `(dashboard)` layout and `DashboardShell`, the `/settings` `BillingCard` (Free/Pro state, usage, upgrade buttons, portal, renewal/cancellation date, checkout banners), Free-tier gating in `createItem`/`createCollection`/`POST /api/upload`, Pro-only type locks and collection-limit banners in the create dialogs, sidebar `isProOnlyTypeId` badge handling, and subscription cancellation before account deletion; added/updated 35 tests (`billing` actions, webhook handler, item/collection gating and account deletion; 306 passing) and verified `npm run lint` + `npm run build` + `npm run db:status`; manual Stripe test-mode checks covered Free settings/limits, monthly Checkout with the test card, checkout-return reconciliation, Customer Portal, Pro upload, signed webhook updates (including cancel-at-period-end), missing/bad signature 400s and Free upload 403; the demo account and Stripe test customer/subscription were cleaned up afterward; note the Stripe CLI is not installed and `.env` has an empty `STRIPE_WEBHOOK_SECRET`, so the webhook was verified with a temporary signed local request — set a real secret/endpoint before production; the spec is `context/features/stripe-phase-2-spec.md`.
