@@ -1,18 +1,38 @@
-# Current Feature
+# Current Feature: AI Auto-Tagging
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Not Started
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- Establish the OpenAI foundation with a server-only client utility and an `AI_MODEL` constant using the Responses API.
+- Add a `generateAutoTags` server action with auth, Zod validation, Pro gating, rate limiting and AI service error handling.
+- Add an AI tag-suggestion rate limit (20 requests/hour per user) to `src/lib/rate-limit.ts`.
+- Add a "Suggest Tags" ghost button with a Sparkles icon near the tags input in the New Item dialog and the item drawer's edit mode.
+- Hide the Suggest Tags button for Free users while enforcing the Pro gate server-side.
+- Display returned tags as badges with per-tag accept (check) and reject (X) controls; accepted tags are added to the item's tag list.
+- Keep tags freeform — suggestions are not limited to tags that already exist in the database.
+- Truncate item content to 2,000 characters before the API call.
+- Surface Pro-gating, rate-limit and AI-service errors via toast.
+- Add unit tests for the server action and update the feature history on completion.
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- Spec: `context/features/ai-auto-tag-spec.md`; full architecture context in `docs/ai-integration-plan.md`.
+- `OPENAI_API_KEY` is already in `.env`, but the `openai` package is not installed yet.
+- **Use the Responses API** (`client.responses.create`) — `gpt-5-nano` returns empty content through Chat Completions.
+- Request JSON with `text: { format: { type: "json_object" } }` and parse `response.output_text` manually. Do not use `zodResponseFormat`: it consumes excessive tokens with this model and can hit length limits.
+- Handle both `{"tags": [...]}` and `[...]` response shapes, then normalise tags to lowercase.
+- Do not send `max_tokens`; use `max_output_tokens` only if a limit is needed.
+- Server-side Pro gating uses `getBillingEntitlements(userId)`; UI button visibility needs `isPro` passed into the create dialog and drawer edit form or read from `useBilling()`.
+- Follow the existing `{ success, data, error }` action pattern and the Vitest mocking approach in `src/actions/items.test.ts`.
 
 ## History
 
@@ -68,3 +88,4 @@ Not Started
 - Stripe Phase 2 (Integration & UI) completed — added `src/actions/billing.ts` (`createCheckoutSession` with idempotent customer creation and `createPortalSession`), `src/lib/stripe-webhook.ts` plus `POST /api/stripe/webhook` (raw-body signature verification, 400/500/200 handling) and the required `/api/stripe/checkout/complete` reconciliation route; added `src/hooks/use-billing.ts` + `BillingProvider` seeded by the `(dashboard)` layout and `DashboardShell`, the `/settings` `BillingCard` (Free/Pro state, usage, upgrade buttons, portal, renewal/cancellation date, checkout banners), Free-tier gating in `createItem`/`createCollection`/`POST /api/upload`, Pro-only type locks and collection-limit banners in the create dialogs, sidebar `isProOnlyTypeId` badge handling, and subscription cancellation before account deletion; added/updated 35 tests (`billing` actions, webhook handler, item/collection gating and account deletion; 306 passing) and verified `npm run lint` + `npm run build` + `npm run db:status`; manual Stripe test-mode checks covered Free settings/limits, monthly Checkout with the test card, checkout-return reconciliation, Customer Portal, Pro upload, signed webhook updates (including cancel-at-period-end), missing/bad signature 400s and Free upload 403; the demo account and Stripe test customer/subscription were cleaned up afterward; note the Stripe CLI is not installed and `.env` has an empty `STRIPE_WEBHOOK_SECRET`, so the webhook was verified with a temporary signed local request — set a real secret/endpoint before production; the spec is `context/features/stripe-phase-2-spec.md`.
 - Free-plan demo seed completed — trimmed `prisma/seed.ts` to the 3 collections a Free account can own (React Patterns, AI Workflows, DevOps; 10 items) and added an `assertFreePlanLimits()` guard using `FREE_COLLECTION_LIMIT`/`FREE_ITEM_LIMIT` so the seed can't drift over the plan limits; exported `seed()` (with a direct-run guard) and added `scripts/clear-users.ts` (`npm run db:clear-users`) which deletes every user except `demo@devstash.io`, wipes the demo user's items/collections/tags, then re-seeds; updated `scripts/test-db.ts` expectations (3 collections, 10 items) and `context/features/seed-spec.md`; ran the script against the development branch (removed 3 users, cleared 24 items/5 collections/43 tags → 1 user, 3 collections, 10 items, 15 tags) and verified `npm run db:seed` + `npm run db:test` + `tsc --noEmit` + `eslint`
 - Pro-only item type gate completed — Free users visiting `/items/file` or `/items/image` now get an upgrade screen instead of the listing: `src/app/(dashboard)/items/[type]/page.tsx` checks `isProOnlyTypeId(type)` before querying items, reads the signed-in user's `getBillingEntitlements()` and returns the new `ProUpgrade` component (`src/components/dashboard/pro-upgrade.tsx`) when `checkItemType(type, isPro)` denies access; the screen is rendered inside the dashboard shell with the type icon/colour, a PRO badge, a type-specific title/description, Pro benefits and "Upgrade to Pro" (`/settings#billing`) + "Back to dashboard" CTAs; Pro users keep the normal listing (verified by temporarily flipping the demo user's `isPro`), snippet/prompt/link pages are unaffected, and `tsc --noEmit` + `eslint` + `npm run test` (308 passing) + browser checks at 1280px pass
+- Language Dropdown completed — replaced the free-text Language input with a shadcn `Select` of 41 Monaco language ids (`src/lib/languages.ts`: `LANGUAGE_OPTIONS`, `toLanguageValue`, `getLanguageLabel`, `languageOptionsFor`) inside the shared `ItemFormFields`, so the New Item dialog and the drawer's inline edit form both get the same control; moved Language above Content so picking a language applies highlighting immediately through the existing `CodeEditor` language prop; legacy aliases (`tsx`, `bash`, …) select their canonical option and unknown stored values are appended as an extra option so editing can't drop them; `CodeEditor`'s header and the drawer's language badge now show friendly labels (e.g. `TypeScript`, `Plain text`); the Select stays controlled with `""` for the placeholder to avoid Radix's uncontrolled→controlled warning; added 10 unit tests in `src/lib/languages.test.ts` (318 passing) and verified in the browser (dropdown above Content in create + edit, live TypeScript → Python re-highlighting, created/edited/deleted a test snippet to confirm the persisted language, prompt keeps no Language field, no console warnings/errors) plus `npm run lint` + `npm run build`

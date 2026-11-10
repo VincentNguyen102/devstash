@@ -7,6 +7,7 @@ import type { BeforeMount, EditorProps, OnMount } from "@monaco-editor/react";
 import { EditorFrame } from "@/components/ui/editor-frame";
 import { useEditorPreferences } from "@/hooks/use-editor-preferences";
 import { EDITOR_MIN_HEIGHT, clampEditorHeight } from "@/lib/editor";
+import { getLanguageLabel } from "@/lib/languages";
 import { toMonacoLanguage } from "@/lib/monaco-language";
 import {
   MONACO_THEME_BY_EDITOR_THEME,
@@ -79,7 +80,7 @@ export function CodeEditor({
 
   const isReadOnly = readOnly || disabled;
   const monacoLanguage = toMonacoLanguage(language);
-  const languageLabel = language?.trim() || "Plain text";
+  const languageLabel = getLanguageLabel(language);
   const themeName = MONACO_THEME_BY_EDITOR_THEME[preferences.theme];
 
   useEffect(() => {

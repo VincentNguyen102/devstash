@@ -2,10 +2,18 @@
 
 import type { ReactNode } from "react";
 
+import { AiTagSuggestions } from "@/components/dashboard/ai-tag-suggestions";
 import { CodeEditor } from "@/components/ui/code-editor";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { MarkdownEditor } from "@/components/ui/markdown-editor";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   CODE_TYPE_IDS,
@@ -14,6 +22,10 @@ import {
   MARKDOWN_TYPE_IDS,
   URL_TYPE_IDS,
 } from "@/lib/item-type-fields";
+import {
+  languageOptionsFor,
+  toLanguageValue,
+} from "@/lib/languages";
 
 /** The editable field values shared by the create and edit item forms. */
 export interface ItemFormValues {
@@ -33,6 +45,8 @@ interface ItemFormFieldsProps {
   onChange: (field: ItemFormField, value: string) => void;
   /** Id prefix so create/edit inputs get unique ids. */
   idPrefix: string;
+  /** Current title, used by the AI tag suggester. */
+  aiTitle: string;
   /** Disables every control while a form is submitting. */
   disabled?: boolean;
   /** Rendered between Description and Content (e.g. the upload field). */
@@ -41,15 +55,17 @@ interface ItemFormFieldsProps {
 
 /**
  * The type-aware field set shared by the New Item dialog and the drawer's
- * inline edit form: Description, the per-type content editor (Monaco/Markdown/
- * textarea), Language, URL and Tags. The title and upload fields stay in their
- * respective callers.
+ * inline edit form: Description, Language, the per-type content editor
+ * (Monaco/Markdown/textarea), URL and Tags. Language sits above Content so the
+ * highlighting choice is visible before typing. The title and upload fields
+ * stay in their respective callers.
  */
 export function ItemFormFields({
   typeId,
   values,
   onChange,
   idPrefix,
+  aiTitle,
   disabled = false,
   afterDescription,
 }: ItemFormFieldsProps) {
@@ -73,6 +89,27 @@ export function ItemFormFields({
       </FormField>
 
       {afterDescription}
+
+      {showLanguage ? (
+        <FormField label="Language" htmlFor={`${idPrefix}-language`}>
+          <Select
+            value={toLanguageValue(values.language) ?? ""}
+            onValueChange={(value) => onChange("language", value)}
+            disabled={disabled}
+          >
+            <SelectTrigger id={`${idPrefix}-language`} className="w-full">
+              <SelectValue placeholder="Select a language" />
+            </SelectTrigger>
+            <SelectContent>
+              {languageOptionsFor(values.language).map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormField>
+      ) : null}
 
       {showContent ? (
         usesCodeEditor ? (
@@ -109,18 +146,6 @@ export function ItemFormFields({
         )
       ) : null}
 
-      {showLanguage ? (
-        <FormField label="Language" htmlFor={`${idPrefix}-language`}>
-          <Input
-            id={`${idPrefix}-language`}
-            value={values.language}
-            onChange={(event) => onChange("language", event.target.value)}
-            placeholder="e.g. typescript"
-            disabled={disabled}
-          />
-        </FormField>
-      ) : null}
-
       {showUrl ? (
         <FormField label="URL" htmlFor={`${idPrefix}-url`}>
           <Input
@@ -145,6 +170,13 @@ export function ItemFormFields({
           value={values.tags}
           onChange={(event) => onChange("tags", event.target.value)}
           placeholder="react, hooks, typescript"
+          disabled={disabled}
+        />
+        <AiTagSuggestions
+          title={aiTitle}
+          content={values.content || values.description}
+          tags={values.tags}
+          onTagsChange={(tags) => onChange("tags", tags)}
           disabled={disabled}
         />
       </FormField>

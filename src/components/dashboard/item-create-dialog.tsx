@@ -267,6 +267,7 @@ export function ItemCreateDialog({
             values={form}
             onChange={(field, value) => updateField(field, value)}
             idPrefix="create-item"
+            aiTitle={form.title}
             disabled={isSubmitting}
             afterDescription={
               uploadKind ? (
