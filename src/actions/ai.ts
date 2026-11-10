@@ -5,19 +5,24 @@ import {
   AI_MODEL,
   AUTO_TAG_INSTRUCTIONS,
   DESCRIPTION_INSTRUCTIONS,
+  EXPLAIN_INSTRUCTIONS,
   buildAutoTagInput,
   buildDescriptionInput,
+  buildExplainInput,
   getOpenAIClient,
   isAiConfigured,
   parseAutoTagResponse,
   parseDescriptionResponse,
+  parseExplainResponse,
 } from "@/lib/ai";
 import { getBillingEntitlements } from "@/lib/db/billing";
 import { getTypeLabel } from "@/lib/item-type-meta";
 import { checkRateLimit, rateLimitKey } from "@/lib/rate-limit";
 import {
+  explainCodeSchema,
   generateAutoTagsSchema,
   generateDescriptionSchema,
+  type ExplainCodeInput,
   type GenerateAutoTagsInput,
   type GenerateDescriptionInput,
 } from "@/lib/validations/ai";
@@ -216,6 +221,106 @@ export async function generateDescription(
     return { success: true, data: { description } };
   } catch (error) {
     console.error("Generate description failed", error);
+
+    return {
+      success: false,
+      error: "AI is temporarily unavailable. Please try again.",
+    };
+  }
+}
+
+export interface ExplainCodeResult {
+  success: boolean;
+  data?: { explanation: string };
+  error?: string;
+}
+
+/**
+ * Explains the snippet or command currently open in the drawer. The code comes
+ * from the already-loaded item, so nothing is read from the database and the
+ * explanation is never persisted. Pro gating and the rate limit are enforced
+ * here even though the drawer shows a locked Crown state for Free users.
+ */
+export async function explainCode(
+  input: ExplainCodeInput,
+): Promise<ExplainCodeResult> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { success: false, error: "You must be signed in to do that." };
+  }
+
+  const parsed = explainCodeSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid input.",
+    };
+  }
+
+  try {
+    const entitlement = await getBillingEntitlements(session.user.id);
+
+    if (!entitlement) {
+      return { success: false, error: "Account not found." };
+    }
+
+    if (!entitlement.isPro) {
+      return {
+        success: false,
+        error: "AI features are available on the Pro plan.",
+      };
+    }
+
+    if (!isAiConfigured()) {
+      return {
+        success: false,
+        error: "AI is temporarily unavailable. Please try again.",
+      };
+    }
+
+    const limit = await checkRateLimit(
+      "aiExplain",
+      rateLimitKey("ai-explain", session.user.id),
+    );
+
+    if (!limit.success) {
+      const minutes = Math.max(1, Math.ceil(limit.retryAfterSeconds / 60));
+
+      return {
+        success: false,
+        error: `Too many explanations. Please try again in ${minutes} minute${
+          minutes === 1 ? "" : "s"
+        }.`,
+      };
+    }
+
+    const { content, language, typeId } = parsed.data;
+    const response = await getOpenAIClient().responses.create({
+      model: AI_MODEL,
+      instructions: EXPLAIN_INSTRUCTIONS,
+      input: buildExplainInput({
+        content,
+        language,
+        typeName: typeId ? getTypeLabel(typeId) : undefined,
+      }),
+      reasoning: { effort: "low" },
+      max_output_tokens: 1_200,
+    });
+
+    const explanation = parseExplainResponse(response.output_text);
+
+    if (!explanation) {
+      return {
+        success: false,
+        error: "No explanation was generated. Please try again.",
+      };
+    }
+
+    return { success: true, data: { explanation } };
+  } catch (error) {
+    console.error("Explain code failed", error);
 
     return {
       success: false,

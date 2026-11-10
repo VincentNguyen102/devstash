@@ -43,3 +43,19 @@ export type GenerateDescriptionInput = z.input<
   typeof generateDescriptionSchema
 >;
 
+/**
+ * Input accepted by the code-explanation action. The drawer already has the
+ * item, so the client sends the code and language rather than an item id.
+ */
+export const explainCodeSchema = z.object({
+  content: z
+    .string()
+    .trim()
+    .min(1, "There is no code to explain")
+    .max(20_000, "Code is too long"),
+  language: z.string().trim().max(40).optional().default(""),
+  typeId: z.string().trim().max(40).optional().default(""),
+});
+
+export type ExplainCodeInput = z.input<typeof explainCodeSchema>;
+

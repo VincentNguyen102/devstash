@@ -1,18 +1,31 @@
-# Current Feature
+# Current Feature: AI Explain Code
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Complete
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Add an `explainCode` server action with auth, Pro gating, Zod validation and rate limiting.
+- Add an "Explain" button with a Sparkles icon and visible label to the code editor header, next to Copy.
+- Show the button only for `snippet` and `command` items in the drawer's read view — not in the create or edit forms.
+- After generating, show Code/Explain tabs in the editor header so the user can toggle between the code and the explanation.
+- Render the explanation as markdown in the same container space as the code editor.
+- Keep the explanation concise (~200–300 words) covering what the code does and key concepts.
+- Show a `Loader2` spinner while generating.
+- Pro gating in the UI: Free users see a Crown icon with the tooltip "AI features require Pro subscription".
+- Surface Pro-gating, rate-limit and AI-service errors via toast.
+- Follow existing project patterns and add unit tests for the server action.
 
 ## Notes
 
-<!-- Any extra notes -->
+- Spec: `context/features/ai-explain-spec.md`; architecture context in `docs/ai-integration-plan.md`.
+- Explanations are not saved to the database; each click regenerates them.
+- The spec calls for a server action (request/response), not the streaming SSE route described in the earlier AI plan.
+- `isPro` needs to reach the drawer/code editor for the Free-user Crown state; the server action remains the authoritative gate.
+- Reuse the existing OpenAI foundation in `src/lib/ai.ts` / `src/actions/ai.ts`, the `aiDescriptions`/`aiTags` rate-limit pattern and the existing markdown rendering styles.
 
 ## History
 

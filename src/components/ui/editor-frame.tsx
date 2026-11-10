@@ -12,6 +12,8 @@ interface EditorFrameProps {
   "aria-label": string;
   /** Optional content between the window dots and the copy controls (e.g. tabs). */
   header?: ReactNode;
+  /** Optional controls rendered next to the copy button (e.g. an AI action). */
+  controls?: ReactNode;
   /** Small label shown before the copy button, e.g. the language or "Markdown". */
   label: string;
   /** Value copied by the built-in copy button. */
@@ -31,6 +33,7 @@ interface EditorFrameProps {
 export function EditorFrame({
   "aria-label": ariaLabel,
   header,
+  controls,
   label,
   copyValue,
   copyLabel,
@@ -59,6 +62,7 @@ export function EditorFrame({
         {header}
 
         <div className="ml-auto flex items-center gap-1.5">
+          {controls}
           <span className="font-mono text-xs text-muted-foreground">
             {label}
           </span>
