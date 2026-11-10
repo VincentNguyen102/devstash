@@ -15,3 +15,31 @@ export const generateAutoTagsSchema = z.object({
 });
 
 export type GenerateAutoTagsInput = z.input<typeof generateAutoTagsSchema>;
+
+/**
+ * Input accepted by the description generator. Every field comes from the
+ * unsaved form; the item does not need to exist yet.
+ */
+export const generateDescriptionSchema = z.object({
+  title: z
+    .string()
+    .trim()
+    .min(1, "Add a title before generating a description")
+    .max(200, "Title is too long"),
+  typeId: z.string().trim().max(40).optional().default(""),
+  language: z.string().trim().max(40).optional().default(""),
+  content: z.string().max(20_000, "Content is too long").optional().default(""),
+  url: z.string().trim().max(2_048, "URL is too long").optional().default(""),
+  fileName: z
+    .string()
+    .trim()
+    .max(255, "File name is too long")
+    .optional()
+    .default(""),
+  tags: z.string().trim().max(500, "Tags are too long").optional().default(""),
+});
+
+export type GenerateDescriptionInput = z.input<
+  typeof generateDescriptionSchema
+>;
+

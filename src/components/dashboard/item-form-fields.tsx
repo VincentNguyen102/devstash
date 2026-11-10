@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 
+import { AiDescriptionButton } from "@/components/dashboard/ai-description-button";
 import { AiTagSuggestions } from "@/components/dashboard/ai-tag-suggestions";
 import { CodeEditor } from "@/components/ui/code-editor";
 import { FormField } from "@/components/ui/form-field";
@@ -45,8 +46,10 @@ interface ItemFormFieldsProps {
   onChange: (field: ItemFormField, value: string) => void;
   /** Id prefix so create/edit inputs get unique ids. */
   idPrefix: string;
-  /** Current title, used by the AI tag suggester. */
+  /** Current title, used by the AI tag suggester and description generator. */
   aiTitle: string;
+  /** Uploaded file name, used by the AI description generator. */
+  aiFileName?: string;
   /** Disables every control while a form is submitting. */
   disabled?: boolean;
   /** Rendered between Description and Content (e.g. the upload field). */
@@ -66,6 +69,7 @@ export function ItemFormFields({
   onChange,
   idPrefix,
   aiTitle,
+  aiFileName,
   disabled = false,
   afterDescription,
 }: ItemFormFieldsProps) {
@@ -77,7 +81,25 @@ export function ItemFormFields({
 
   return (
     <>
-      <FormField label="Description" htmlFor={`${idPrefix}-description`}>
+      <FormField
+        label="Description"
+        htmlFor={`${idPrefix}-description`}
+        action={
+          <AiDescriptionButton
+            title={aiTitle}
+            typeId={typeId}
+            language={values.language}
+            content={values.content}
+            url={values.url}
+            fileName={aiFileName}
+            tags={values.tags}
+            onDescriptionChange={(description) =>
+              onChange("description", description)
+            }
+            disabled={disabled}
+          />
+        }
+      >
         <Textarea
           id={`${idPrefix}-description`}
           value={values.description}

@@ -191,6 +191,7 @@ export function ItemDetailView({
               onChange={(field, value) => updateField(field, value)}
               idPrefix="item"
               aiTitle={form.title}
+              aiFileName={item.fileName ?? undefined}
               disabled={isSaving}
             />
             <CollectionSelect
