@@ -1,4 +1,4 @@
-# Current Feature: AI Description Generator
+# Current Feature
 
 ## Status
 
@@ -8,18 +8,11 @@ Complete
 
 ## Goals
 
-- Add an icon button next to the Description field that generates a concise 1-2 sentence description from the current unsaved form values (title, content, URL, file name and item type).
-- Generate from what is already in the form — no need to save the item first.
-- Show the button in both the New Item dialog and the drawer's inline edit form (shared `ItemFormFields`) for every content type.
-- Replace the description input with the generated text; the user still decides when to Save/Create.
-- Keep the existing AI pattern: Pro-only (UI hidden for Free users, enforced server-side), Zod validation, rate limiting, content truncation and toast errors.
-- Add unit tests for the new AI helpers and server action.
+<!-- Goals & requirements -->
 
 ## Notes
 
-- Uses the existing OpenAI `gpt-5-nano` foundation in `src/lib/ai.ts` and `src/actions/ai.ts`.
-- Uses whatever context is available per type: content for snippet/prompt/command/note, URL for links, file name for file/image.
-- Clicking the button overwrites an existing description (it remains unsaved until the form is submitted).
+<!-- Any extra notes -->
 
 ## History
 
