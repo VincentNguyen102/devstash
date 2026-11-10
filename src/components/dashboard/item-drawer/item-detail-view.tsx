@@ -190,6 +190,8 @@ export function ItemDetailView({
               values={form}
               onChange={(field, value) => updateField(field, value)}
               idPrefix="item"
+              aiTitle={form.title}
+              disabled={isSaving}
             />
             <CollectionSelect
               value={form.collectionIds}

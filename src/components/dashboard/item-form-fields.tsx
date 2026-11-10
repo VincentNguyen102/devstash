@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 
+import { AiTagSuggestions } from "@/components/dashboard/ai-tag-suggestions";
 import { CodeEditor } from "@/components/ui/code-editor";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,8 @@ interface ItemFormFieldsProps {
   onChange: (field: ItemFormField, value: string) => void;
   /** Id prefix so create/edit inputs get unique ids. */
   idPrefix: string;
+  /** Current title, used by the AI tag suggester. */
+  aiTitle: string;
   /** Disables every control while a form is submitting. */
   disabled?: boolean;
   /** Rendered between Description and Content (e.g. the upload field). */
@@ -62,6 +65,7 @@ export function ItemFormFields({
   values,
   onChange,
   idPrefix,
+  aiTitle,
   disabled = false,
   afterDescription,
 }: ItemFormFieldsProps) {
@@ -166,6 +170,13 @@ export function ItemFormFields({
           value={values.tags}
           onChange={(event) => onChange("tags", event.target.value)}
           placeholder="react, hooks, typescript"
+          disabled={disabled}
+        />
+        <AiTagSuggestions
+          title={aiTitle}
+          content={values.content || values.description}
+          tags={values.tags}
+          onTagsChange={(tags) => onChange("tags", tags)}
           disabled={disabled}
         />
       </FormField>

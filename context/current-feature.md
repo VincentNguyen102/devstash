@@ -1,28 +1,38 @@
-# Language Dropdown
+# Current Feature: AI Auto-Tagging
 
 ## Status
 
 <!-- Not Started|In Progress|Complete -->
 
-Complete
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
-- Replace the free-text Language input with a dropdown of common languages in the New Item dialog and the drawer's inline edit form.
-- Render the Language field above the Content field so the chosen language is clear before typing.
-- Selecting a language immediately applies syntax highlighting in the Monaco editor as the user types.
-- Keep the Language field limited to snippets and commands (the code editor types).
-- Preserve legacy/unknown stored language values without losing them on edit.
-- Add unit tests for the language option helpers and update the feature history.
+- Establish the OpenAI foundation with a server-only client utility and an `AI_MODEL` constant using the Responses API.
+- Add a `generateAutoTags` server action with auth, Zod validation, Pro gating, rate limiting and AI service error handling.
+- Add an AI tag-suggestion rate limit (20 requests/hour per user) to `src/lib/rate-limit.ts`.
+- Add a "Suggest Tags" ghost button with a Sparkles icon near the tags input in the New Item dialog and the item drawer's edit mode.
+- Hide the Suggest Tags button for Free users while enforcing the Pro gate server-side.
+- Display returned tags as badges with per-tag accept (check) and reject (X) controls; accepted tags are added to the item's tag list.
+- Keep tags freeform — suggestions are not limited to tags that already exist in the database.
+- Truncate item content to 2,000 characters before the API call.
+- Surface Pro-gating, rate-limit and AI-service errors via toast.
+- Add unit tests for the server action and update the feature history on completion.
 
 ## Notes
 
 <!-- Any extra notes -->
 
-- The form field set is shared by both surfaces through `ItemFormFields`, so the change belongs there.
-- Language values are stored as Monaco language ids; legacy aliases (`tsx`, `bash`, …) are normalised for display via `toMonacoLanguage`.
+- Spec: `context/features/ai-auto-tag-spec.md`; full architecture context in `docs/ai-integration-plan.md`.
+- `OPENAI_API_KEY` is already in `.env`, but the `openai` package is not installed yet.
+- **Use the Responses API** (`client.responses.create`) — `gpt-5-nano` returns empty content through Chat Completions.
+- Request JSON with `text: { format: { type: "json_object" } }` and parse `response.output_text` manually. Do not use `zodResponseFormat`: it consumes excessive tokens with this model and can hit length limits.
+- Handle both `{"tags": [...]}` and `[...]` response shapes, then normalise tags to lowercase.
+- Do not send `max_tokens`; use `max_output_tokens` only if a limit is needed.
+- Server-side Pro gating uses `getBillingEntitlements(userId)`; UI button visibility needs `isPro` passed into the create dialog and drawer edit form or read from `useBilling()`.
+- Follow the existing `{ success, data, error }` action pattern and the Vitest mocking approach in `src/actions/items.test.ts`.
 
 ## History
 
