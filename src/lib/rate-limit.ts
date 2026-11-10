@@ -16,6 +16,7 @@ const LIMITERS = {
   resetPassword: { tokens: 5, window: "15 m" },
   resendVerification: { tokens: 3, window: "15 m" },
   aiTags: { tokens: 20, window: "1 h" },
+  aiDescriptions: { tokens: 20, window: "1 h" },
 } as const satisfies Record<
   string,
   { tokens: number; window: `${number} ${"s" | "m" | "h" | "d"}` }
