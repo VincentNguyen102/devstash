@@ -86,7 +86,7 @@ export function AiDescriptionButton({
     <Button
       type="button"
       variant="ghost"
-      size="icon-xs"
+      size="xs"
       onClick={handleGenerate}
       disabled={!canGenerate}
       aria-label={
@@ -99,13 +99,14 @@ export function AiDescriptionButton({
             ? "Generate description with AI"
             : "Add a title first"
       }
-      className="text-muted-foreground"
+      className="gap-1 text-muted-foreground"
     >
       {isLoading ? (
         <Loader2 aria-hidden className="animate-spin" />
       ) : (
         <Sparkles aria-hidden />
       )}
+      {isLoading ? "Generating…" : "Generate"}
     </Button>
   );
 }

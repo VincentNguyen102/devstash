@@ -3,16 +3,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { BeforeMount, EditorProps, OnMount } from "@monaco-editor/react";
+import { Crown, Loader2, Sparkles } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { toast } from "sonner";
 
+import { explainCode } from "@/actions/ai";
+import { Button } from "@/components/ui/button";
 import { EditorFrame } from "@/components/ui/editor-frame";
 import { useEditorPreferences } from "@/hooks/use-editor-preferences";
-import { EDITOR_MIN_HEIGHT, clampEditorHeight } from "@/lib/editor";
+import {
+  EDITOR_MAX_HEIGHT,
+  EDITOR_MIN_HEIGHT,
+  clampEditorHeight,
+} from "@/lib/editor";
 import { getLanguageLabel } from "@/lib/languages";
 import { toMonacoLanguage } from "@/lib/monaco-language";
 import {
   MONACO_THEME_BY_EDITOR_THEME,
   registerEditorThemes,
 } from "@/lib/monaco-theme";
+import { cn } from "@/lib/utils";
 
 /** Monaco is browser-only, so keep it out of the server render and initial bundle. */
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
@@ -55,6 +66,10 @@ interface CodeEditorProps {
   readOnly?: boolean;
   /** Disables interaction (used while a form is submitting). */
   disabled?: boolean;
+  /** Shows the AI explain control and Code/Explain tabs (drawer read view). */
+  explainable?: boolean;
+  /** Whether the viewer has the Pro plan; Free users see a locked Crown state. */
+  isPro?: boolean;
   /** Accessible label for the editor region. */
   "aria-label"?: string;
   className?: string;
@@ -71,10 +86,15 @@ export function CodeEditor({
   language,
   readOnly = false,
   disabled = false,
+  explainable = false,
+  isPro = false,
   "aria-label": ariaLabel = "Code editor",
   className,
 }: CodeEditorProps) {
   const [height, setHeight] = useState(EDITOR_MIN_HEIGHT);
+  const [explanation, setExplanation] = useState<string | null>(null);
+  const [view, setView] = useState<"code" | "explain">("code");
+  const [isExplaining, setIsExplaining] = useState(false);
   const contentSizeListener = useRef<{ dispose: () => void } | null>(null);
   const { preferences } = useEditorPreferences();
 
@@ -137,6 +157,41 @@ export function CodeEditor({
     [isReadOnly, preferences]
   );
 
+  async function handleExplain() {
+    if (!explainable || isExplaining) return;
+
+    if (!isPro) {
+      toast.error("AI features require Pro subscription.");
+      return;
+    }
+
+    if (!value.trim()) {
+      toast.error("There is no code to explain.");
+      return;
+    }
+
+    setIsExplaining(true);
+
+    try {
+      const result = await explainCode({
+        content: value,
+        language: language ?? "",
+      });
+
+      if (!result.success || !result.data) {
+        toast.error(result.error ?? "Couldn't explain the code.");
+        return;
+      }
+
+      setExplanation(result.data.explanation);
+      setView("explain");
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsExplaining(false);
+    }
+  }
+
   return (
     <EditorFrame
       aria-label={ariaLabel}
@@ -145,20 +200,99 @@ export function CodeEditor({
       copyValue={value}
       copyLabel="Copy code"
       disabled={disabled}
+      header={
+        explainable && explanation ? (
+          <div
+            role="tablist"
+            aria-label="Code editor view"
+            className="ml-2 flex items-center gap-0.5"
+          >
+            {(["code", "explain"] as const).map((tab) => (
+              <Button
+                key={tab}
+                type="button"
+                role="tab"
+                variant="ghost"
+                size="xs"
+                aria-selected={view === tab}
+                onClick={() => setView(tab)}
+                className={cn(
+                  "text-muted-foreground",
+                  view === tab && "bg-muted text-foreground",
+                )}
+              >
+                {tab === "code" ? "Code" : "Explain"}
+              </Button>
+            ))}
+          </div>
+        ) : null
+      }
+      controls={
+        explainable ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            className={cn(
+              "gap-1 text-muted-foreground hover:text-foreground",
+              !isPro && "text-amber-400/80 hover:text-amber-300",
+            )}
+            aria-label={
+              isExplaining
+                ? "Explaining code"
+                : isPro
+                  ? "Explain code with AI"
+                  : "Explain code (Pro)"
+            }
+            title={
+              isPro
+                ? "Explain code with AI"
+                : "AI features require Pro subscription"
+            }
+            disabled={isExplaining || (isPro && !value.trim())}
+            onClick={handleExplain}
+          >
+            {isExplaining ? (
+              <Loader2 aria-hidden className="animate-spin" />
+            ) : isPro ? (
+              <Sparkles aria-hidden />
+            ) : (
+              <Crown aria-hidden />
+            )}
+            {isExplaining ? "Explaining…" : "Explain"}
+          </Button>
+        ) : null
+      }
     >
-      <div style={{ height }}>
-        <MonacoEditor
-          height="100%"
-          language={monacoLanguage}
-          theme={themeName}
-          value={value}
-          beforeMount={handleBeforeMount}
-          onMount={handleMount}
-          onChange={(next) => onChange?.(next ?? "")}
-          options={options}
-          loading={<EditorSkeleton />}
-        />
-      </div>
+      {view === "explain" && explanation ? (
+        <div
+          className="overflow-y-auto px-3 py-2.5"
+          style={{
+            minHeight: EDITOR_MIN_HEIGHT,
+            maxHeight: EDITOR_MAX_HEIGHT,
+          }}
+        >
+          <div className="markdown-preview">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {explanation}
+            </ReactMarkdown>
+          </div>
+        </div>
+      ) : (
+        <div style={{ height }}>
+          <MonacoEditor
+            height="100%"
+            language={monacoLanguage}
+            theme={themeName}
+            value={value}
+            beforeMount={handleBeforeMount}
+            onMount={handleMount}
+            onChange={(next) => onChange?.(next ?? "")}
+            options={options}
+            loading={<EditorSkeleton />}
+          />
+        </div>
+      )}
     </EditorFrame>
   );
 }

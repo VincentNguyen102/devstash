@@ -30,7 +30,11 @@ vi.mock("@/lib/ai", async (importOriginal) => {
   };
 });
 
-import { generateAutoTags, generateDescription } from "@/actions/ai";
+import {
+  explainCode,
+  generateAutoTags,
+  generateDescription,
+} from "@/actions/ai";
 
 const validInput = {
   title: "React hooks snippet",
@@ -41,6 +45,12 @@ const validDescriptionInput = {
   title: "React hooks snippet",
   typeId: "snippet",
   content: "const [count, setCount] = useState(0);",
+};
+
+const validExplainInput = {
+  content: "const [count, setCount] = useState(0);",
+  language: "tsx",
+  typeId: "snippet",
 };
 
 beforeEach(() => {
@@ -339,6 +349,134 @@ describe("generateDescription", () => {
     mocks.create.mockRejectedValue(new Error("boom"));
 
     const result = await generateDescription(validDescriptionInput);
+
+    expect(result).toEqual({
+      success: false,
+      error: "AI is temporarily unavailable. Please try again.",
+    });
+    consoleError.mockRestore();
+  });
+});
+
+describe("explainCode", () => {
+  it("requires a signed-in user", async () => {
+    mocks.auth.mockResolvedValue(null);
+
+    const result = await explainCode(validExplainInput);
+
+    expect(result).toEqual({
+      success: false,
+      error: "You must be signed in to do that.",
+    });
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+
+  it("validates the input before calling OpenAI", async () => {
+    const result = await explainCode({ content: "   " });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/no code/i);
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+
+  it("blocks Free users", async () => {
+    mocks.getBillingEntitlements.mockResolvedValue({
+      isPro: false,
+      itemCount: 0,
+      collectionCount: 0,
+    });
+
+    const result = await explainCode(validExplainInput);
+
+    expect(result).toEqual({
+      success: false,
+      error: "AI features are available on the Pro plan.",
+    });
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+
+  it("returns a friendly error when AI is not configured", async () => {
+    mocks.isAiConfigured.mockReturnValue(false);
+
+    const result = await explainCode(validExplainInput);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/temporarily unavailable/i);
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+
+  it("blocks requests over the rate limit", async () => {
+    mocks.checkRateLimit.mockResolvedValue({
+      success: false,
+      remaining: 0,
+      reset: 0,
+      retryAfterSeconds: 3_600,
+    });
+
+    const result = await explainCode(validExplainInput);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("60 minutes");
+    expect(mocks.checkRateLimit).toHaveBeenCalledWith(
+      "aiExplain",
+      "ai-explain:user-1",
+    );
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+
+  it("returns the generated explanation with the expected request", async () => {
+    mocks.create.mockResolvedValue({
+      output_text: "## What it does\n\nTracks a counter in local state.",
+    });
+
+    const result = await explainCode(validExplainInput);
+
+    expect(result).toEqual({
+      success: true,
+      data: {
+        explanation: "## What it does\n\nTracks a counter in local state.",
+      },
+    });
+    expect(mocks.create).toHaveBeenCalledTimes(1);
+    expect(mocks.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: "gpt-5-nano",
+        reasoning: { effort: "low" },
+        max_output_tokens: 1_200,
+        input: expect.stringContaining("const [count, setCount] = useState(0);"),
+      }),
+    );
+  });
+
+  it("includes the item type label and language in the request", async () => {
+    mocks.create.mockResolvedValue({
+      output_text: "A short explanation.",
+    });
+
+    await explainCode(validExplainInput);
+
+    const request = mocks.create.mock.calls[0]?.[0] as { input: string };
+
+    expect(request.input).toContain("Type:\nSnippet");
+    expect(request.input).toContain("Language:\ntsx");
+  });
+
+  it("reports an empty response", async () => {
+    mocks.create.mockResolvedValue({ output_text: "   " });
+
+    const result = await explainCode(validExplainInput);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/no explanation was generated/i);
+  });
+
+  it("returns a generic error when the API call fails", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    mocks.create.mockRejectedValue(new Error("boom"));
+
+    const result = await explainCode(validExplainInput);
 
     expect(result).toEqual({
       success: false,

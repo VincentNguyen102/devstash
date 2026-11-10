@@ -5,13 +5,17 @@ import {
   AUTO_TAG_MAX_TAGS,
   DESCRIPTION_CONTENT_LIMIT,
   DESCRIPTION_MAX_LENGTH,
+  EXPLAIN_CONTENT_LIMIT,
   buildAutoTagInput,
   buildDescriptionInput,
+  buildExplainInput,
   normalizeDescription,
   parseAutoTagResponse,
   parseDescriptionResponse,
+  parseExplainResponse,
   truncateForAutoTags,
   truncateForDescription,
+  truncateForExplain,
 } from "@/lib/ai";
 
 describe("truncateForAutoTags", () => {
@@ -213,5 +217,65 @@ describe("parseDescriptionResponse", () => {
     expect(parseDescriptionResponse("not json")).toBeNull();
     expect(parseDescriptionResponse("null")).toBeNull();
     expect(parseDescriptionResponse('{"description":42}')).toBeNull();
+  });
+});
+
+describe("truncateForExplain", () => {
+  it("keeps code shorter than the limit untouched", () => {
+    expect(truncateForExplain("const x = 1;")).toBe("const x = 1;");
+  });
+
+  it("cuts code at the configured limit", () => {
+    const code = "a".repeat(EXPLAIN_CONTENT_LIMIT + 50);
+
+    expect(truncateForExplain(code)).toHaveLength(EXPLAIN_CONTENT_LIMIT);
+  });
+});
+
+describe("buildExplainInput", () => {
+  it("includes the type, language and code", () => {
+    const input = buildExplainInput({
+      content: "docker compose up -d",
+      language: "bash",
+      typeName: "Command",
+    });
+
+    expect(input).toContain("Type:\nCommand");
+    expect(input).toContain("Language:\nbash");
+    expect(input).toContain("Code:\ndocker compose up -d");
+  });
+
+  it("omits empty optional fields", () => {
+    const input = buildExplainInput({ content: "const x = 1;" });
+
+    expect(input).toBe("Code:\nconst x = 1;");
+  });
+
+  it("truncates long code before it is sent", () => {
+    const input = buildExplainInput({
+      content: "a".repeat(25_000),
+    });
+
+    expect(input).toContain("a".repeat(EXPLAIN_CONTENT_LIMIT));
+    expect(input).not.toContain("a".repeat(EXPLAIN_CONTENT_LIMIT + 1));
+  });
+});
+
+describe("parseExplainResponse", () => {
+  it("trims the output", () => {
+    expect(parseExplainResponse("  ## What it does\n\nIt counts.  ")).toBe(
+      "## What it does\n\nIt counts.",
+    );
+  });
+
+  it("unwraps a surrounding markdown fence", () => {
+    expect(
+      parseExplainResponse("```markdown\n## What it does\n\nIt counts.\n```"),
+    ).toBe("## What it does\n\nIt counts.");
+  });
+
+  it("returns null for empty output", () => {
+    expect(parseExplainResponse("   ")).toBeNull();
+    expect(parseExplainResponse("```\n\n```")).toBeNull();
   });
 });

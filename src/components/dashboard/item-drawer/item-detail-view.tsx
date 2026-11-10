@@ -15,6 +15,7 @@ import { ItemFormFields } from "@/components/dashboard/item-form-fields";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useBilling } from "@/hooks/use-billing";
 import type { ItemDetail } from "@/lib/db/items";
 import { getTypeVisual } from "@/lib/item-type-meta";
 import { getLanguageLabel } from "@/lib/languages";
@@ -59,6 +60,7 @@ export function ItemDetailView({
   onDeleted: () => void;
 }) {
   const router = useRouter();
+  const { isPro } = useBilling();
   const { Icon, textClass, bgClass } = getTypeVisual(item.typeId, item.typeIcon);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -201,7 +203,7 @@ export function ItemDetailView({
             />
           </>
         ) : (
-          <ItemDetailBody item={item} />
+          <ItemDetailBody item={item} isPro={isPro} />
         )}
 
         <ItemMetaSections item={item} />

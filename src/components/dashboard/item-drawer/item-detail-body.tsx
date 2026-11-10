@@ -22,7 +22,13 @@ import {
 import { formatFileSize } from "@/lib/upload";
 
 /** Read-only Description / Content / URL / Tags for the drawer. */
-export function ItemDetailBody({ item }: { item: ItemDetail }) {
+export function ItemDetailBody({
+  item,
+  isPro,
+}: {
+  item: ItemDetail;
+  isPro: boolean;
+}) {
   const usesCodeEditor = CODE_TYPE_IDS.has(item.typeId);
   const usesMarkdownEditor = MARKDOWN_TYPE_IDS.has(item.typeId);
 
@@ -38,10 +44,13 @@ export function ItemDetailBody({ item }: { item: ItemDetail }) {
         <DetailSection title="Content">
           {usesCodeEditor ? (
             <CodeEditor
+              key={item.id}
               aria-label="Content"
               value={item.content}
               language={item.language}
               readOnly
+              explainable
+              isPro={isPro}
             />
           ) : usesMarkdownEditor ? (
             <MarkdownEditor aria-label="Content" value={item.content} readOnly />
