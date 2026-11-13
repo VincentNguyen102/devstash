@@ -1,11 +1,10 @@
 import { Pin } from "lucide-react";
-import { redirect } from "next/navigation";
 
-import { auth } from "@/auth";
 import { CollectionCard } from "@/components/dashboard/collection-card";
 import { ItemRow } from "@/components/dashboard/item-row";
 import { SectionHeading } from "@/components/dashboard/section-heading";
 import { DashboardStats } from "@/components/dashboard/stat-cards";
+import { verifySession } from "@/lib/dal";
 import {
   getCollectionStats,
   getRecentCollections,
@@ -13,11 +12,7 @@ import {
 import { getItemStats, getPinnedItems, getRecentItems } from "@/lib/db/items";
 
 export default async function DashboardPage() {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    redirect("/sign-in");
-  }
+  const session = await verifySession();
 
   const [
     recentCollections,

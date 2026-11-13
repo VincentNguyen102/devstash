@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 
-import { auth } from "@/auth";
 import { AccountActions } from "@/components/profile/account-actions";
 import { BillingCard } from "@/components/settings/billing-card";
 import { EditorPreferencesCard } from "@/components/settings/editor-preferences-card";
+import { verifySession } from "@/lib/dal";
 import { getBillingOverview } from "@/lib/db/billing";
 import { getAccountSettings } from "@/lib/db/settings";
 import { intervalForPriceId } from "@/lib/stripe";
@@ -13,11 +13,7 @@ export const metadata = {
 };
 
 export default async function SettingsPage(props: PageProps<"/settings">) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    redirect("/sign-in");
-  }
+  const session = await verifySession();
 
   const [settings, billing] = await Promise.all([
     getAccountSettings(session.user.id),

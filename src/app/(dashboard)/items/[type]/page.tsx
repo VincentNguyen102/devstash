@@ -1,6 +1,5 @@
 import { notFound, redirect } from "next/navigation";
 
-import { auth } from "@/auth";
 import { ItemCollection } from "@/components/dashboard/item-collection";
 import { ItemCreateDialog } from "@/components/dashboard/item-create-dialog";
 import { Pagination } from "@/components/dashboard/pagination";
@@ -8,6 +7,7 @@ import { ProUpgrade } from "@/components/dashboard/pro-upgrade";
 import { SectionHeading } from "@/components/dashboard/section-heading";
 import { Button } from "@/components/ui/button";
 import { ITEMS_PER_PAGE } from "@/lib/constants";
+import { verifySession } from "@/lib/dal";
 import { getBillingEntitlements } from "@/lib/db/billing";
 import { getItemTypeById, getItemsByType } from "@/lib/db/items";
 import { CREATE_TYPE_LABELS, getTypeVisual } from "@/lib/item-type-meta";
@@ -16,16 +16,14 @@ import { checkItemType, isProOnlyTypeId } from "@/lib/usage-limits";
 import { isCreateItemTypeId } from "@/lib/validations/item";
 
 export default async function ItemTypePage(props: PageProps<"/items/[type]">) {
+  const session = await verifySession();
+
   const { type } = await props.params;
   const { page } = await props.searchParams;
 
   // File and image listings are Pro-only. Gate before querying the items so a
   // Free user never receives (or waits on) the listing data.
   if (isProOnlyTypeId(type)) {
-    const session = await auth();
-
-    if (!session) redirect("/sign-in");
-
     const billing = await getBillingEntitlements(session.user.id);
 
     if (!billing) redirect("/sign-in");

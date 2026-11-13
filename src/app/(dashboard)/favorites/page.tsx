@@ -1,7 +1,5 @@
-import { redirect } from "next/navigation";
-
-import { auth } from "@/auth";
 import { FavoritesView } from "@/components/dashboard/favorites-view";
+import { verifySession } from "@/lib/dal";
 import { getFavoriteCollections } from "@/lib/db/collections";
 import { getFavoriteItems } from "@/lib/db/items";
 
@@ -10,11 +8,7 @@ export const metadata = {
 };
 
 export default async function FavoritesPage() {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    redirect("/sign-in");
-  }
+  const session = await verifySession();
 
   const [items, collections] = await Promise.all([
     getFavoriteItems(session.user.id),

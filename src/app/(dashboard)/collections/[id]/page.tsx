@@ -1,11 +1,11 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
-import { auth } from "@/auth";
 import { CollectionActions } from "@/components/dashboard/collection-actions";
 import { ItemCollection } from "@/components/dashboard/item-collection";
 import { Pagination } from "@/components/dashboard/pagination";
 import { SectionHeading } from "@/components/dashboard/section-heading";
 import { COLLECTIONS_PER_PAGE } from "@/lib/constants";
+import { verifySession } from "@/lib/dal";
 import { getCollectionById } from "@/lib/db/collections";
 import { getItemsByCollection } from "@/lib/db/items";
 import { parsePage } from "@/lib/pagination";
@@ -13,11 +13,7 @@ import { parsePage } from "@/lib/pagination";
 export default async function CollectionPage(
   props: PageProps<"/collections/[id]">
 ) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    redirect("/sign-in");
-  }
+  const session = await verifySession();
 
   const { id } = await props.params;
   const { page } = await props.searchParams;

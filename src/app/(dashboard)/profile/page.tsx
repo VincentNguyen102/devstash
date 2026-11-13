@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 
-import { auth } from "@/auth";
 import { ProfileCard } from "@/components/profile/profile-card";
 import { UsageStats } from "@/components/profile/usage-stats";
+import { verifySession } from "@/lib/dal";
 import { getProfile } from "@/lib/db/profile";
 
 export const metadata = {
@@ -10,11 +10,7 @@ export const metadata = {
 };
 
 export default async function ProfilePage() {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    redirect("/sign-in");
-  }
+  const session = await verifySession();
 
   const profile = await getProfile(session.user.id);
 

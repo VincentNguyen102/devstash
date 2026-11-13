@@ -1,16 +1,10 @@
-import { redirect } from "next/navigation";
-
-import { auth } from "@/auth";
 import { CollectionCard } from "@/components/dashboard/collection-card";
 import { SectionHeading } from "@/components/dashboard/section-heading";
+import { verifySession } from "@/lib/dal";
 import { getCollections } from "@/lib/db/collections";
 
 export default async function CollectionsPage() {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    redirect("/sign-in");
-  }
+  const session = await verifySession();
 
   const collections = await getCollections(session.user.id);
 
